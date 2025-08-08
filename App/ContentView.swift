@@ -7,6 +7,7 @@ struct ContentView: View {
     var onOpenInfo: () -> Void = {}
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
+    @State private var searchText: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,6 +22,9 @@ struct ContentView: View {
         HStack {
             Text("Clipboard History")
                 .font(.headline)
+            TextField("Search", text: $searchText)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .frame(maxWidth: 240)
             Spacer()
             Button(action: { isShowingClearConfirm = true }) {
                 Image(systemName: "trash")
@@ -55,7 +59,7 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8) {
-                    let items = store.allItems()
+                    let items = filteredItems
                     ForEach(Array(items.enumerated()), id: \.1.id) { index, item in
                         ClipboardItemRow(item: item, onSelect: onSelect, isSelected: index == selectedIndex)
                             .id(item.id)
@@ -66,8 +70,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
                 // Reset selection to top and scroll to the first item
+                searchText = ""
                 selectedIndex = 0
-                let items = store.allItems()
+                let items = filteredItems
                 guard let first = items.first else { return }
                 DispatchQueue.main.async {
                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -79,10 +84,20 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionDown)) { _ in moveSelection(1) }
             .onReceive(NotificationCenter.default.publisher(for: .overlaySelectCurrentItem)) { _ in selectCurrent() }
             .onChange(of: selectedIndex) { _ in
-                let items = store.allItems()
+                let items = filteredItems
                 guard items.indices.contains(selectedIndex) else { return }
                 withAnimation(.easeInOut(duration: 0.12)) {
                     proxy.scrollTo(items[selectedIndex].id, anchor: .center)
+                }
+            }
+            .onChange(of: searchText) { _ in
+                selectedIndex = 0
+                let items = filteredItems
+                guard let first = items.first else { return }
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        proxy.scrollTo(first.id, anchor: .top)
+                    }
                 }
             }
         }
@@ -142,16 +157,34 @@ struct ContentView: View {
 
 private extension ContentView {
     func moveSelection(_ delta: Int) {
-        let count = store.allItems().count
+        let count = filteredItems.count
         guard count > 0 else { selectedIndex = 0; return }
         selectedIndex = max(0, min(count - 1, selectedIndex + delta))
     }
 
     func selectCurrent() {
-        let items = store.allItems()
+        let items = filteredItems
         guard items.indices.contains(selectedIndex) else { return }
         let item = items[selectedIndex]
         onSelect(item)
+    }
+}
+
+// MARK: - Filtering
+private extension ContentView {
+    var filteredItems: [ClipboardItem] {
+        let items = store.allItems()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return items }
+        let loweredQuery = query.lowercased()
+        return items.filter { item in
+            switch item.content {
+            case .text(let text):
+                return text.lowercased().contains(loweredQuery)
+            case .image:
+                return false
+            }
+        }
     }
 }
 
