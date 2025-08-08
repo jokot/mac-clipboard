@@ -1,8 +1,13 @@
-MaClip (SwiftUI)
+MaClip
 ================
 
 <p align="center">
   <img src="assets/maclip-icon.svg" alt="MaClip icon" width="160" height="160" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/jokot/mac-clipboard/releases/tag/v1.0">Download (v1.0)</a>
+  
 </p>
 
 A simple macOS clipboard history app built with SwiftUI.
