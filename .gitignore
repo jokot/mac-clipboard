@@ -4,6 +4,7 @@
 # Xcode
 DerivedData/
 build/
+dist/
 *.xcuserdatad
 xcuserdata/
 *.xcscmblueprint
@@ -29,4 +30,7 @@ Pods/
 
 # Symbols
 *.dSYM
+
+# Disk images / installers
+*.dmg
 
