@@ -46,6 +46,7 @@ final class OverlayWindowController: NSObject {
         }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        NotificationCenter.default.post(name: .overlayDidShow, object: nil)
 
         if escMonitor == nil {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
@@ -170,6 +171,10 @@ private extension OverlayWindowController {
 
 extension Notification.Name {
     static let overlayCloseRequested = Notification.Name("OverlayCloseRequested")
+    static let overlayMoveSelectionUp = Notification.Name("OverlayMoveSelectionUp")
+    static let overlayMoveSelectionDown = Notification.Name("OverlayMoveSelectionDown")
+    static let overlaySelectCurrentItem = Notification.Name("OverlaySelectCurrentItem")
+    static let overlayDidShow = Notification.Name("OverlayDidShow")
 }
 
 private struct ESCKeyCatcher: NSViewRepresentable {
@@ -195,9 +200,16 @@ private final class KeyCatcherView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { // Escape key
+        switch event.keyCode {
+        case 53: // Escape
             onEscape?()
-        } else {
+        case 126: // Arrow Up
+            NotificationCenter.default.post(name: .overlayMoveSelectionUp, object: nil)
+        case 125: // Arrow Down
+            NotificationCenter.default.post(name: .overlayMoveSelectionDown, object: nil)
+        case 36, 76: // Return or Keypad Enter
+            NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
+        default:
             super.keyDown(with: event)
         }
     }

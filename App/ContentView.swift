@@ -6,6 +6,7 @@ struct ContentView: View {
     var onOpenSettings: () -> Void = {}
     var onOpenInfo: () -> Void = {}
     @State private var isShowingClearConfirm: Bool = false
+    @State private var selectedIndex: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,14 +52,39 @@ struct ContentView: View {
     }
 
     private var list: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 8) {
-                ForEach(store.allItems()) { item in
-                    ClipboardItemRow(item: item, onSelect: onSelect)
-                    Divider()
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    let items = store.allItems()
+                    ForEach(Array(items.enumerated()), id: \.1.id) { index, item in
+                        ClipboardItemRow(item: item, onSelect: onSelect, isSelected: index == selectedIndex)
+                            .id(item.id)
+                        Divider()
+                    }
+                }
+                .padding(12)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
+                // Reset selection to top and scroll to the first item
+                selectedIndex = 0
+                let items = store.allItems()
+                guard let first = items.first else { return }
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        proxy.scrollTo(first.id, anchor: .top)
+                    }
                 }
             }
-            .padding(12)
+            .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionUp)) { _ in moveSelection(-1) }
+            .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionDown)) { _ in moveSelection(1) }
+            .onReceive(NotificationCenter.default.publisher(for: .overlaySelectCurrentItem)) { _ in selectCurrent() }
+            .onChange(of: selectedIndex) { _ in
+                let items = store.allItems()
+                guard items.indices.contains(selectedIndex) else { return }
+                withAnimation(.easeInOut(duration: 0.12)) {
+                    proxy.scrollTo(items[selectedIndex].id, anchor: .center)
+                }
+            }
         }
     }
 
@@ -114,12 +140,28 @@ struct ContentView: View {
     }
 }
 
+private extension ContentView {
+    func moveSelection(_ delta: Int) {
+        let count = store.allItems().count
+        guard count > 0 else { selectedIndex = 0; return }
+        selectedIndex = max(0, min(count - 1, selectedIndex + delta))
+    }
+
+    func selectCurrent() {
+        let items = store.allItems()
+        guard items.indices.contains(selectedIndex) else { return }
+        let item = items[selectedIndex]
+        onSelect(item)
+    }
+}
+
 // MARK: - Row with hover handling
 
     private struct ClipboardItemRow: View {
         @EnvironmentObject var store: ClipboardStore
         let item: ClipboardItem
         let onSelect: (ClipboardItem) -> Void
+        var isSelected: Bool = false
 
         @State private var isHovered: Bool = false
 
@@ -131,11 +173,11 @@ struct ContentView: View {
             .padding(6)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isHovered ? Color.accentColor.opacity(0.08) : Color.clear)
+                    .fill((isHovered || isSelected) ? Color.accentColor.opacity(0.12) : Color.clear)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.secondary.opacity(isHovered ? 0.25 : 0.1), lineWidth: 1)
+                    .stroke(Color.secondary.opacity((isHovered || isSelected) ? 0.35 : 0.1), lineWidth: 1)
             )
     }
 
