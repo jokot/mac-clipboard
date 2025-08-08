@@ -6,7 +6,7 @@ MaClip
 </p>
 
 <p align="center">
-  <a href="https://github.com/jokot/mac-clipboard/releases/tag/v1.0">Download (v1.0)</a>
+  <a href="https://github.com/jokot/mac-clipboard/releases/tag/v1.1.0">Download (v1.1.0)</a>
   
 </p>
 
