@@ -36,13 +36,19 @@ To package a DMG and generate a SHA256 checksum for sharing (e.g., on GitHub Rel
 # 1) Build Release into ./build
 xcodebuild -scheme MacClipboard -project MacClipboard.xcodeproj -configuration Release BUILD_DIR=$(pwd)/build clean build
 
-# 2) Package DMG + checksum
+# 2) Package DMG with create-dmg + checksum (opens/mounts briefly)
+brew list create-dmg >/dev/null 2>&1 || brew install create-dmg
 VERSION=$(defaults read "$(pwd)/build/Release/MaClip.app/Contents/Info" CFBundleShortVersionString)
-mkdir -p dist/vol && rm -rf dist/MaClip*.dmg dist/MaClip*.sha256 dist/vol/*
-cp -R build/Release/MaClip.app dist/vol/
-hdiutil create -volname "MaClip" -srcfolder dist/vol -ov -format UDZO "dist/MaClip-${VERSION}.dmg"
-shasum -a 256 "dist/MaClip-${VERSION}.dmg" > "dist/MaClip-${VERSION}.dmg.sha256"
+rm -f dist/MacClip-${VERSION}.dmg dist/MacClip-${VERSION}.dmg.sha256
+create-dmg --volname "MaClip" --volicon "App/AppIcon.icns" \
+  --window-pos 200 120 --window-size 540 360 --icon-size 96 --text-size 12 \
+  --icon "MaClip.app" 140 150 --app-drop-link 400 150 --format UDZO \
+  "dist/MacClip-${VERSION}.dmg" "build/Release/MaClip.app"
+shasum -a 256 "dist/MacClip-${VERSION}.dmg" > "dist/MacClip-${VERSION}.dmg.sha256"
 ```
+
+Notes:
+- The DMG window will open briefly during creation; this is expected. The `--app-drop-link` adds the standard Applications shortcut for drag‑to‑install.
 
 Notes:
 - Bump the app version before building so `VERSION` updates.
@@ -54,12 +60,12 @@ Once you have a DMG and its `.sha256` file:
 
 ```bash
 # Verify the DMG against the stored checksum
-shasum -a 256 -c dist/MaClip-*.dmg.sha256
+shasum -a 256 -c dist/MacClip-*.dmg.sha256
 
 # Recompute and print the hash
-shasum -a 256 dist/MaClip-*.dmg
+shasum -a 256 dist/MacClip-*.dmg
 
 # Show the stored hash
-cat dist/MaClip-*.dmg.sha256
+cat dist/MacClip-*.dmg.sha256
 ```
 
