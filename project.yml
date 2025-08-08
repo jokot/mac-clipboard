@@ -15,7 +15,10 @@ targets:
     deploymentTarget: "12.0"
     sources:
       - path: App
+      - path: App/AppIcon.icns
+        type: file
     settings:
+      PRODUCT_NAME: MaClip
       PRODUCT_BUNDLE_IDENTIFIER: com.jokot.MacClipboard
       INFOPLIST_FILE: App/Info.plist
       CURRENT_PROJECT_VERSION: 1

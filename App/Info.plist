@@ -12,8 +12,12 @@
   <string>6.0</string>
   <key>CFBundleName</key>
   <string>MaClip</string>
+  <key>CFBundleDisplayName</key>
+  <string>MaClip</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon.icns</string>
   <key>CFBundleShortVersionString</key>
   <string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key>
