@@ -4,6 +4,7 @@ struct ContentView: View {
     @EnvironmentObject var store: ClipboardStore
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
+    var onOpenInfo: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +20,11 @@ struct ContentView: View {
             Text("Clipboard History")
                 .font(.headline)
             Spacer()
+            Button(action: { onOpenInfo() }) {
+                Image(systemName: "info.circle")
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 6)
             Button(action: { onOpenSettings() }) {
                 Image(systemName: "gearshape.fill")
             }

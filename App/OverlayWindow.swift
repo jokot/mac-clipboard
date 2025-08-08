@@ -76,6 +76,8 @@ final class OverlayWindowController: NSObject {
             self?.hide()
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
+        }, onOpenInfo: { [weak self] in
+            self?.openInfo()
         })
         .environmentObject(store)
         .background(ESCKeyCatcher())
@@ -130,6 +132,11 @@ final class OverlayWindowController: NSObject {
 
         // Ensure settings appears above overlay
         window?.level = .floating
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func openInfo() {
+        InfoWindow.show()
         NSApp.activate(ignoringOtherApps: true)
     }
 }
