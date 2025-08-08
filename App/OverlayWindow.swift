@@ -82,7 +82,7 @@ final class OverlayWindowController: NSObject {
         .environmentObject(store)
         .background(ESCKeyCatcher())
 
-        let hosting = NSHostingView(rootView: content)
+        let hosting = FirstMouseHostingView(rootView: content)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 520, height: 600),
             styleMask: [.titled, .fullSizeContentView],
@@ -119,6 +119,10 @@ final class OverlayWindowController: NSObject {
         self.window = window
         self.backgroundView = vev
         applyTheme()
+    }
+
+    private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 
     @objc private func closeRequested() {
