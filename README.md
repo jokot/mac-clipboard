@@ -5,10 +5,11 @@ MaClip
   <img src="assets/maclip-icon.svg" alt="MaClip icon" width="160" height="160" />
 </p>
 
-<p align="center">
-  <a href="https://github.com/jokot/mac-clipboard/releases/tag/v1.1.0">Download (v1.1.0)</a>
-  
-</p>
+A simple macOS clipboard history app built with SwiftUI.
+
+## Download
+
+- [Download v1.1.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.1.0)
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/0e37461b-2ef6-4bf8-a25f-f80eaffb356d)
@@ -16,14 +17,12 @@ MaClip
 ### Copy Clipboard Demo
 https://github.com/user-attachments/assets/2c6abef8-dc2b-4bd5-a3d7-39fa5ad87ec1
 
-A simple macOS clipboard history app built with SwiftUI.
-
-Features
+## Features
 - Captures copied text and images
 - Global hotkey Command+Control+V to toggle a floating window
 - Click any entry to copy it back to the pasteboard
 
-Build & Run
+## Build from source
 1. Ensure you have Xcode and Homebrew installed.
 2. Install XcodeGen if needed and generate the Xcode project:
 
@@ -35,12 +34,11 @@ Build & Run
 
 3. Select the "MacClipboard" scheme and run. (Display name appears as "MaClip".)
 
-Notes
+## Notes
 - The app uses Carbon's RegisterEventHotKey API, so no special permissions are required for the global hotkey.
 - The app is not sandboxed and is intended for personal use/development. For Mac App Store distribution, additional work is required.
 
-Local release (DMG + checksum)
---------------------------------
+## Packaging (DMG + checksum)
 To package a DMG and generate a SHA256 checksum for sharing (e.g., on GitHub Releases):
 
 ```bash
@@ -58,15 +56,12 @@ create-dmg --volname "MaClip" --volicon "App/AppIcon.icns" \
 shasum -a 256 "dist/MacClip-${VERSION}.dmg" > "dist/MacClip-${VERSION}.dmg.sha256"
 ```
 
-Notes:
+### Packaging notes
 - The DMG window will open briefly during creation; this is expected. The `--app-drop-link` adds the standard Applications shortcut for drag‑to‑install.
-
-Notes:
 - Bump the app version before building so `VERSION` updates.
 - Unsigned binaries may trigger Gatekeeper on other Macs. For wide distribution, sign and notarize.
 
-Verify checksum
-----------------
+### Verify checksum
 Once you have a DMG and its `.sha256` file:
 
 ```bash
