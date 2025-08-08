@@ -10,15 +10,11 @@ MaClip
   
 </p>
 
-<p align="center">
-  <img src="assets/macclip-screenshot.png" alt="MaClip screenshot" width="800" />
-</p>
+## Preview
+![macclip-screenshot.png](https://github.com/user-attachments/assets/0e37461b-2ef6-4bf8-a25f-f80eaffb356d)
 
-<p align="center">
-  <video src="assets/macclip-demo.mov" width="800" controls loop muted playsinline></video>
-  <br/>
-  <a href="assets/macclip-demo.mov">Demo video (MOV)</a>
-</p>
+### Copy Clipboard Demo
+https://github.com/user-attachments/assets/2c6abef8-dc2b-4bd5-a3d7-39fa5ad87ec1
 
 A simple macOS clipboard history app built with SwiftUI.
 
