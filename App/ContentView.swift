@@ -117,11 +117,12 @@ struct ContentView: View {
 
 // MARK: - Row with hover handling
 
-private struct ClipboardItemRow: View {
-    let item: ClipboardItem
-    let onSelect: (ClipboardItem) -> Void
+    private struct ClipboardItemRow: View {
+        @EnvironmentObject var store: ClipboardStore
+        let item: ClipboardItem
+        let onSelect: (ClipboardItem) -> Void
 
-    @State private var isHovered: Bool = false
+        @State private var isHovered: Bool = false
 
     var body: some View {
         content
@@ -158,6 +159,12 @@ private struct ClipboardItemRow: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
+                if isHovered {
+                    Button(action: { store.remove(item) }) {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
         case .image(let image):
             HStack(alignment: .center, spacing: 10) {
@@ -180,6 +187,12 @@ private struct ClipboardItemRow: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
+                if isHovered {
+                    Button(action: { store.remove(item) }) {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
         }
     }

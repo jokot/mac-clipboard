@@ -106,6 +106,11 @@ final class ClipboardStore: ObservableObject {
         items.insert(moved, at: 0)
     }
 
+    func remove(_ item: ClipboardItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items.remove(at: index)
+    }
+
     func applyMaxItems(_ limit: Int) {
         if items.count > limit {
             items.removeLast(items.count - limit)
