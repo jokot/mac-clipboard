@@ -58,11 +58,12 @@ final class OverlayWindowController: NSObject {
             self?.hide()
         }
         .environmentObject(store)
+        .background(ESCKeyCatcher())
 
         let hosting = NSHostingView(rootView: content)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 520, height: 600),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -74,6 +75,7 @@ final class OverlayWindowController: NSObject {
         window.isOpaque = false
         window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.98)
         window.contentView = hosting
+        window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
 
@@ -87,5 +89,36 @@ final class OverlayWindowController: NSObject {
 
 extension Notification.Name {
     static let overlayCloseRequested = Notification.Name("OverlayCloseRequested")
+}
+
+private struct ESCKeyCatcher: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = KeyCatcherView()
+        view.onEscape = {
+            NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+private final class KeyCatcherView: NSView {
+    var onEscape: (() -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.makeFirstResponder(self)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { // Escape key
+            onEscape?()
+        } else {
+            super.keyDown(with: event)
+        }
+    }
 }
 
