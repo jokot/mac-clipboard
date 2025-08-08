@@ -117,5 +117,10 @@ final class ClipboardStore: ObservableObject {
         let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
         items.removeAll { $0.date < sevenDaysAgo }
     }
+
+    // Manually clear all stored history items
+    func clearHistory() {
+        items.removeAll()
+    }
 }
 

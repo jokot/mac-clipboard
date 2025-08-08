@@ -5,6 +5,7 @@ struct ContentView: View {
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
     var onOpenInfo: () -> Void = {}
+    @State private var isShowingClearConfirm: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +21,11 @@ struct ContentView: View {
             Text("Clipboard History")
                 .font(.headline)
             Spacer()
+            Button(action: { isShowingClearConfirm = true }) {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 6)
             Button(action: { onOpenInfo() }) {
                 Image(systemName: "info.circle")
             }
@@ -36,6 +42,12 @@ struct ContentView: View {
             .buttonStyle(.plain)
         }
         .padding(12)
+        .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) { store.clearHistory() }
+        } message: {
+            Text("This will remove all clipboard items from the list.")
+        }
     }
 
     private var list: some View {
