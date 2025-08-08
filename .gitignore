@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+*.xcuserdatad
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# SwiftPM
+.swiftpm/
+.build/
+
+# Xcode project user data
+MacClipboard.xcodeproj/project.xcworkspace/xcuserdata/
+MacClipboard.xcodeproj/xcuserdata/
+MacClipboard.xcworkspace/xcuserdata/
+
+# Carthage/CocoaPods (not used, but ignore if added later)
+Carthage/
+Pods/
+
+# Other IDEs
+.idea/
+.vscode/
+.cursor/
+
+# Symbols
+*.dSYM
+

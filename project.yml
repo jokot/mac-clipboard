@@ -1,0 +1,23 @@
+name: MacClipboard
+
+options:
+  minimumXcodeGenVersion: 2.38.0
+
+settings:
+  base:
+    SWIFT_VERSION: 5.9
+    MACOSX_DEPLOYMENT_TARGET: 12.0
+
+targets:
+  MacClipboard:
+    type: application
+    platform: macOS
+    deploymentTarget: "12.0"
+    sources:
+      - path: App
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.jokot.MacClipboard
+      INFOPLIST_FILE: App/Info.plist
+      CURRENT_PROJECT_VERSION: 1
+      MARKETING_VERSION: 1.0
+
