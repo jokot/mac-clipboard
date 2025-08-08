@@ -75,3 +75,6 @@ shasum -a 256 dist/MacClip-*.dmg
 cat dist/MacClip-*.dmg.sha256
 ```
 
+
+## License
+MIT License. See `LICENSE` for details.
