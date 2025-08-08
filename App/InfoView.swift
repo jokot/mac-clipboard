@@ -45,7 +45,7 @@ struct InfoView: View {
     }
 
     private func appName() -> String {
-        Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "MacClipboard"
+        Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "MaClip"
     }
 }
 
@@ -84,7 +84,7 @@ final class InfoWindowController: NSObject {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "About MacClipboard"
+            window.title = "About MaClip"
             window.contentView = hosting
             window.isReleasedWhenClosed = false
             window.level = .modalPanel
