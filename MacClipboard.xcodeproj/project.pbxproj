@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		21A3056B5CED9B6284AF2C45 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14F76A9EF775CFF0184162A /* GlobalHotKey.swift */; };
 		23D9A90C97A6C71969D6AA05 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06CE04182770C4C8C0C8B8DE /* ContentView.swift */; };
+		365F00439623F76C93698CF6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28E73A0E46519683B5398A14 /* SettingsView.swift */; };
 		4D10273BEF3DACE8D1C25755 /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B1C4299FD0BBDD2FABA0AB3 /* ClipboardStore.swift */; };
+		7586CD6A92635ED90DF5FE7B /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 319AD086CBC1D7FE594F1051 /* AppSettings.swift */; };
 		831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19935DAD7985C6E587966A20 /* OverlayWindow.swift */; };
 		8F856EE18392B85109E8D8B3 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EB912FCD51C44F22B90A2D1 /* ClipboardItem.swift */; };
 		9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */; };
@@ -20,6 +22,8 @@
 		19935DAD7985C6E587966A20 /* OverlayWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayWindow.swift; sourceTree = "<group>"; };
 		1B1C4299FD0BBDD2FABA0AB3 /* ClipboardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
 		2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardApp.swift; sourceTree = "<group>"; };
+		28E73A0E46519683B5398A14 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		319AD086CBC1D7FE594F1051 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		7422559F8C0D95AA23979A71 /* MacClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EB912FCD51C44F22B90A2D1 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -30,6 +34,7 @@
 		91C5FBD624A1EA659780B058 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				319AD086CBC1D7FE594F1051 /* AppSettings.swift */,
 				2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */,
 				7EB912FCD51C44F22B90A2D1 /* ClipboardItem.swift */,
 				1B1C4299FD0BBDD2FABA0AB3 /* ClipboardStore.swift */,
@@ -37,6 +42,7 @@
 				E14F76A9EF775CFF0184162A /* GlobalHotKey.swift */,
 				C67FC149D427F9DDCBC6AA38 /* Info.plist */,
 				19935DAD7985C6E587966A20 /* OverlayWindow.swift */,
+				28E73A0E46519683B5398A14 /* SettingsView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -110,12 +116,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7586CD6A92635ED90DF5FE7B /* AppSettings.swift in Sources */,
 				9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */,
 				8F856EE18392B85109E8D8B3 /* ClipboardItem.swift in Sources */,
 				4D10273BEF3DACE8D1C25755 /* ClipboardStore.swift in Sources */,
 				23D9A90C97A6C71969D6AA05 /* ContentView.swift in Sources */,
 				21A3056B5CED9B6284AF2C45 /* GlobalHotKey.swift in Sources */,
 				831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */,
+				365F00439623F76C93698CF6 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

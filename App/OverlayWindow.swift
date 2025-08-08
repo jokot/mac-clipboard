@@ -6,6 +6,7 @@ final class OverlayWindowController: NSObject {
     private let store: ClipboardStore
     private let onCloseRequested: (() -> Void)?
     private var escMonitor: Any?
+    private var backgroundView: NSVisualEffectView?
 
     init(store: ClipboardStore, onCloseRequested: (() -> Void)? = nil) {
         self.store = store
@@ -55,6 +56,8 @@ final class OverlayWindowController: NSObject {
                 return event
             }
         }
+
+        applyTheme()
     }
 
     func hide() {
@@ -67,11 +70,13 @@ final class OverlayWindowController: NSObject {
     }
 
     private func createWindow() {
-        let content = ContentView { [weak self] item in
+        let content = ContentView(onSelect: { [weak self] item in
             self?.store.setPasteboard(to: item)
             self?.store.promote(item)
             self?.hide()
-        }
+        }, onOpenSettings: { [weak self] in
+            self?.openSettings()
+        })
         .environmentObject(store)
         .background(ESCKeyCatcher())
 
@@ -88,17 +93,67 @@ final class OverlayWindowController: NSObject {
         window.isMovableByWindowBackground = true
         window.level = .floating
         window.isOpaque = false
-        window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.98)
-        window.contentView = hosting
+        window.backgroundColor = .clear
+
+        let vev = NSVisualEffectView()
+        vev.material = .contentBackground
+        vev.state = .active
+        vev.blendingMode = .withinWindow
+        vev.translatesAutoresizingMaskIntoConstraints = false
+        window.contentView = vev
+
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        vev.addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: vev.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: vev.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: vev.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: vev.bottomAnchor)
+        ])
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
 
         self.window = window
+        self.backgroundView = vev
+        applyTheme()
     }
 
     @objc private func closeRequested() {
         hide()
+    }
+
+    private func openSettings() {
+        SettingsWindow.show(with: store)
+        // Apply theme to overlay content window when opened
+        applyTheme()
+
+        // Ensure settings appears above overlay
+        window?.level = .floating
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+extension Notification.Name {
+    static let themeChanged = Notification.Name("ThemeChanged")
+}
+
+private extension OverlayWindowController {
+    func applyTheme() {
+        guard let window else { return }
+        switch AppSettings.shared.theme {
+        case .system:
+            window.appearance = nil
+            backgroundView?.appearance = nil
+        case .light:
+            let a = NSAppearance(named: .aqua)
+            window.appearance = a
+            backgroundView?.appearance = a
+        case .dark:
+            let a = NSAppearance(named: .darkAqua)
+            window.appearance = a
+            backgroundView?.appearance = a
+        }
+        window.invalidateShadow()
     }
 }
 

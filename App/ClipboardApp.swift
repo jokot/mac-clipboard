@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = ClipboardStore()
     private var overlay: OverlayWindowController!
     private var statusItem: NSStatusItem?
+    private let settings = AppSettings.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         overlay = OverlayWindowController(store: store)
@@ -25,6 +26,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         GlobalHotKeyManager.shared.registerCommandControlV()
 
         setupStatusItem()
+
+        // Apply initial hotkey from settings
+        GlobalHotKeyManager.shared.unregister()
+        GlobalHotKeyManager.shared.register(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

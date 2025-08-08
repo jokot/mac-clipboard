@@ -26,7 +26,7 @@ final class GlobalHotKeyManager {
         }
     }
 
-    private func register(keyCode: UInt32, modifiers: UInt32) {
+    func register(keyCode: UInt32, modifiers: UInt32) {
         unregister()
 
         var hotKeyID = EventHotKeyID(signature: OSType(UInt32(truncatingIfNeeded: "MCLP".utf8.reduce(0) { ($0 << 8) | UInt32($1) })), id: UInt32(1))

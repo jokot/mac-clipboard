@@ -7,7 +7,7 @@ final class ClipboardStore: ObservableObject {
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private var isSettingPasteboard = false
-    private let maxItems = 100
+    private var maxItems: Int { AppSettings.shared.maxItems }
 
     init() {
         startMonitoring()
@@ -75,8 +75,9 @@ final class ClipboardStore: ObservableObject {
             return
         }
         items.insert(item, at: 0)
-        if items.count > maxItems {
-            items.removeLast(items.count - maxItems)
+        applyMaxItems(maxItems)
+        if AppSettings.shared.autoCleanEnabled {
+            autoClean()
         }
     }
 
@@ -103,6 +104,18 @@ final class ClipboardStore: ObservableObject {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         let moved = items.remove(at: index)
         items.insert(moved, at: 0)
+    }
+
+    func applyMaxItems(_ limit: Int) {
+        if items.count > limit {
+            items.removeLast(items.count - limit)
+        }
+    }
+
+    private func autoClean() {
+        // Simple policy: remove items older than 7 days
+        let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+        items.removeAll { $0.date < sevenDaysAgo }
     }
 }
 
