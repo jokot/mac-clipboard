@@ -12,10 +12,10 @@ A simple macOS clipboard history app built with SwiftUI.
 - [Download v1.2.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.2.0)
 
 ## Preview
-![macclip-screenshot.png](https://github.com/user-attachments/assets/0e37461b-2ef6-4bf8-a25f-f80eaffb356d)
+![macclip-screenshot.png](https://github.com/user-attachments/assets/b54cba75-8c7f-4851-a0a3-15915e09b24c)
 
 ### Copy Clipboard Demo
-https://github.com/user-attachments/assets/2c6abef8-dc2b-4bd5-a3d7-39fa5ad87ec1
+https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 
 ## Features
 - Captures copied text and images
