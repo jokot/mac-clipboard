@@ -49,6 +49,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(statusItemClicked)
             button.toolTip = "Show Clipboard (Ctrl+Cmd+V)"
         }
+
+        // Status bar menu with Quit option
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Show Clipboard", action: #selector(statusItemClicked), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettingsFromStatusItem), keyEquivalent: ","))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Quit MaClip", action: #selector(quitApp), keyEquivalent: "q"))
+        menu.items.forEach { $0.target = self }
+        statusItem?.menu = menu
     }
 
     @objc private func statusItemClicked() {
@@ -57,6 +66,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func openSettingsFromStatusItem() {
+        SettingsWindow.show(with: store)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 

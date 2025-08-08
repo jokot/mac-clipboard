@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var store: ClipboardStore
@@ -38,6 +39,11 @@ struct ContentView: View {
             .padding(.trailing, 6)
             Button(action: { onOpenSettings() }) {
                 Image(systemName: "gearshape.fill")
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 6)
+            Button(action: { NSApp.terminate(nil) }) {
+                Image(systemName: "power")
             }
             .buttonStyle(.plain)
             .padding(.trailing, 6)

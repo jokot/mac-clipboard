@@ -148,13 +148,14 @@ final class SettingsWindowController: NSObject {
             }, onSave: { [weak self] in
                 self?.window?.close()
             }).environmentObject(store)
-            let hosting = NSHostingView(rootView: view)
+
+            let controller = NSHostingController(rootView: view)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 460),
                                    styleMask: [.titled, .closable],
                                    backing: .buffered,
                                    defer: false)
             window.title = "Settings"
-            window.contentView = hosting
+            window.contentViewController = controller
             window.isReleasedWhenClosed = false
             window.level = .modalPanel
             self.window = window

@@ -13,6 +13,7 @@ final class OverlayWindowController: NSObject {
         self.onCloseRequested = onCloseRequested
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(closeRequested), name: .overlayCloseRequested, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(openSettingsRequested), name: .overlayOpenSettings, object: nil)
     }
 
     deinit {
@@ -130,6 +131,10 @@ final class OverlayWindowController: NSObject {
         hide()
     }
 
+    @objc private func openSettingsRequested() {
+        openSettings()
+    }
+
     private func openSettings() {
         SettingsWindow.show(with: store)
         // Apply theme to overlay content window when opened
@@ -175,6 +180,7 @@ extension Notification.Name {
     static let overlayMoveSelectionDown = Notification.Name("OverlayMoveSelectionDown")
     static let overlaySelectCurrentItem = Notification.Name("OverlaySelectCurrentItem")
     static let overlayDidShow = Notification.Name("OverlayDidShow")
+    static let overlayOpenSettings = Notification.Name("OverlayOpenSettings")
 }
 
 private struct ESCKeyCatcher: NSViewRepresentable {
@@ -210,6 +216,10 @@ private final class KeyCatcherView: NSView {
         case 36, 76: // Return or Keypad Enter
             NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
         default:
+            if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers, chars == "," {
+                NotificationCenter.default.post(name: .overlayOpenSettings, object: nil)
+                return
+            }
             super.keyDown(with: event)
         }
     }
