@@ -9,7 +9,7 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.1.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.1.0)
+- [Download v1.2.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.2.0)
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/0e37461b-2ef6-4bf8-a25f-f80eaffb356d)
@@ -21,6 +21,9 @@ https://github.com/user-attachments/assets/2c6abef8-dc2b-4bd5-a3d7-39fa5ad87ec1
 - Captures copied text and images
 - Global hotkey Command+Control+V to toggle a floating window
 - Click any entry to copy it back to the pasteboard
+ - Search clipboard history (text)
+ - Quit from overlay header or menu bar icon
+ - Command+, opens Settings when overlay is visible; Settings also available in menu bar
 
 ## Build from source
 1. Ensure you have Xcode and Homebrew installed.
