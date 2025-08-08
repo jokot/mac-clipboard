@@ -10,6 +10,16 @@ MaClip
   
 </p>
 
+<p align="center">
+  <img src="assets/macclip-screenshot.png" alt="MaClip screenshot" width="800" />
+</p>
+
+<p align="center">
+  <video src="assets/macclip-demo.mov" width="800" controls loop muted playsinline></video>
+  <br/>
+  <a href="assets/macclip-demo.mov">Demo video (MOV)</a>
+</p>
+
 A simple macOS clipboard history app built with SwiftUI.
 
 Features
