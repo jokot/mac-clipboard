@@ -5,6 +5,7 @@ final class OverlayWindowController: NSObject {
     private var window: NSWindow?
     private let store: ClipboardStore
     private let onCloseRequested: (() -> Void)?
+    private var escMonitor: Any?
 
     init(store: ClipboardStore, onCloseRequested: (() -> Void)? = nil) {
         self.store = store
@@ -44,10 +45,24 @@ final class OverlayWindowController: NSObject {
         }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+
+        if escMonitor == nil {
+            escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+                if event.keyCode == 53 { // Escape key
+                    self?.hide()
+                    return nil
+                }
+                return event
+            }
+        }
     }
 
     func hide() {
         window?.orderOut(nil)
+        if let escMonitor {
+            NSEvent.removeMonitor(escMonitor)
+            self.escMonitor = nil
+        }
         onCloseRequested?()
     }
 
