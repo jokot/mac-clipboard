@@ -15,7 +15,12 @@ struct MacClipboardApp: App {
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    SettingsWindowController.shared.show()
+                    let controller = SettingsWindowController.shared
+                    if let win = controller.window, win.isVisible, win.isKeyWindow {
+                        win.close()
+                    } else {
+                        controller.show()
+                    }
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }

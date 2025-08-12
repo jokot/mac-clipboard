@@ -216,7 +216,7 @@ class HotkeyView: NSView {
     }
 }
 
-class SettingsWindowController: NSWindowController {
+class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
     init() {
         let window = NSWindow(
@@ -231,6 +231,18 @@ class SettingsWindowController: NSWindowController {
         window.contentView = NSHostingView(rootView: SettingsView())
         
         super.init(window: window)
+        window.delegate = self
+        window.initialFirstResponder = window.contentView
+        
+        // Local monitor: catch Command+, while Settings is key and close
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, self.window?.isKeyWindow == true else { return event }
+            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
+                self.window?.close()
+                return nil
+            }
+            return event
+        }
     }
     
     required init?(coder: NSCoder) {
