@@ -8,7 +8,7 @@ final class OverlayWindowController: NSObject {
     private let onCloseRequested: (() -> Void)?
     private var escMonitor: Any?
     private var backgroundView: NSVisualEffectView?
-    private let settingsController = SettingsWindowController()
+    private let settingsController = SettingsWindowController.shared
 
     init(viewModel: ClipboardListViewModel, onCloseRequested: (() -> Void)? = nil) {
         self.viewModel = viewModel
@@ -62,6 +62,8 @@ final class OverlayWindowController: NSObject {
         }
 
         applyTheme()
+        // Ensure overlay window stays key when toggled via hotkey
+        window.level = .floating
     }
 
     func hide() {
@@ -138,14 +140,8 @@ final class OverlayWindowController: NSObject {
     }
 
     private func openSettings() {
-        // Reduce overlay level so settings can appear on top if needed
-        window?.level = .floating
         settingsController.show()
-        // Apply theme to overlay content window when opened
         applyTheme()
-
-        // Ensure app activation
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func openInfo() {

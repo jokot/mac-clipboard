@@ -217,6 +217,7 @@ class HotkeyView: NSView {
 }
 
 class SettingsWindowController: NSWindowController {
+    static let shared = SettingsWindowController()
     init() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
@@ -226,7 +227,7 @@ class SettingsWindowController: NSWindowController {
         )
         window.title = "Settings"
         window.center()
-        window.level = .modalPanel  // Higher level to appear above overlay
+        window.level = .normal  // Normal level for natural z-ordering
         window.contentView = NSHostingView(rootView: SettingsView())
         
         super.init(window: window)
@@ -238,7 +239,6 @@ class SettingsWindowController: NSWindowController {
     
     func show() {
         window?.makeKeyAndOrderFront(nil)
-        window?.orderFrontRegardless()  // Force to front
         NSApp.activate(ignoringOtherApps: true)
     }
 }

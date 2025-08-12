@@ -6,8 +6,20 @@ struct MacClipboardApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        // No main window; shown via global hotkey instead
-        Settings { SettingsView() }
+        // Override the settings command to prevent automatic window creation
+        Settings {
+            // This will be handled by our custom command below
+            EmptyView()
+        }
+        .handlesExternalEvents(matching: Set<String>())
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    SettingsWindowController.shared.show()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
     }
 }
 
@@ -19,6 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Prevent automatic window creation
+        NSApp.setActivationPolicy(.prohibited)
+        
         overlay = OverlayWindowController(viewModel: viewModel)
 
         HotKeyService.shared.onPressed = { [weak self] in
@@ -29,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotKeyService.shared.register(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
 
         setupStatusItem()
+        
+        // Allow app to be activated when needed
+        NSApp.setActivationPolicy(.accessory)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -70,9 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     @objc private func openSettingsFromStatusItem() {
-        let controller = SettingsWindowController()
-        controller.show()
-        NSApp.activate(ignoringOtherApps: true)
+        SettingsWindowController.shared.show()
     }
 }
 
