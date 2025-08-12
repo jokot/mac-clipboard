@@ -37,6 +37,34 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 
 3. Select the "MacClipboard" scheme and run. (Display name appears as "MaClip".)
 
+## Data Persistence
+
+MaClip implements comprehensive persistence for both text and image clipboard entries:
+
+### Storage Location
+- **Base directory**: `~/Library/Application Support/MaClip/`
+- **Metadata**: `history.json` stores clipboard entry references and metadata
+- **Images**: PNG files stored in `Images/` subdirectory, named by UUID (e.g., `{uuid}.png`)
+
+### Data Model
+Each clipboard entry (`ClipboardItem`) contains:
+- `id`: Unique UUID identifier
+- `date`: Timestamp when copied
+- `content`: Either `.text(String)` or `.image(NSImage)`
+
+### Persistence Workflow
+- **Saving**: Items are converted to JSON records with image references. Images are saved as PNG files separately.
+- **Loading**: At startup, metadata is read from JSON and images are reconstructed from PNG files. Missing image files are gracefully skipped.
+- **Timing**: Data is saved synchronously on app termination and asynchronously on list changes (new items, promotions, deletions, etc.).
+
+### Data Management
+- **Deduplication**: Prevents duplicate entries by comparing text strings or PNG data bytes
+- **Retention**: Configurable max items limit with automatic truncation
+- **Auto-cleanup**: Removes items older than 7 days during new item insertion
+- **Atomic writes**: Reduces risk of corrupted files during save operations
+
+*Implementation files: `ClipboardRepository.swift`, `ClipboardItem.swift`, `ClipboardListViewModel.swift`, `ClipboardMonitor.swift`*
+
 ## Notes
 - The app uses Carbon's RegisterEventHotKey API, so no special permissions are required for the global hotkey.
 - The app is not sandboxed and is intended for personal use/development. For Mac App Store distribution, additional work is required.
