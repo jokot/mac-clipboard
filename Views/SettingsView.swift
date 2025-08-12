@@ -1,9 +1,13 @@
 import SwiftUI
 import AppKit
+import Carbon.HIToolbox
 
 struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
     @StateObject private var viewModel = ClipboardListViewModel()
+    @State private var isCapturingHotkey = false
+    @State private var newHotkeyModifiers: UInt32 = 0
+    @State private var newHotkeyKeyCode: UInt32 = 0
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -19,10 +23,10 @@ struct SettingsView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Button("Change Hotkey") {
-                        // Not implemented in this MVVM refactor step
+                    Button(isCapturingHotkey ? "Press new hotkey..." : "Change Hotkey") {
+                        startCapturingHotkey()
                     }
-                    .disabled(true)
+                    .foregroundColor(isCapturingHotkey ? .orange : .blue)
                     
                     Text("Press the hotkey to show the clipboard overlay.")
                         .font(.caption)
@@ -96,6 +100,9 @@ struct SettingsView: View {
         }
         .padding(24)
         .frame(width: 480, height: 400)
+        .background(HotkeyCapturingView(isCapturing: $isCapturingHotkey) { keyCode, modifiers in
+            updateHotkey(keyCode: keyCode, modifiers: modifiers)
+        })
     }
     
     private var hotKeyDescription: String {
@@ -118,6 +125,24 @@ struct SettingsView: View {
         return components.joined()
     }
     
+    private func startCapturingHotkey() {
+        isCapturingHotkey = true
+    }
+    
+    private func updateHotkey(keyCode: UInt32, modifiers: UInt32) {
+        // Unregister old hotkey
+        HotKeyService.shared.unregister()
+        
+        // Update settings
+        settings.hotkeyKeyCode = keyCode
+        settings.hotkeyModifiers = modifiers
+        
+        // Register new hotkey
+        HotKeyService.shared.register(keyCode: keyCode, modifiers: modifiers)
+        
+        isCapturingHotkey = false
+    }
+    
     private func applyTheme(_ theme: AppTheme) {
         switch theme {
         case .light:
@@ -127,6 +152,67 @@ struct SettingsView: View {
         case .system:
             NSApp.appearance = nil
         }
+    }
+}
+
+// MARK: - Hotkey Capturing View
+struct HotkeyCapturingView: NSViewRepresentable {
+    @Binding var isCapturing: Bool
+    let onCaptured: (UInt32, UInt32) -> Void
+    
+    func makeNSView(context: Context) -> NSView {
+        let view = HotkeyView()
+        view.onHotkeyCaptured = onCaptured
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let hotkeyView = nsView as? HotkeyView {
+            hotkeyView.isCapturing = isCapturing
+        }
+    }
+}
+
+class HotkeyView: NSView {
+    var isCapturing = false {
+        didSet {
+            if isCapturing {
+                window?.makeFirstResponder(self)
+            }
+        }
+    }
+    
+    var onHotkeyCaptured: ((UInt32, UInt32) -> Void)?
+    
+    override var acceptsFirstResponder: Bool { isCapturing }
+    
+    override func keyDown(with event: NSEvent) {
+        guard isCapturing else {
+            super.keyDown(with: event)
+            return
+        }
+        
+        // Don't capture single modifier keys or escape
+        if event.keyCode == 53 { // Escape
+            isCapturing = false
+            return
+        }
+        
+        let modifiers = event.modifierFlags
+        var carbonModifiers: UInt32 = 0
+        
+        if modifiers.contains(.command) { carbonModifiers |= UInt32(cmdKey) }
+        if modifiers.contains(.control) { carbonModifiers |= UInt32(controlKey) }
+        if modifiers.contains(.option) { carbonModifiers |= UInt32(optionKey) }
+        if modifiers.contains(.shift) { carbonModifiers |= UInt32(shiftKey) }
+        
+        // Require at least one modifier
+        guard carbonModifiers != 0 else {
+            NSSound.beep()
+            return
+        }
+        
+        onHotkeyCaptured?(UInt32(event.keyCode), carbonModifiers)
     }
 }
 
@@ -140,6 +226,7 @@ class SettingsWindowController: NSWindowController {
         )
         window.title = "Settings"
         window.center()
+        window.level = .modalPanel  // Higher level to appear above overlay
         window.contentView = NSHostingView(rootView: SettingsView())
         
         super.init(window: window)
@@ -151,10 +238,12 @@ class SettingsWindowController: NSWindowController {
     
     func show() {
         window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()  // Force to front
         NSApp.activate(ignoringOtherApps: true)
     }
 }
 
+@MainActor
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()

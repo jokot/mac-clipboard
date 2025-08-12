@@ -7,7 +7,7 @@ struct MacClipboardApp: App {
 
     var body: some Scene {
         // No main window; shown via global hotkey instead
-        Settings { EmptyView() }
+        Settings { SettingsView() }
     }
 }
 
