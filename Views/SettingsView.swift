@@ -227,7 +227,7 @@ class SettingsWindowController: NSWindowController {
         )
         window.title = "Settings"
         window.center()
-        window.level = .normal  // Normal level for natural z-ordering
+        window.level = .floating  // Ensure it appears above the overlay window
         window.contentView = NSHostingView(rootView: SettingsView())
         
         super.init(window: window)
