@@ -1,14 +1,25 @@
 import SwiftUI
 import AppKit
+import Combine
+import Foundation
 
 struct ContentView: View {
-    @EnvironmentObject var store: ClipboardStore
+    @ObservedObject var viewModel: ClipboardListViewModel
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
     var onOpenInfo: () -> Void = {}
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
-    @State private var searchText: String = ""
+
+    init(viewModel: ClipboardListViewModel,
+         onSelect: @escaping (ClipboardItem) -> Void = { _ in },
+         onOpenSettings: @escaping () -> Void = {},
+         onOpenInfo: @escaping () -> Void = {}) {
+        self.viewModel = viewModel
+        self.onSelect = onSelect
+        self.onOpenSettings = onOpenSettings
+        self.onOpenInfo = onOpenInfo
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,7 +34,7 @@ struct ContentView: View {
         HStack {
             Text("Clipboard History")
                 .font(.headline)
-            TextField("Search", text: $searchText)
+            TextField("Search", text: $viewModel.searchText)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(maxWidth: 240)
             Spacer()
@@ -55,7 +66,7 @@ struct ContentView: View {
         .padding(12)
         .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
             Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) { store.clearHistory() }
+            Button("Clear", role: .destructive) { viewModel.clearHistory() }
         } message: {
             Text("This will remove all clipboard items from the list.")
         }
@@ -65,9 +76,10 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8) {
-                    let items = filteredItems
-                    ForEach(Array(items.enumerated()), id: \.1.id) { index, item in
-                        ClipboardItemRow(item: item, onSelect: onSelect, isSelected: index == selectedIndex)
+                    let items = viewModel.filteredItems
+                    ForEach(Array(items.indices), id: \.self) { index in
+                        let item = items[index]
+                        ClipboardItemRow(item: item, onSelect: onSelect, onRemove: { viewModel.remove(item) }, isSelected: index == selectedIndex)
                             .id(item.id)
                         Divider()
                     }
@@ -76,9 +88,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
                 // Reset selection to top and scroll to the first item
-                searchText = ""
+                viewModel.searchText = ""
                 selectedIndex = 0
-                let items = filteredItems
+                let items = viewModel.filteredItems
                 guard let first = items.first else { return }
                 DispatchQueue.main.async {
                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -90,65 +102,21 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionDown)) { _ in moveSelection(1) }
             .onReceive(NotificationCenter.default.publisher(for: .overlaySelectCurrentItem)) { _ in selectCurrent() }
             .onChange(of: selectedIndex) { _ in
-                let items = filteredItems
+                let items = viewModel.filteredItems
                 guard items.indices.contains(selectedIndex) else { return }
                 withAnimation(.easeInOut(duration: 0.12)) {
                     proxy.scrollTo(items[selectedIndex].id, anchor: .center)
                 }
             }
-            .onChange(of: searchText) { _ in
+            .onChange(of: viewModel.searchText) { _ in
                 selectedIndex = 0
-                let items = filteredItems
+                let items = viewModel.filteredItems
                 guard let first = items.first else { return }
                 DispatchQueue.main.async {
                     withAnimation(.easeInOut(duration: 0.12)) {
                         proxy.scrollTo(first.id, anchor: .top)
                     }
                 }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func itemRow(for item: ClipboardItem) -> some View {
-        switch item.content {
-        case .text(let string):
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "doc.on.clipboard")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(preview(for: string))
-                        .font(.body)
-                        .lineLimit(4)
-                    Text(item.date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            }
-        case .image(let image):
-            HStack(alignment: .center, spacing: 10) {
-                Image(systemName: "photo")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 6) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 360, maxHeight: 200)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                        )
-                    Text(item.date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
             }
         }
     }
@@ -163,46 +131,28 @@ struct ContentView: View {
 
 private extension ContentView {
     func moveSelection(_ delta: Int) {
-        let count = filteredItems.count
+        let count = viewModel.filteredItems.count
         guard count > 0 else { selectedIndex = 0; return }
         selectedIndex = max(0, min(count - 1, selectedIndex + delta))
     }
 
     func selectCurrent() {
-        let items = filteredItems
+        let items = viewModel.filteredItems
         guard items.indices.contains(selectedIndex) else { return }
         let item = items[selectedIndex]
         onSelect(item)
     }
 }
 
-// MARK: - Filtering
-private extension ContentView {
-    var filteredItems: [ClipboardItem] {
-        let items = store.allItems()
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return items }
-        let loweredQuery = query.lowercased()
-        return items.filter { item in
-            switch item.content {
-            case .text(let text):
-                return text.lowercased().contains(loweredQuery)
-            case .image:
-                return false
-            }
-        }
-    }
-}
-
 // MARK: - Row with hover handling
 
-    private struct ClipboardItemRow: View {
-        @EnvironmentObject var store: ClipboardStore
-        let item: ClipboardItem
-        let onSelect: (ClipboardItem) -> Void
-        var isSelected: Bool = false
+private struct ClipboardItemRow: View {
+    let item: ClipboardItem
+    let onSelect: (ClipboardItem) -> Void
+    let onRemove: () -> Void
+    var isSelected: Bool = false
 
-        @State private var isHovered: Bool = false
+    @State private var isHovered: Bool = false
 
     var body: some View {
         content
@@ -239,7 +189,7 @@ private extension ContentView {
                 }
                 Spacer()
                 if isHovered {
-                    Button(action: { store.remove(item) }) {
+                    Button(action: { onRemove() }) {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
@@ -267,7 +217,7 @@ private extension ContentView {
                 }
                 Spacer()
                 if isHovered {
-                    Button(action: { store.remove(item) }) {
+                    Button(action: { onRemove() }) {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
@@ -284,9 +234,9 @@ private extension ContentView {
     }
 }
 
+@MainActor
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().environmentObject(ClipboardStore())
+        ContentView(viewModel: ClipboardListViewModel())
     }
 }
-

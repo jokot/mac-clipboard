@@ -1,15 +1,17 @@
 import Cocoa
 import SwiftUI
 
+@MainActor
 final class OverlayWindowController: NSObject {
     private var window: NSWindow?
-    private let store: ClipboardStore
+    private let viewModel: ClipboardListViewModel
     private let onCloseRequested: (() -> Void)?
     private var escMonitor: Any?
     private var backgroundView: NSVisualEffectView?
+    private let settingsController = SettingsWindowController()
 
-    init(store: ClipboardStore, onCloseRequested: (() -> Void)? = nil) {
-        self.store = store
+    init(viewModel: ClipboardListViewModel, onCloseRequested: (() -> Void)? = nil) {
+        self.viewModel = viewModel
         self.onCloseRequested = onCloseRequested
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(closeRequested), name: .overlayCloseRequested, object: nil)
@@ -72,16 +74,16 @@ final class OverlayWindowController: NSObject {
     }
 
     private func createWindow() {
-        let content = ContentView(onSelect: { [weak self] item in
-            self?.store.setPasteboard(to: item)
-            self?.store.promote(item)
-            self?.hide()
+        let content = ContentView(viewModel: viewModel, onSelect: { [weak self] item in
+            guard let self else { return }
+            self.viewModel.setPasteboard(to: item)
+            self.viewModel.promote(item)
+            self.hide()
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
         }, onOpenInfo: { [weak self] in
             self?.openInfo()
         })
-        .environmentObject(store)
         .background(ESCKeyCatcher())
 
         let hosting = FirstMouseHostingView(rootView: content)
@@ -136,7 +138,7 @@ final class OverlayWindowController: NSObject {
     }
 
     private func openSettings() {
-        SettingsWindow.show(with: store)
+        settingsController.show()
         // Apply theme to overlay content window when opened
         applyTheme()
 

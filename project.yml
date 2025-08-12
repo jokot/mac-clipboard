@@ -15,6 +15,11 @@ targets:
     deploymentTarget: "12.0"
     sources:
       - path: App
+      - path: Models
+      - path: ViewModels
+      - path: Views
+      - path: Services
+      - path: Utilities
       - path: App/AppIcon.icns
         type: file
     settings:

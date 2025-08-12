@@ -12,28 +12,27 @@ struct MacClipboardApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let store = ClipboardStore()
+    @MainActor private let viewModel = ClipboardListViewModel()
     private var overlay: OverlayWindowController!
     private var statusItem: NSStatusItem?
     private let settings = AppSettings.shared
 
+    @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
-        overlay = OverlayWindowController(store: store)
+        overlay = OverlayWindowController(viewModel: viewModel)
 
-        GlobalHotKeyManager.shared.onPressed = { [weak self] in
-            self?.overlay.toggle()
+        HotKeyService.shared.onPressed = { [weak self] in
+            Task { @MainActor in
+                self?.overlay.toggle()
+            }
         }
-        GlobalHotKeyManager.shared.registerCommandControlV()
+        HotKeyService.shared.register(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
 
         setupStatusItem()
-
-        // Apply initial hotkey from settings
-        GlobalHotKeyManager.shared.unregister()
-        GlobalHotKeyManager.shared.register(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        GlobalHotKeyManager.shared.unregister()
+        HotKeyService.shared.unregister()
     }
 
     private func setupStatusItem() {
@@ -60,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.menu = menu
     }
 
+    @MainActor
     @objc private func statusItemClicked() {
         overlay.toggle()
     }
@@ -68,8 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 
+    @MainActor
     @objc private func openSettingsFromStatusItem() {
-        SettingsWindow.show(with: store)
+        let controller = SettingsWindowController()
+        controller.show()
         NSApp.activate(ignoringOtherApps: true)
     }
 }
