@@ -9,6 +9,7 @@ protocol ClipboardMonitorProtocol: AnyObject {
 
 final class ClipboardMonitor: ClipboardMonitorProtocol {
     private var timer: Timer?
+    private var debounceTimer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private var isSettingPasteboard = false
     private let subject = PassthroughSubject<ClipboardItem, Never>()
@@ -28,6 +29,8 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
     func stop() {
         timer?.invalidate()
         timer = nil
+        debounceTimer?.invalidate()
+        debounceTimer = nil
     }
 
     private func checkPasteboard() {
@@ -43,6 +46,16 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
         guard currentChangeCount != lastChangeCount else { return }
         lastChangeCount = currentChangeCount
 
+        // Cancel any existing debounce timer
+        debounceTimer?.invalidate()
+        
+        // Start a new debounce timer to handle rapid successive changes
+        debounceTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+            self?.processPasteboardChange(from: pasteboard)
+        }
+    }
+    
+    private func processPasteboardChange(from pasteboard: NSPasteboard) {
         if let item = readCurrentPasteboardItem(from: pasteboard) {
             subject.send(item)
         }

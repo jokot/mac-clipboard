@@ -5,6 +5,7 @@ protocol ClipboardRepositoryProtocol {
     func loadFromDisk() -> [ClipboardItem]
     func saveToDisk(items: [ClipboardItem])
     func saveToDiskAsync(items: [ClipboardItem])
+    func clearAllFiles()
 }
 
 final class ClipboardRepository: ClipboardRepositoryProtocol {
@@ -15,6 +16,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let text: String?
         let imageFilename: String?
     }
+
+    // Serialize all disk operations to avoid race conditions and out-of-order writes
+    private let saveQueue = DispatchQueue(label: "com.macclip.repository.save", qos: .utility)
     
     func loadFromDisk() -> [ClipboardItem] {
         guard let url = dataFileURL(), let data = try? Data(contentsOf: url) else { return [] }
@@ -22,7 +26,6 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         guard let records = try? decoder.decode([PersistRecord].self, from: data) else { return [] }
         
         var loaded: [ClipboardItem] = []
-        let fm = FileManager.default
         let imagesDir = imagesDirectory()
         
         for rec in records {
@@ -46,16 +49,27 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
     }
     
     func saveToDiskAsync(items: [ClipboardItem]) {
-        DispatchQueue.global(qos: .utility).async { [self] in
-            self.saveToDisk(items: items)
+        let snapshot = items
+        saveQueue.async { [weak self] in
+            self?.performSave(items: snapshot)
         }
     }
 
     func saveToDisk(items: [ClipboardItem]) {
+        let snapshot = items
+        saveQueue.sync {
+            self.performSave(items: snapshot)
+        }
+    }
+
+    // Actual save implementation executed on saveQueue only
+    private func performSave(items: [ClipboardItem]) {
         guard let dataURL = dataFileURL() else { return }
         var records: [PersistRecord] = []
         let imagesDir = imagesDirectory()
-
+        let fm = FileManager.default
+        var savedImageHashes: [Data: String] = [:]  // Track saved images by their data hash
+        
         for item in items {
             switch item.content {
             case .text(let text):
@@ -64,9 +78,20 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 guard let imagesDir else { continue }
                 let filename = item.id.uuidString + ".png"
                 let fileURL = imagesDir.appendingPathComponent(filename)
-                // Write PNG
-                if let data = image.pngData() {
-                    try? data.write(to: fileURL, options: .atomic)
+                
+                // Get PNG data for comparison
+                guard let pngData = image.pngData() else { continue }
+                
+                // Check if we already saved this exact image data
+                if let existingFilename = savedImageHashes[pngData] {
+                    // Reuse existing file
+                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: existingFilename))
+                } else {
+                    // Write new PNG file
+                    if !fm.fileExists(atPath: fileURL.path) {
+                        try? pngData.write(to: fileURL, options: .atomic)
+                    }
+                    savedImageHashes[pngData] = filename
                     records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename))
                 }
             }
@@ -76,6 +101,36 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         encoder.outputFormatting = [.prettyPrinted]
         if let data = try? encoder.encode(records) {
             try? data.write(to: dataURL, options: .atomic)
+        }
+        
+        // Cleanup: remove any image files not referenced by current records
+        if let imagesDir,
+           let contents = try? fm.contentsOfDirectory(at: imagesDir, includingPropertiesForKeys: nil, options: []) {
+            let referenced = Set(records.compactMap { $0.imageFilename })
+            for url in contents {
+                if !referenced.contains(url.lastPathComponent) {
+                    try? fm.removeItem(at: url)
+                }
+            }
+        }
+    }
+
+    func clearAllFiles() {
+        // Ensure no save is running while we clear files
+        saveQueue.sync {
+            let fm = FileManager.default
+            // Remove history.json
+            if let dataURL = dataFileURL(), fm.fileExists(atPath: dataURL.path) {
+                try? fm.removeItem(at: dataURL)
+            }
+            // Remove all images in Images directory
+            if let imagesDir = imagesDirectory(), fm.fileExists(atPath: imagesDir.path) {
+                if let contents = try? fm.contentsOfDirectory(at: imagesDir, includingPropertiesForKeys: nil, options: []) {
+                    for url in contents {
+                        try? fm.removeItem(at: url)
+                    }
+                }
+            }
         }
     }
 }

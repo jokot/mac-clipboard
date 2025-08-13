@@ -29,7 +29,7 @@ struct MacClipboardApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    @MainActor private let viewModel = ClipboardListViewModel()
+    @MainActor let viewModel = ClipboardListViewModel()
     private var overlay: OverlayWindowController!
     private var statusItem: NSStatusItem?
     private let settings = AppSettings.shared

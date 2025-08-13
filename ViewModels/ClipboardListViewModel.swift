@@ -15,8 +15,20 @@ final class ClipboardListViewModel: ObservableObject {
         self.repository = repository
         self.monitor = monitor
 
-        // Load initial
-        self.items = repository.loadFromDisk()
+        // Load initial once
+        let loadedItems = repository.loadFromDisk()
+        self.items = loadedItems
+        
+        // Apply current settings limits immediately after loading
+        applyMaxItems(AppSettings.shared.maxItems)
+        if AppSettings.shared.autoCleanEnabled { 
+            autoClean() 
+        }
+        
+        // Save the trimmed list back to disk if it was modified
+        if items.count != loadedItems.count {
+            repository.saveToDisk(items: items)
+        }
 
         // Start monitoring
         monitor.itemPublisher
@@ -27,11 +39,14 @@ final class ClipboardListViewModel: ObservableObject {
             .store(in: &cancellables)
         monitor.start()
 
-        // Save on termination
-        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
-            guard let self else { return }
-            self.repository.saveToDisk(items: self.items)
-        }
+        // Save on termination via Combine
+        NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.repository.saveToDisk(items: self.items)
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -41,7 +56,9 @@ final class ClipboardListViewModel: ObservableObject {
     // Intents
     func clearHistory() {
         items.removeAll()
-        repository.saveToDiskAsync(items: items)
+        repository.clearAllFiles()
+        // Use synchronous save for critical operations to avoid race conditions
+        repository.saveToDisk(items: items)
     }
 
     func remove(_ item: ClipboardItem) {
@@ -73,7 +90,7 @@ final class ClipboardListViewModel: ObservableObject {
         if items.count > limit {
             items.removeLast(items.count - limit)
         }
-        repository.saveToDiskAsync(items: items)
+        // Remove the save here - let caller handle saving
     }
 
     // Derived data
@@ -93,10 +110,13 @@ final class ClipboardListViewModel: ObservableObject {
 
     // Private
     private func append(_ item: ClipboardItem) {
-        if let last = items.first, last == item { return }
+        if let last = items.first, last == item { 
+            return 
+        }
         items.insert(item, at: 0)
         applyMaxItems(AppSettings.shared.maxItems)
         if AppSettings.shared.autoCleanEnabled { autoClean() }
+        // Only save once after all modifications
         repository.saveToDiskAsync(items: items)
     }
 

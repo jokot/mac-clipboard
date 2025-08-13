@@ -8,7 +8,6 @@ final class OverlayWindowController: NSObject {
     private let onCloseRequested: (() -> Void)?
     private var escMonitor: Any?
     private var backgroundView: NSVisualEffectView?
-    private let settingsController = SettingsWindowController.shared
 
     init(viewModel: ClipboardListViewModel, onCloseRequested: (() -> Void)? = nil) {
         self.viewModel = viewModel
@@ -140,7 +139,7 @@ final class OverlayWindowController: NSObject {
     }
 
     private func openSettings() {
-        settingsController.show()
+        SettingsWindowController.shared.show()
         applyTheme()
     }
 

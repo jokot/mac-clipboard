@@ -4,7 +4,7 @@ import Carbon.HIToolbox
 
 struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
-    @StateObject private var viewModel = ClipboardListViewModel()
+    @ObservedObject var viewModel: ClipboardListViewModel
     @State private var isCapturingHotkey = false
     @State private var newHotkeyModifiers: UInt32 = 0
     @State private var newHotkeyKeyCode: UInt32 = 0
@@ -228,7 +228,8 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.title = "Settings"
         window.center()
         window.level = .floating  // Ensure it appears above the overlay window
-        window.contentView = NSHostingView(rootView: SettingsView())
+        // Do not resolve the shared viewModel here to avoid startup ordering issues
+        window.contentViewController = NSHostingController(rootView: EmptyView())
         
         super.init(window: window)
         window.delegate = self
@@ -250,6 +251,14 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func show() {
+        // Lazily bind the shared viewModel when showing the window
+        if let appDelegate = NSApp.delegate as? AppDelegate {
+            window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: appDelegate.viewModel))
+        } else {
+            // Fallback: create a new viewModel if delegate casting fails
+            print("Warning: Could not access AppDelegate, creating fallback viewModel")
+            window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: ClipboardListViewModel()))
+        }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -258,6 +267,6 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
 @MainActor
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
-        SettingsView()
+        SettingsView(viewModel: ClipboardListViewModel())
     }
 }
