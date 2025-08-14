@@ -114,13 +114,13 @@ final class InfoWindowController: NSObject {
             window.title = "About MaClip"
             window.contentViewController = hosting
             window.isReleasedWhenClosed = false
-            window.level = .modalPanel
+            // Match Settings window behavior: use floating level so order can change among app windows
+            window.level = .floating
             self.window = window
         }
         guard let window else { return }
         window.center()
         NSApp.activate(ignoringOtherApps: true)
-        window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
     }
 }
