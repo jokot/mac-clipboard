@@ -82,8 +82,6 @@ final class OverlayWindowController: NSObject {
             self.hide()
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
-        }, onOpenInfo: { [weak self] in
-            self?.openInfo()
         })
         .background(ESCKeyCatcher())
 
@@ -141,11 +139,6 @@ final class OverlayWindowController: NSObject {
     private func openSettings() {
         SettingsWindowController.shared.show()
         applyTheme()
-    }
-
-    private func openInfo() {
-        InfoWindow.show()
-        NSApp.activate(ignoringOtherApps: true)
     }
 }
 extension Notification.Name {

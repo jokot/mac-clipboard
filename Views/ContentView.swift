@@ -7,18 +7,15 @@ struct ContentView: View {
     @ObservedObject var viewModel: ClipboardListViewModel
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
-    var onOpenInfo: () -> Void = {}
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
 
     init(viewModel: ClipboardListViewModel,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
-         onOpenSettings: @escaping () -> Void = {},
-         onOpenInfo: @escaping () -> Void = {}) {
+         onOpenSettings: @escaping () -> Void = {}) {
         self.viewModel = viewModel
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
-        self.onOpenInfo = onOpenInfo
     }
 
     var body: some View {
@@ -40,11 +37,6 @@ struct ContentView: View {
             Spacer()
             Button(action: { isShowingClearConfirm = true }) {
                 Image(systemName: "trash")
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 6)
-            Button(action: { onOpenInfo() }) {
-                Image(systemName: "info.circle")
             }
             .buttonStyle(.plain)
             .padding(.trailing, 6)
