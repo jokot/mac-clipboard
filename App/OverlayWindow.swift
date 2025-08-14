@@ -13,8 +13,6 @@ final class OverlayWindowController: NSObject {
     // Track the previously active app to restore focus and paste into it
     private var previousActiveApp: NSRunningApplication?
     internal var autoPastePending: Bool = false  // Make this internal so KeyCatcherView can access
-    // Observer to know exactly when the previous app becomes active
-    private var activationObserver: Any?
 
     init(viewModel: ClipboardListViewModel, onCloseRequested: (() -> Void)? = nil) {
         self.viewModel = viewModel
@@ -202,34 +200,7 @@ private extension OverlayWindowController {
     
     func reactivatePreviousAppAndPaste() {
         guard let app = previousActiveApp else { return }
-        // Remove any previous observer if still present
-        if let obs = activationObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(obs)
-            activationObserver = nil
-        }
-        let center = NSWorkspace.shared.notificationCenter
-        let targetPID = app.processIdentifier
-        // Observe when the target app becomes active, then paste immediately
-        activationObserver = center.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
-            guard let self = self else { return }
-            let running: NSRunningApplication? = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication) ?? (note.userInfo?["NSWorkspaceApplicationKey"] as? NSRunningApplication)
-            if let running = running, running.processIdentifier == targetPID {
-                center.removeObserver(self.activationObserver as Any)
-                self.activationObserver = nil
-                self.sendPasteKeystroke()
-            }
-        }
-        // Activate the previous app now
-        app.activate(options: [.activateIgnoringOtherApps])
-        // Fallback: if activation notification doesn't arrive shortly, paste anyway
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self = self else { return }
-            if self.activationObserver != nil {
-                center.removeObserver(self.activationObserver as Any)
-                self.activationObserver = nil
-                self.sendPasteKeystroke()
-            }
-        }
+        AppFocusService.shared.switchToAppAndPaste(app)
     }
     
     func sendPasteKeystroke() {
@@ -246,7 +217,7 @@ private extension OverlayWindowController {
     
     func reactivatePreviousAppOnly() {
         guard let app = previousActiveApp else { return }
-        app.activate(options: [.activateIgnoringOtherApps])
+        AppFocusService.shared.switchToAppOnly(app)
     }
 
     func hideImmediatelyRefocusOnly() {
