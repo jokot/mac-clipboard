@@ -102,5 +102,3 @@ enum InfoWindow {
     private static var controller = InfoWindowController()
     static func show() { controller.show() }
 }
-
-

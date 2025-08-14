@@ -6,9 +6,15 @@ enum ClipboardItemContent {
 }
 
 struct ClipboardItem: Identifiable {
-    let id = UUID()
+    let id: UUID
     let date: Date
     let content: ClipboardItemContent
+
+    init(id: UUID = UUID(), date: Date, content: ClipboardItemContent) {
+        self.id = id
+        self.date = date
+        self.content = content
+    }
 }
 
 extension ClipboardItem: Equatable {
@@ -33,4 +39,3 @@ extension NSImage {
         return bitmap.representation(using: .png, properties: [:])
     }
 }
-

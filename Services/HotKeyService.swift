@@ -1,8 +1,14 @@
 import Cocoa
 import Carbon.HIToolbox
 
-final class GlobalHotKeyManager {
-    static let shared = GlobalHotKeyManager()
+protocol HotKeyServiceProtocol: AnyObject {
+    var onPressed: (() -> Void)? { get set }
+    func register(keyCode: UInt32, modifiers: UInt32)
+    func unregister()
+}
+
+final class HotKeyService: HotKeyServiceProtocol {
+    static let shared = HotKeyService()
 
     var onPressed: (() -> Void)?
 
@@ -10,21 +16,6 @@ final class GlobalHotKeyManager {
     private var eventHandlerRef: EventHandlerRef?
 
     private init() {}
-
-    func registerCommandControlV() {
-        register(keyCode: UInt32(kVK_ANSI_V), modifiers: UInt32(controlKey | cmdKey))
-    }
-
-    func unregister() {
-        if let hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
-        }
-        if let eventHandlerRef {
-            RemoveEventHandler(eventHandlerRef)
-            self.eventHandlerRef = nil
-        }
-    }
 
     func register(keyCode: UInt32, modifiers: UInt32) {
         unregister()
@@ -38,7 +29,7 @@ final class GlobalHotKeyManager {
             let status = GetEventParameter(eventRef, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
             if status == noErr {
                 if hotKeyID.id == 1 {
-                    GlobalHotKeyManager.shared.onPressed?()
+                    HotKeyService.shared.onPressed?()
                 }
             }
             return noErr
@@ -54,5 +45,15 @@ final class GlobalHotKeyManager {
             NSLog("Failed to register hotkey: \(regStatus)")
         }
     }
-}
 
+    func unregister() {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.hotKeyRef = nil
+        }
+        if let eventHandlerRef {
+            RemoveEventHandler(eventHandlerRef)
+            self.eventHandlerRef = nil
+        }
+    }
+}

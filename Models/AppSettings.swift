@@ -111,4 +111,3 @@ extension UInt32 {
     var containsAlt: Bool { (self & UInt32(optionKey)) != 0 }
     var containsShift: Bool { (self & UInt32(shiftKey)) != 0 }
 }
-

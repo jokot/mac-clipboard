@@ -15,6 +15,11 @@ targets:
     deploymentTarget: "12.0"
     sources:
       - path: App
+      - path: Models
+      - path: ViewModels
+      - path: Views
+      - path: Services
+      - path: Utilities
       - path: App/AppIcon.icns
         type: file
     settings:
@@ -22,5 +27,5 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.jokot.MacClipboard
       INFOPLIST_FILE: App/Info.plist
       CURRENT_PROJECT_VERSION: 3
-      MARKETING_VERSION: 1.2.0
+      MARKETING_VERSION: 1.3.0
 
