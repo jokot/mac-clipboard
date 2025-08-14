@@ -12,6 +12,7 @@
 		7E0D43030BBB9BE895CCF2C2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA06703AB7DD76075D2895A4 /* SettingsView.swift */; };
 		831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19935DAD7985C6E587966A20 /* OverlayWindow.swift */; };
 		9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */; };
+		A1B2C3F45E6D78910F234567 /* InfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89DEF123456789AB01234567 /* InfoViewModel.swift */; };
 		ADA397C03763610821625BEA /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FAC45A87AF3BC309EC56D4D /* ClipboardMonitor.swift */; };
 		B3DAF98ABBDBE882FFEC7E39 /* ClipboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */; };
 		B6E3A6C5EE7070AABCCAC0DC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95F666DE6781E514FE7F9921 /* ContentView.swift */; };
@@ -19,6 +20,7 @@
 		C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815338FAF7D3A98423D0E86C /* ClipboardItem.swift */; };
 		E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A5E1B92A0543BA5D33AD02 /* InfoView.swift */; };
 		F4C53B0274A8E0982EF17495 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72305A678DEF1D5E247BFC8C /* AppSettings.swift */; };
+		A2B3C4D56E7F89AB01234568 /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EDF234567890AB02345678 /* UpdateService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +38,8 @@
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DA06703AB7DD76075D2895A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		EF7344C6550C102B4815F469 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		89DEF123456789AB01234567 /* InfoViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViewModel.swift; sourceTree = "<group>"; };
+		90EDF234567890AB02345678 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -43,6 +47,7 @@
 			isa = PBXGroup;
 			children = (
 				63ECD86587A3DE062DB598C0 /* ClipboardListViewModel.swift */,
+				89DEF123456789AB01234567 /* InfoViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -111,6 +116,7 @@
 				5FAC45A87AF3BC309EC56D4D /* ClipboardMonitor.swift */,
 				233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */,
 				B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */,
+				90EDF234567890AB02345678 /* UpdateService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -184,6 +190,7 @@
 				9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */,
 				C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */,
 				B7145E979D867746DB75E236 /* ClipboardListViewModel.swift in Sources */,
+				A1B2C3F45E6D78910F234567 /* InfoViewModel.swift in Sources */,
 				ADA397C03763610821625BEA /* ClipboardMonitor.swift in Sources */,
 				B3DAF98ABBDBE882FFEC7E39 /* ClipboardRepository.swift in Sources */,
 				B6E3A6C5EE7070AABCCAC0DC /* ContentView.swift in Sources */,
@@ -191,6 +198,7 @@
 				E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */,
 				831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */,
 				7E0D43030BBB9BE895CCF2C2 /* SettingsView.swift in Sources */,
+				A2B3C4D56E7F89AB01234568 /* UpdateService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 struct InfoView: View {
+    @StateObject private var viewModel = InfoViewModel()
     private let repoURL = URL(string: "https://github.com/jokot/mac-clipboard")!
 
     var body: some View {
@@ -9,10 +10,14 @@ struct InfoView: View {
             AppIconView()
                 .frame(width: 128, height: 128)
 
-            Text(appName())
+            Text(viewModel.getAppName())
                 .font(.title3).bold()
 
-            Text("Version \(appVersion())")
+            Text("Version \(viewModel.getAppVersion())")
+                .foregroundColor(.secondary)
+
+            Text("Last checked: \(viewModel.getFormattedLastChecked())")
+                .font(.footnote)
                 .foregroundColor(.secondary)
 
             Button {
@@ -21,6 +26,19 @@ struct InfoView: View {
                 Label("Open on GitHub", systemImage: "link")
             }
             .buttonStyle(.bordered)
+
+            Button(action: viewModel.checkForUpdates) {
+                if viewModel.isCheckingUpdate {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Checking…")
+                    }
+                } else {
+                    Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+            .disabled(viewModel.isCheckingUpdate)
+            .buttonStyle(.borderedProminent)
 
             Spacer(minLength: 8)
             Divider()
@@ -35,17 +53,26 @@ struct InfoView: View {
         }
         .padding(24)
         .frame(minWidth: 360)
-    }
-
-    private func appVersion() -> String {
-        let dict = Bundle.main.infoDictionary
-        let short = dict?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = dict?["CFBundleVersion"] as? String ?? "1"
-        return "\(short) (\(build))"
-    }
-
-    private func appName() -> String {
-        Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "MaClip"
+        .alert(item: $viewModel.updateAlert) { alert in
+            var message = alert.message
+            if let notes = alert.releaseNotes {
+                message += "\n\nWhat's new:\n" + notes
+            }
+            if let url = alert.url {
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(message),
+                    primaryButton: .default(Text("Open Release")) { NSWorkspace.shared.open(url) },
+                    secondaryButton: .cancel()
+                )
+            } else {
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(message),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+        }
     }
 }
 
@@ -77,15 +104,15 @@ final class InfoWindowController: NSObject {
     func show() {
         if window == nil {
             let view = InfoView()
-            let hosting = NSHostingView(rootView: view)
+            let hosting = NSHostingController(rootView: view)
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
+                contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "About MaClip"
-            window.contentView = hosting
+            window.contentViewController = hosting
             window.isReleasedWhenClosed = false
             window.level = .modalPanel
             self.window = window
