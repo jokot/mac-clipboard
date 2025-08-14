@@ -1,5 +1,6 @@
 import Cocoa
 import SwiftUI
+import Carbon.HIToolbox
 
 @MainActor
 final class OverlayWindowController: NSObject {
@@ -8,6 +9,12 @@ final class OverlayWindowController: NSObject {
     private let onCloseRequested: (() -> Void)?
     private var escMonitor: Any?
     private var backgroundView: NSVisualEffectView?
+    
+    // Track the previously active app to restore focus and paste into it
+    private var previousActiveApp: NSRunningApplication?
+    internal var autoPastePending: Bool = false  // Make this internal so KeyCatcherView can access
+    // Observer to know exactly when the previous app becomes active
+    private var activationObserver: Any?
 
     init(viewModel: ClipboardListViewModel, onCloseRequested: (() -> Void)? = nil) {
         self.viewModel = viewModel
@@ -37,6 +44,9 @@ final class OverlayWindowController: NSObject {
         if window == nil {
             createWindow()
         }
+        // Capture the app that was frontmost before we activate our window
+        previousActiveApp = NSWorkspace.shared.frontmostApplication
+        
         guard let window else { return }
         if let screen = NSScreen.main {
             let size = CGSize(width: 520, height: 600)
@@ -53,7 +63,9 @@ final class OverlayWindowController: NSObject {
         if escMonitor == nil {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
                 if event.keyCode == 53 { // Escape key
-                    self?.hide()
+                    guard let self = self else { return nil }
+                    // Hide immediately and only refocus the previous app (no paste)
+                    self.hideImmediatelyRefocusOnly()
                     return nil
                 }
                 return event
@@ -72,6 +84,28 @@ final class OverlayWindowController: NSObject {
             self.escMonitor = nil
         }
         onCloseRequested?()
+        
+        // If a selection triggered hide, auto-paste into the previously active app
+        if autoPastePending {
+            autoPastePending = false
+            reactivatePreviousAppAndPaste()
+        }
+    }
+    
+    func hideImmediatelyAndPaste() {
+        // Hide window first for instant visual response
+        window?.orderOut(nil)
+        if let escMonitor {
+            NSEvent.removeMonitor(escMonitor)
+            self.escMonitor = nil
+        }
+        onCloseRequested?()
+        
+        // Then handle focus switch and paste in background
+        if autoPastePending {
+            autoPastePending = false
+            reactivatePreviousAppAndPaste()
+        }
     }
 
     private func createWindow() {
@@ -79,7 +113,9 @@ final class OverlayWindowController: NSObject {
             guard let self else { return }
             self.viewModel.setPasteboard(to: item)
             self.viewModel.promote(item)
-            self.hide()
+            // Mark that we want to auto-paste after hiding the overlay
+            self.autoPastePending = true
+            self.hideImmediatelyAndPaste()
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
         })
@@ -129,7 +165,7 @@ final class OverlayWindowController: NSObject {
     }
 
     @objc private func closeRequested() {
-        hide()
+        hideImmediatelyRefocusOnly()
     }
 
     @objc private func openSettingsRequested() {
@@ -149,19 +185,80 @@ private extension OverlayWindowController {
     func applyTheme() {
         guard let window else { return }
         switch AppSettings.shared.theme {
-        case .system:
-            window.appearance = nil
-            backgroundView?.appearance = nil
-        case .light:
-            let a = NSAppearance(named: .aqua)
-            window.appearance = a
-            backgroundView?.appearance = a
-        case .dark:
-            let a = NSAppearance(named: .darkAqua)
-            window.appearance = a
-            backgroundView?.appearance = a
+            case .system:
+                window.appearance = nil
+                backgroundView?.appearance = nil
+            case .light:
+                let a = NSAppearance(named: .aqua)
+                window.appearance = a
+                backgroundView?.appearance = a
+            case .dark:
+                let a = NSAppearance(named: .darkAqua)
+                window.appearance = a
+                backgroundView?.appearance = a
         }
         window.invalidateShadow()
+    }
+    
+    func reactivatePreviousAppAndPaste() {
+        guard let app = previousActiveApp else { return }
+        // Remove any previous observer if still present
+        if let obs = activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+            activationObserver = nil
+        }
+        let center = NSWorkspace.shared.notificationCenter
+        let targetPID = app.processIdentifier
+        // Observe when the target app becomes active, then paste immediately
+        activationObserver = center.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
+            guard let self = self else { return }
+            let running: NSRunningApplication? = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication) ?? (note.userInfo?["NSWorkspaceApplicationKey"] as? NSRunningApplication)
+            if let running = running, running.processIdentifier == targetPID {
+                center.removeObserver(self.activationObserver as Any)
+                self.activationObserver = nil
+                self.sendPasteKeystroke()
+            }
+        }
+        // Activate the previous app now
+        app.activate(options: [.activateIgnoringOtherApps])
+        // Fallback: if activation notification doesn't arrive shortly, paste anyway
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self = self else { return }
+            if self.activationObserver != nil {
+                center.removeObserver(self.activationObserver as Any)
+                self.activationObserver = nil
+                self.sendPasteKeystroke()
+            }
+        }
+    }
+    
+    func sendPasteKeystroke() {
+        // Synthesize Command+V to paste the selected content in the focused app
+        let src = CGEventSource(stateID: .hidSystemState)
+        let keyV = CGKeyCode(kVK_ANSI_V)
+        let keyDown = CGEvent(keyboardEventSource: src, virtualKey: keyV, keyDown: true)
+        keyDown?.flags = .maskCommand
+        let keyUp = CGEvent(keyboardEventSource: src, virtualKey: keyV, keyDown: false)
+        keyUp?.flags = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
+    }
+    
+    func reactivatePreviousAppOnly() {
+        guard let app = previousActiveApp else { return }
+        app.activate(options: [.activateIgnoringOtherApps])
+    }
+
+    func hideImmediatelyRefocusOnly() {
+        // Hide window first for instant visual response
+        window?.orderOut(nil)
+        if let escMonitor {
+            NSEvent.removeMonitor(escMonitor)
+            self.escMonitor = nil
+        }
+        onCloseRequested?()
+        // Only refocus the previous app, do not paste
+        reactivatePreviousAppOnly()
     }
 }
 
@@ -178,6 +275,7 @@ private struct ESCKeyCatcher: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = KeyCatcherView()
         view.onEscape = {
+            // On Escape, close overlay immediately and refocus previous app (no paste)
             NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
         }
         return view
@@ -198,20 +296,21 @@ private final class KeyCatcherView: NSView {
 
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
-        case 53: // Escape
-            onEscape?()
-        case 126: // Arrow Up
-            NotificationCenter.default.post(name: .overlayMoveSelectionUp, object: nil)
-        case 125: // Arrow Down
-            NotificationCenter.default.post(name: .overlayMoveSelectionDown, object: nil)
-        case 36, 76: // Return or Keypad Enter
-            NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
-        default:
-            if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers, chars == "," {
-                NotificationCenter.default.post(name: .overlayOpenSettings, object: nil)
-                return
-            }
-            super.keyDown(with: event)
+            case 53: // Escape
+                // Close overlay immediately and refocus previous app (no paste)
+                NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+            case 126: // Arrow Up
+                NotificationCenter.default.post(name: .overlayMoveSelectionUp, object: nil)
+            case 125: // Arrow Down
+                NotificationCenter.default.post(name: .overlayMoveSelectionDown, object: nil)
+            case 36, 76: // Return or Keypad Enter
+                NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
+            default:
+                if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers, chars == "," {
+                    NotificationCenter.default.post(name: .overlayOpenSettings, object: nil)
+                    return
+                }
+                super.keyDown(with: event)
         }
     }
 }
