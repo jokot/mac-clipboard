@@ -37,6 +37,9 @@ struct MacClipboardApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    // Provide a stable shared reference to the AppDelegate for accessing the shared view model
+    static var shared: AppDelegate?
+
     @MainActor let viewModel = ClipboardListViewModel()
     private var overlay: OverlayWindowController!
     private var statusItem: NSStatusItem?
@@ -44,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Assign shared reference
+        AppDelegate.shared = self
+
         // Prevent automatic window creation
         NSApp.setActivationPolicy(.prohibited)
         
@@ -64,6 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         HotKeyService.shared.unregister()
+        // Clear shared on terminate
+        AppDelegate.shared = nil
     }
 
     private func setupStatusItem() {

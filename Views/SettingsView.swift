@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var isCapturingHotkey = false
     @State private var newHotkeyModifiers: UInt32 = 0
     @State private var newHotkeyKeyCode: UInt32 = 0
+    @State private var isShowingClearConfirm: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -87,7 +88,7 @@ struct SettingsView: View {
             // Action Buttons
             HStack {
                 Button("Clear All History") {
-                    viewModel.clearHistory()
+                    isShowingClearConfirm = true
                 }
                 .foregroundColor(.red)
                 
@@ -110,6 +111,12 @@ struct SettingsView: View {
         .background(HotkeyCapturingView(isCapturing: $isCapturingHotkey) { keyCode, modifiers in
             updateHotkey(keyCode: keyCode, modifiers: modifiers)
         })
+        .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) { viewModel.clearHistory() }
+        } message: {
+            Text("This will remove all clipboard items from the list.")
+        }
     }
     
     private var hotKeyDescription: String {
@@ -258,13 +265,17 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func show() {
-        // Lazily bind the shared viewModel when showing the window
-        if let appDelegate = NSApp.delegate as? AppDelegate {
+        // Always resolve the shared viewModel from AppDelegate
+        if let shared = AppDelegate.shared {
+            window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: shared.viewModel))
+        } else if let appDelegate = NSApp.delegate as? AppDelegate {
             window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: appDelegate.viewModel))
+            // Also set shared for future calls
+            AppDelegate.shared = appDelegate
         } else {
-            // Fallback: create a new viewModel if delegate casting fails
-            print("Warning: Could not access AppDelegate, creating fallback viewModel")
-            window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: ClipboardListViewModel()))
+            assertionFailure("AppDelegate not available - Settings should only be shown after app launch")
+            // As a last resort, keep the window empty to avoid using a wrong instance
+            window?.contentViewController = NSHostingController(rootView: Text("Unable to load settings"))
         }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
