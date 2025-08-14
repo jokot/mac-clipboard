@@ -2,6 +2,7 @@ import Foundation
 
 final class UpdateService {
     static let shared = UpdateService()
+    static let lastCheckedDidChange = Notification.Name("UpdateServiceLastCheckedDidChange")
     
     private let userDefaults = UserDefaults.standard
     private let lastCheckedKey = "LastUpdateCheck"
@@ -93,9 +94,50 @@ final class UpdateService {
     /// Get formatted last checked string
     func getFormattedLastChecked() -> String {
         guard let lastChecked = getLastChecked() else { return "Never" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: lastChecked, relativeTo: Date())
+        
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(lastChecked)
+        
+        // Less than 1 minute
+        if timeInterval < 60 {
+            return "recently"
+        }
+        
+        // Minutes (1-59)
+        let minutes = Int(timeInterval / 60)
+        if minutes < 60 {
+            return minutes == 1 ? "1 minute ago" : "\(minutes) minutes ago"
+        }
+        
+        // Hours (1-23)
+        let hours = Int(timeInterval / 3600)
+        if hours < 24 {
+            return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
+        }
+        
+        // Days
+        let days = Int(timeInterval / 86400)
+        if days == 1 {
+            return "yesterday"
+        } else if days < 7 {
+            return "\(days) days ago"
+        }
+        
+        // Weeks
+        let weeks = days / 7
+        if weeks < 4 {
+            return weeks == 1 ? "1 week ago" : "\(weeks) weeks ago"
+        }
+        
+        // Months (approximate)
+        let months = days / 30
+        if months < 12 {
+            return months == 1 ? "1 month ago" : "\(months) months ago"
+        }
+        
+        // Years
+        let years = days / 365
+        return years == 1 ? "1 year ago" : "\(years) years ago"
     }
     
     /// Get current app version
@@ -121,6 +163,7 @@ final class UpdateService {
     
     private func saveLastChecked() {
         userDefaults.set(Date(), forKey: lastCheckedKey)
+        NotificationCenter.default.post(name: Self.lastCheckedDidChange, object: nil)
     }
     
     private func normalizeVersion(_ v: String) -> String {

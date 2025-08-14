@@ -3,6 +3,7 @@ import AppKit
 
 struct InfoView: View {
     @StateObject private var viewModel = InfoViewModel()
+    @State private var refreshTrigger = false
     private let repoURL = URL(string: "https://github.com/jokot/mac-clipboard")!
 
     var body: some View {
@@ -14,10 +15,6 @@ struct InfoView: View {
                 .font(.title3).bold()
 
             Text("Version \(viewModel.getAppVersion())")
-                .foregroundColor(.secondary)
-
-            Text("Last checked: \(viewModel.getFormattedLastChecked())")
-                .font(.footnote)
                 .foregroundColor(.secondary)
 
             Button {
@@ -40,6 +37,11 @@ struct InfoView: View {
             .disabled(viewModel.isCheckingUpdate)
             .buttonStyle(.borderedProminent)
 
+            Text("Last checked: \(viewModel.getFormattedLastChecked())")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .id(refreshTrigger) // Force refresh when this changes
+
             Spacer(minLength: 8)
             Divider()
             HStack(spacing: 6) {
@@ -53,6 +55,9 @@ struct InfoView: View {
         }
         .padding(24)
         .frame(minWidth: 360)
+        .onAppear {
+            startRefreshTimer()
+        }
         .alert(item: $viewModel.updateAlert) { alert in
             var message = alert.message
             if let notes = alert.releaseNotes {
@@ -73,6 +78,16 @@ struct InfoView: View {
                 )
             }
         }
+    }
+    
+    private func startRefreshTimer() {
+        // Refresh every 30 seconds to keep the "last checked" text current
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            refreshTrigger.toggle()
+        }
+        
+        // Also refresh immediately on appear
+        refreshTrigger.toggle()
     }
 }
 

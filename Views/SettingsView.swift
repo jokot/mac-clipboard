@@ -93,6 +93,13 @@ struct SettingsView: View {
                 
                 Spacer()
                 
+                Button("About MaClip") {
+                    InfoWindow.show()
+                }
+                .buttonStyle(.plain)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                
                 Button("Close") {
                     NSApp.keyWindow?.close()
                 }

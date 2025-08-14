@@ -9,6 +9,7 @@ final class InfoViewModel: ObservableObject {
     
     private let updateService = UpdateService.shared
     private var autoCheckStarted = false
+    private var notificationObserver: NSObjectProtocol?
     
     struct UpdateAlert: Identifiable {
         let id = UUID()
@@ -22,10 +23,19 @@ final class InfoViewModel: ObservableObject {
         // hydrate last checked
         lastChecked = updateService.getLastChecked()
         startAutoCheckIfNeeded()
+        
+        notificationObserver = NotificationCenter.default.addObserver(forName: UpdateService.lastCheckedDidChange, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                self?.lastChecked = self?.updateService.getLastChecked()
+            }
+        }
     }
     
     deinit {
         // service manages its own timer lifecycle
+        if let observer = notificationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
     
     // MARK: - Public Methods
