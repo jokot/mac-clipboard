@@ -37,6 +37,29 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 
 3. Select the "MacClipboard" scheme and run. (Display name appears as "MaClip".)
 
+## Running Tests
+
+To run the unit tests from the command line:
+
+```bash
+# Run all tests
+xcodebuild -scheme MacClipboard -destination 'platform=macOS' test
+
+# Run quietly (less verbose output)
+xcodebuild -scheme MacClipboard -destination 'platform=macOS' -quiet test
+
+# Run specific test class
+xcodebuild -scheme MacClipboard -destination 'platform=macOS' -only-testing:MacClipboardTests/ClipboardListViewModelTests test
+```
+
+You can also run tests directly in Xcode using `Cmd+U` or through the Test Navigator.
+
+The test suite includes:
+- **ClipboardListViewModelTests**: MVVM behavior, item management, and persistence
+- **InfoViewModelTests**: Update checking logic 
+- **HotkeyUtilsTests**: Hotkey description formatting
+- **TextPreviewTests**: Text truncation utilities
+
 ## Data Persistence
 
 MaClip implements comprehensive persistence for both text and image clipboard entries:
