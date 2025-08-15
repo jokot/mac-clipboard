@@ -9,7 +9,7 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.2.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.2.0)
+- [Download v1.3.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.3.0)
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/b54cba75-8c7f-4851-a0a3-15915e09b24c)
@@ -21,9 +21,31 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 - Captures copied text and images
 - Global hotkey Command+Control+V to toggle a floating window
 - Click any entry to copy it back to the pasteboard
- - Search clipboard history (text)
- - Quit from overlay header or menu bar icon
- - Command+, opens Settings when overlay is visible; Settings also available in menu bar
+- Search clipboard history (text)
+- Quit from overlay header or menu bar icon
+- Command+, opens Settings when overlay is visible; Settings also available in menu bar
+- Theme selection: System / Light / Dark (via Settings)
+- Customizable global hotkey (changeable in Settings)
+- Keyboard navigation in overlay: ↑/↓ to move, Return to select, Esc to close
+- Status bar menu: quick access to Show Clipboard, Settings, and Quit
+- About/Info window with version details and GitHub link
+- Clear All History action
+- Persistent clipboard history on disk (JSON metadata + image files), async saving, and auto-save on changes and on quit
+
+## Usage
+
+1. Press <kbd>CONTROL (⌃)</kbd> + <kbd>COMMAND (⌘)</kbd> + <kbd>V</kbd> to show the MaClip overlay, or click the menu bar icon.
+2. Type in the Search field to filter your clipboard history.
+3. Select an item to copy it back to the clipboard:
+   - Press <kbd>ENTER</kbd> to copy the highlighted item and close the overlay.
+   - Click an item to copy it and close the overlay.
+4. Navigate the list with <kbd>↑</kbd>/<kbd>↓</kbd> arrow keys.
+5. Press <kbd>ESC</kbd> to close the overlay.
+6. Remove a single item: hover over it and click the trash button.
+7. Clear all history: click the trash button in the header and confirm.
+8. Open Settings: press <kbd>COMMAND (⌘)</kbd> + <kbd>,</kbd> while the overlay is visible, or choose "Settings…" from the menu bar icon.
+9. Customize behavior in Settings: change the global hotkey, switch theme (System/Light/Dark), and adjust storage limits.
+10. Open About: click the info button in the overlay header to view version details and a GitHub link.
 
 ## Build from source
 1. Ensure you have Xcode and Homebrew installed.
