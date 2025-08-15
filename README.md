@@ -107,5 +107,8 @@ cat dist/MacClip-*.dmg.sha256
 ```
 
 
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on fixing bugs and proposing new features.
+
 ## License
 MIT License. See `LICENSE` for details.
