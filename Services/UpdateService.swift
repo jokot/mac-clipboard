@@ -2,6 +2,7 @@ import Foundation
 
 final class UpdateService {
     static let shared = UpdateService()
+    @available(*, deprecated, message: "Use Notification.Name.updateServiceLastCheckedDidChange instead")
     static let lastCheckedDidChange = Notification.Name("UpdateServiceLastCheckedDidChange")
     
     private let userDefaults = UserDefaults.standard
@@ -163,7 +164,7 @@ final class UpdateService {
     
     private func saveLastChecked() {
         userDefaults.set(Date(), forKey: lastCheckedKey)
-        NotificationCenter.default.post(name: Self.lastCheckedDidChange, object: nil)
+        NotificationCenter.default.post(name: .updateServiceLastCheckedDidChange, object: nil)
     }
     
     private func normalizeVersion(_ v: String) -> String {

@@ -158,9 +158,6 @@ final class OverlayWindowController: NSObject {
         applyTheme()
     }
 
-    private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    }
 
     @objc private func closeRequested() {
         hideImmediatelyRefocusOnly()
@@ -174,9 +171,6 @@ final class OverlayWindowController: NSObject {
         SettingsWindowController.shared.show()
         applyTheme()
     }
-}
-extension Notification.Name {
-    static let themeChanged = Notification.Name("ThemeChanged")
 }
 
 private extension OverlayWindowController {
@@ -203,18 +197,6 @@ private extension OverlayWindowController {
         AppFocusService.shared.switchToAppAndPaste(app)
     }
     
-    func sendPasteKeystroke() {
-        // Synthesize Command+V to paste the selected content in the focused app
-        let src = CGEventSource(stateID: .hidSystemState)
-        let keyV = CGKeyCode(kVK_ANSI_V)
-        let keyDown = CGEvent(keyboardEventSource: src, virtualKey: keyV, keyDown: true)
-        keyDown?.flags = .maskCommand
-        let keyUp = CGEvent(keyboardEventSource: src, virtualKey: keyV, keyDown: false)
-        keyUp?.flags = .maskCommand
-        keyDown?.post(tap: .cghidEventTap)
-        keyUp?.post(tap: .cghidEventTap)
-    }
-    
     func reactivatePreviousAppOnly() {
         guard let app = previousActiveApp else { return }
         AppFocusService.shared.switchToAppOnly(app)
@@ -231,14 +213,5 @@ private extension OverlayWindowController {
         // Only refocus the previous app, do not paste
         reactivatePreviousAppOnly()
     }
-}
-
-extension Notification.Name {
-    static let overlayCloseRequested = Notification.Name("OverlayCloseRequested")
-    static let overlayMoveSelectionUp = Notification.Name("OverlayMoveSelectionUp")
-    static let overlayMoveSelectionDown = Notification.Name("OverlayMoveSelectionDown")
-    static let overlaySelectCurrentItem = Notification.Name("OverlaySelectCurrentItem")
-    static let overlayDidShow = Notification.Name("OverlayDidShow")
-    static let overlayOpenSettings = Notification.Name("OverlayOpenSettings")
 }
 

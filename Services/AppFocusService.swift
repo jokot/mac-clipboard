@@ -31,7 +31,7 @@ final class AppFocusService {
             if let runningApp = runningApp, runningApp.processIdentifier == targetPID {
                 center.removeObserver(self.activationObserver as Any)
                 self.activationObserver = nil
-                self.sendPasteKeystroke()
+                PasteUtility.sendPasteKeystroke()
             }
         }
         
@@ -44,7 +44,7 @@ final class AppFocusService {
             if self.activationObserver != nil {
                 center.removeObserver(self.activationObserver as Any)
                 self.activationObserver = nil
-                self.sendPasteKeystroke()
+                PasteUtility.sendPasteKeystroke()
             }
         }
     }
@@ -61,22 +61,5 @@ final class AppFocusService {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             activationObserver = nil
         }
-    }
-    
-    // MARK: - Private Methods
-    
-    private func sendPasteKeystroke() {
-        // Synthesize Command+V to paste content in the focused app
-        let src = CGEventSource(stateID: .hidSystemState)
-        let keyV = CGKeyCode(kVK_ANSI_V)
-        
-        let keyDown = CGEvent(keyboardEventSource: src, virtualKey: keyV, keyDown: true)
-        keyDown?.flags = .maskCommand
-        
-        let keyUp = CGEvent(keyboardEventSource: src, virtualKey: keyV, keyDown: false)
-        keyUp?.flags = .maskCommand
-        
-        keyDown?.post(tap: .cghidEventTap)
-        keyUp?.post(tap: .cghidEventTap)
     }
 }

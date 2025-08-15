@@ -24,7 +24,7 @@ final class InfoViewModel: ObservableObject {
         lastChecked = updateService.getLastChecked()
         startAutoCheckIfNeeded()
         
-        notificationObserver = NotificationCenter.default.addObserver(forName: UpdateService.lastCheckedDidChange, object: nil, queue: .main) { [weak self] _ in
+        notificationObserver = NotificationCenter.default.addObserver(forName: Notification.Name.updateServiceLastCheckedDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
                 self?.lastChecked = self?.updateService.getLastChecked()
             }

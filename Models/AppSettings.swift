@@ -104,10 +104,3 @@ enum HotkeyChoice: String, CaseIterable, Identifiable {
         }
     }
 }
-
-extension UInt32 {
-    var containsCmd: Bool { (self & UInt32(cmdKey)) != 0 }
-    var containsCtrl: Bool { (self & UInt32(controlKey)) != 0 }
-    var containsAlt: Bool { (self & UInt32(optionKey)) != 0 }
-    var containsShift: Bool { (self & UInt32(shiftKey)) != 0 }
-}
