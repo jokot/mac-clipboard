@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var isCapturingHotkey = false
     @State private var newHotkeyModifiers: UInt32 = 0
     @State private var newHotkeyKeyCode: UInt32 = 0
+    @State private var isShowingClearConfirm: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -87,11 +88,18 @@ struct SettingsView: View {
             // Action Buttons
             HStack {
                 Button("Clear All History") {
-                    viewModel.clearHistory()
+                    isShowingClearConfirm = true
                 }
                 .foregroundColor(.red)
                 
                 Spacer()
+                
+                Button("About MaClip") {
+                    InfoWindow.show()
+                }
+                .buttonStyle(.plain)
+                .font(.footnote)
+                .foregroundColor(.secondary)
                 
                 Button("Close") {
                     NSApp.keyWindow?.close()
@@ -103,26 +111,16 @@ struct SettingsView: View {
         .background(HotkeyCapturingView(isCapturing: $isCapturingHotkey) { keyCode, modifiers in
             updateHotkey(keyCode: keyCode, modifiers: modifiers)
         })
+        .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) { viewModel.clearHistory() }
+        } message: {
+            Text("This will remove all clipboard items from the list.")
+        }
     }
     
     private var hotKeyDescription: String {
-        var components: [String] = []
-        
-        if settings.hotkeyModifiers.containsCmd { components.append("⌘") }
-        if settings.hotkeyModifiers.containsCtrl { components.append("⌃") }
-        if settings.hotkeyModifiers.containsAlt { components.append("⌥") }
-        if settings.hotkeyModifiers.containsShift { components.append("⇧") }
-        
-        // Best-effort letter from keyCode (only supports A-Z here)
-        let letterMap: [UInt32: String] = [
-            0x00:"A",0x0B:"B",0x08:"C",0x02:"D",0x0E:"E",0x03:"F",0x05:"G",0x04:"H",0x22:"I",0x26:"J",
-            0x28:"K",0x25:"L",0x2E:"M",0x2D:"N",0x1F:"O",0x23:"P",0x0C:"Q",0x0F:"R",0x01:"S",0x11:"T",
-            0x20:"U",0x09:"V",0x0D:"W",0x07:"X",0x10:"Y",0x06:"Z"
-        ]
-        let key = letterMap[settings.hotkeyKeyCode] ?? "V"
-        components.append(key)
-        
-        return components.joined()
+        HotkeyUtils.description(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
     }
     
     private func startCapturingHotkey() {
@@ -152,67 +150,6 @@ struct SettingsView: View {
         case .system:
             NSApp.appearance = nil
         }
-    }
-}
-
-// MARK: - Hotkey Capturing View
-struct HotkeyCapturingView: NSViewRepresentable {
-    @Binding var isCapturing: Bool
-    let onCaptured: (UInt32, UInt32) -> Void
-    
-    func makeNSView(context: Context) -> NSView {
-        let view = HotkeyView()
-        view.onHotkeyCaptured = onCaptured
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSView, context: Context) {
-        if let hotkeyView = nsView as? HotkeyView {
-            hotkeyView.isCapturing = isCapturing
-        }
-    }
-}
-
-class HotkeyView: NSView {
-    var isCapturing = false {
-        didSet {
-            if isCapturing {
-                window?.makeFirstResponder(self)
-            }
-        }
-    }
-    
-    var onHotkeyCaptured: ((UInt32, UInt32) -> Void)?
-    
-    override var acceptsFirstResponder: Bool { isCapturing }
-    
-    override func keyDown(with event: NSEvent) {
-        guard isCapturing else {
-            super.keyDown(with: event)
-            return
-        }
-        
-        // Don't capture single modifier keys or escape
-        if event.keyCode == 53 { // Escape
-            isCapturing = false
-            return
-        }
-        
-        let modifiers = event.modifierFlags
-        var carbonModifiers: UInt32 = 0
-        
-        if modifiers.contains(.command) { carbonModifiers |= UInt32(cmdKey) }
-        if modifiers.contains(.control) { carbonModifiers |= UInt32(controlKey) }
-        if modifiers.contains(.option) { carbonModifiers |= UInt32(optionKey) }
-        if modifiers.contains(.shift) { carbonModifiers |= UInt32(shiftKey) }
-        
-        // Require at least one modifier
-        guard carbonModifiers != 0 else {
-            NSSound.beep()
-            return
-        }
-        
-        onHotkeyCaptured?(UInt32(event.keyCode), carbonModifiers)
     }
 }
 
@@ -251,13 +188,17 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func show() {
-        // Lazily bind the shared viewModel when showing the window
-        if let appDelegate = NSApp.delegate as? AppDelegate {
+        // Always resolve the shared viewModel from AppDelegate
+        if let shared = AppDelegate.shared {
+            window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: shared.viewModel))
+        } else if let appDelegate = NSApp.delegate as? AppDelegate {
             window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: appDelegate.viewModel))
+            // Also set shared for future calls
+            AppDelegate.shared = appDelegate
         } else {
-            // Fallback: create a new viewModel if delegate casting fails
-            print("Warning: Could not access AppDelegate, creating fallback viewModel")
-            window?.contentViewController = NSHostingController(rootView: SettingsView(viewModel: ClipboardListViewModel()))
+            assertionFailure("AppDelegate not available - Settings should only be shown after app launch")
+            // As a last resort, keep the window empty to avoid using a wrong instance
+            window?.contentViewController = NSHostingController(rootView: Text("Unable to load settings"))
         }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

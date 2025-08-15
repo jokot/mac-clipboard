@@ -2,6 +2,8 @@ import SwiftUI
 import AppKit
 
 struct InfoView: View {
+    @StateObject private var viewModel = InfoViewModel()
+    @State private var refreshTrigger = false
     private let repoURL = URL(string: "https://github.com/jokot/mac-clipboard")!
 
     var body: some View {
@@ -9,10 +11,10 @@ struct InfoView: View {
             AppIconView()
                 .frame(width: 128, height: 128)
 
-            Text(appName())
+            Text(viewModel.getAppName())
                 .font(.title3).bold()
 
-            Text("Version \(appVersion())")
+            Text("Version \(viewModel.getAppVersion())")
                 .foregroundColor(.secondary)
 
             Button {
@@ -21,6 +23,24 @@ struct InfoView: View {
                 Label("Open on GitHub", systemImage: "link")
             }
             .buttonStyle(.bordered)
+
+            Button(action: viewModel.checkForUpdates) {
+                if viewModel.isCheckingUpdate {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Checking…")
+                    }
+                } else {
+                    Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+            .disabled(viewModel.isCheckingUpdate)
+            .buttonStyle(.borderedProminent)
+
+            Text("Last checked: \(viewModel.getFormattedLastChecked())")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .id(refreshTrigger) // Force refresh when this changes
 
             Spacer(minLength: 8)
             Divider()
@@ -35,39 +55,39 @@ struct InfoView: View {
         }
         .padding(24)
         .frame(minWidth: 360)
-    }
-
-    private func appVersion() -> String {
-        let dict = Bundle.main.infoDictionary
-        let short = dict?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = dict?["CFBundleVersion"] as? String ?? "1"
-        return "\(short) (\(build))"
-    }
-
-    private func appName() -> String {
-        Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "MaClip"
-    }
-}
-
-struct AppIconView: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(colors: [Color.blue, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-                .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .inset(by: 8)
-                .strokeBorder(Color.white.opacity(0.25), lineWidth: 2)
-
-            Image(systemName: "doc.on.clipboard.fill")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(.white)
-                .padding(28)
+        .onAppear {
+            startRefreshTimer()
         }
+        .alert(item: $viewModel.updateAlert) { alert in
+            var message = alert.message
+            if let notes = alert.releaseNotes {
+                message += "\n\nWhat's new:\n" + notes
+            }
+            if let url = alert.url {
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(message),
+                    primaryButton: .default(Text("Open Release")) { NSWorkspace.shared.open(url) },
+                    secondaryButton: .cancel()
+                )
+            } else {
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(message),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+        }
+    }
+    
+    private func startRefreshTimer() {
+        // Refresh every 30 seconds to keep the "last checked" text current
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            refreshTrigger.toggle()
+        }
+        
+        // Also refresh immediately on appear
+        refreshTrigger.toggle()
     }
 }
 
@@ -77,23 +97,23 @@ final class InfoWindowController: NSObject {
     func show() {
         if window == nil {
             let view = InfoView()
-            let hosting = NSHostingView(rootView: view)
+            let hosting = NSHostingController(rootView: view)
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
+                contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "About MaClip"
-            window.contentView = hosting
+            window.contentViewController = hosting
             window.isReleasedWhenClosed = false
-            window.level = .modalPanel
+            // Match Settings window behavior: use floating level so order can change among app windows
+            window.level = .floating
             self.window = window
         }
         guard let window else { return }
         window.center()
         NSApp.activate(ignoringOtherApps: true)
-        window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
     }
 }

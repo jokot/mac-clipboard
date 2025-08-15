@@ -9,7 +9,7 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.3.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.3.0)
+- [Download v1.4.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.4.0)
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/b54cba75-8c7f-4851-a0a3-15915e09b24c)
@@ -31,6 +31,8 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 - About/Info window with version details and GitHub link
 - Clear All History action
 - Persistent clipboard history on disk (JSON metadata + image files), async saving, and auto-save on changes and on quit
+- Returns focus to the previously active window when closing the overlay
+- In-app update checking (Info screen), shows latest version and last-checked time
 
 ## Usage
 
@@ -58,6 +60,29 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
    ```
 
 3. Select the "MacClipboard" scheme and run. (Display name appears as "MaClip".)
+
+## Running Tests
+
+To run the unit tests from the command line:
+
+```bash
+# Run all tests
+xcodebuild -scheme MacClipboard -destination 'platform=macOS' test
+
+# Run quietly (less verbose output)
+xcodebuild -scheme MacClipboard -destination 'platform=macOS' -quiet test
+
+# Run specific test class
+xcodebuild -scheme MacClipboard -destination 'platform=macOS' -only-testing:MacClipboardTests/ClipboardListViewModelTests test
+```
+
+You can also run tests directly in Xcode using `Cmd+U` or through the Test Navigator.
+
+The test suite includes:
+- **ClipboardListViewModelTests**: MVVM behavior, item management, and persistence
+- **InfoViewModelTests**: Update checking logic 
+- **HotkeyUtilsTests**: Hotkey description formatting
+- **TextPreviewTests**: Text truncation utilities
 
 ## Data Persistence
 
@@ -128,6 +153,9 @@ shasum -a 256 dist/MacClip-*.dmg
 cat dist/MacClip-*.dmg.sha256
 ```
 
+
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on fixing bugs and proposing new features.
 
 ## License
 MIT License. See `LICENSE` for details.

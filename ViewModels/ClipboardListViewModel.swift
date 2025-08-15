@@ -8,10 +8,10 @@ final class ClipboardListViewModel: ObservableObject {
     @Published var searchText: String = ""
 
     private let repository: ClipboardRepositoryProtocol
-    private let monitor: ClipboardMonitor
+    private let monitor: ClipboardMonitorProtocol
     private var cancellables = Set<AnyCancellable>()
 
-    init(repository: ClipboardRepositoryProtocol = ClipboardRepository(), monitor: ClipboardMonitor = ClipboardMonitor()) {
+    init(repository: ClipboardRepositoryProtocol = ClipboardRepository(), monitor: ClipboardMonitorProtocol = ClipboardMonitor()) {
         self.repository = repository
         self.monitor = monitor
 
