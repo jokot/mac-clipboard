@@ -31,6 +31,8 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 - About/Info window with version details and GitHub link
 - Clear All History action
 - Persistent clipboard history on disk (JSON metadata + image files), async saving, and auto-save on changes and on quit
+- Returns focus to the previously active window when closing the overlay
+- In-app update checking (Info screen), shows latest version and last-checked time
 
 ## Usage
 
