@@ -38,11 +38,9 @@ struct ContentView: View {
                 .frame(maxWidth: 240)
             Spacer()
             Button(action: { isShowingClearConfirm = true }) {
-                Label("Clear", systemImage: "trash")
+                Image(systemName: "trash")
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .tint(.red)
+            .buttonStyle(.plain)
             .padding(.trailing, 6)
             Button(action: { onOpenSettings() }) {
                 Image(systemName: "gearshape.fill")
