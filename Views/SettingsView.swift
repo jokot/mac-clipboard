@@ -47,6 +47,7 @@ struct SettingsView: View {
                     .pickerStyle(SegmentedPickerStyle())
                     .onChange(of: settings.theme) { newTheme in
                         applyTheme(newTheme)
+                        NotificationCenter.default.post(name: .themeChanged, object: nil)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

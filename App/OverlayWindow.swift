@@ -20,12 +20,16 @@ final class OverlayWindowController: NSObject {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(closeRequested), name: .overlayCloseRequested, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(openSettingsRequested), name: .overlayOpenSettings, object: nil)
-    }
+        NotificationCenter.default.addObserver(self, selector: #selector(themeChanged), name: .themeChanged, object: nil)
+     }
 
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
+     deinit {
+         NotificationCenter.default.removeObserver(self)
+     }
 
+    @objc private func themeChanged() {
+        applyTheme()
+    }
     func toggle() {
         if isVisible {
             hide()

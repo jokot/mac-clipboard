@@ -27,6 +27,7 @@ struct ContentView: View {
             list
         }
         .frame(minWidth: 480, minHeight: 480)
+        .ignoresSafeArea(.container, edges: .top)
     }
 
     private var header: some View {
