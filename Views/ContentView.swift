@@ -24,7 +24,22 @@ struct ContentView: View {
         VStack(spacing: 0) {
             header
             Divider()
-            list
+            if viewModel.filteredItems.isEmpty {
+                GeometryReader { proxy in
+                    VStack(spacing: 8) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 28, weight: .regular))
+                            .foregroundColor(.secondary)
+                        Text("No items yet")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .padding(.top, max(48, proxy.size.height * 0.3))
+                }
+            } else {
+                list
+            }
         }
         .frame(minWidth: 480, minHeight: 480)
         .ignoresSafeArea(.container, edges: .top)
