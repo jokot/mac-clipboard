@@ -71,7 +71,7 @@ struct ClipboardItemRow: View {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: 360, maxHeight: 200)
+                        .frame(maxWidth: .infinity, maxHeight: 200)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
