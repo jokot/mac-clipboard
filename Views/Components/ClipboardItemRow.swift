@@ -52,6 +52,7 @@ struct ClipboardItemRow: View {
                             .foregroundColor(.red)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 10)
+                            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                                     .stroke(Color.red.opacity(0.35), lineWidth: 1)
