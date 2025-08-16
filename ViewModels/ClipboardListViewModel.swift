@@ -120,6 +120,13 @@ final class ClipboardListViewModel: ObservableObject {
         repository.saveToDiskAsync(items: items)
     }
 
+    func insertNewItemAtTop(_ item: ClipboardItem) {
+        items.insert(item, at: 0)
+        applyMaxItems(AppSettings.shared.maxItems)
+        if AppSettings.shared.autoCleanEnabled { autoClean() }
+        repository.saveToDiskAsync(items: items)
+    }
+
     private func autoClean() {
         let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
         items.removeAll { $0.date < sevenDaysAgo }

@@ -5,6 +5,10 @@ struct ClipboardItemRow: View {
     let onSelect: (ClipboardItem) -> Void
     let onRemove: () -> Void
     var isSelected: Bool = false
+    
+    // New callbacks for OCR actions
+    var onExtractText: ((ClipboardItem) -> Void)? = nil
+    var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
 
@@ -71,10 +75,26 @@ struct ClipboardItemRow: View {
                 }
                 Spacer()
                 if isHovered {
-                    Button(action: { onRemove() }) {
-                        Image(systemName: "trash")
+                    // New OCR action buttons
+                    VStack(spacing: 6) {
+                        if let onExtractText {
+                            Button(action: { onExtractText(item) }) {
+                                Label("Extract Text", systemImage: "text.viewfinder")
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        if let onExtractBarcode {
+                            Button(action: { onExtractBarcode(item) }) {
+                                Label("Extract Code", systemImage: "barcode.viewfinder")
+                            }
+                            .buttonStyle(.borderless)
+                        }
+
+                        Button(action: { onRemove() }) {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
                     }
-                    .buttonStyle(.borderless)
                 }
             }
         }

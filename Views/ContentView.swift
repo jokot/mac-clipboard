@@ -9,6 +9,9 @@ struct ContentView: View {
     var onOpenSettings: () -> Void = {}
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
+    
+    // OCR service
+    private let ocrService: OCRServiceProtocol = OCRService()
 
     init(viewModel: ClipboardListViewModel,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
@@ -71,8 +74,42 @@ struct ContentView: View {
                     let items = viewModel.filteredItems
                     ForEach(Array(items.indices), id: \.self) { index in
                         let item = items[index]
-                        ClipboardItemRow(item: item, onSelect: onSelect, onRemove: { viewModel.remove(item) }, isSelected: index == selectedIndex)
-                            .id(item.id)
+                        ClipboardItemRow(
+                            item: item,
+                            onSelect: onSelect,
+                            onRemove: { viewModel.remove(item) },
+                            isSelected: index == selectedIndex,
+                            onExtractText: { item in
+                                Task { @MainActor in
+                                    if case .image(let image) = item.content {
+                                        do {
+                                            let text = try await ocrService.extractText(from: image)
+                                            // Copy to pasteboard and append as new item
+                                            let textItem = ClipboardItem(date: Date(), content: .text(text))
+                                            viewModel.setPasteboard(to: textItem)
+                                            viewModel.insertNewItemAtTop(textItem)
+                                        } catch {
+                                            NSSound.beep()
+                                        }
+                                    }
+                                }
+                            },
+                            onExtractBarcode: { item in
+                                Task { @MainActor in
+                                    if case .image(let image) = item.content {
+                                        do {
+                                            let code = try await ocrService.extractBarcode(from: image)
+                                            let textItem = ClipboardItem(date: Date(), content: .text(code))
+                                            viewModel.setPasteboard(to: textItem)
+                                            viewModel.insertNewItemAtTop(textItem)
+                                        } catch {
+                                            NSSound.beep()
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                        .id(item.id)
                         Divider()
                     }
                 }
