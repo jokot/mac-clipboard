@@ -9,14 +9,10 @@ struct SettingsView: View {
     @State private var newHotkeyModifiers: UInt32 = 0
     @State private var newHotkeyKeyCode: UInt32 = 0
     @State private var isShowingClearConfirm: Bool = false
+    @State private var cleanOlderThanDays: String = "7"
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Settings")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding(.bottom)
-            
             // Hotkey Configuration
             GroupBox("Hotkey") {
                 VStack(alignment: .leading, spacing: 8) {
@@ -69,17 +65,17 @@ struct SettingsView: View {
                     
                     Toggle("Auto-clean old items", isOn: $settings.autoCleanEnabled)
                     
-                    if settings.autoCleanEnabled {
-                        HStack {
-                            Text("Clean items older than:")
-                            Spacer()
-                            TextField("7", text: .constant("7"))
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .frame(width: 60)
-                            Text("days")
-                        }
-                        .padding(.leading)
+                    HStack {
+                        Text("Clean items older than:")
+                        Spacer()
+                        TextField("7", text: $cleanOlderThanDays)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(width: 60)
+                        Text("days")
                     }
+                    .padding(.leading)
+                    .disabled(!settings.autoCleanEnabled)
+                    .opacity(settings.autoCleanEnabled ? 1.0 : 0.5)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -108,7 +104,7 @@ struct SettingsView: View {
             }
         }
         .padding(24)
-        .frame(width: 480, height: 400)
+        .frame(width: 480)
         .background(HotkeyCapturingView(isCapturing: $isCapturingHotkey) { keyCode, modifiers in
             updateHotkey(keyCode: keyCode, modifiers: modifiers)
         })
