@@ -10,7 +10,6 @@ struct ContentView: View {
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
     
-    // OCR service
     private let ocrService: OCRServiceProtocol = OCRService()
 
     init(viewModel: ClipboardListViewModel,
@@ -39,9 +38,11 @@ struct ContentView: View {
                 .frame(maxWidth: 240)
             Spacer()
             Button(action: { isShowingClearConfirm = true }) {
-                Image(systemName: "trash")
+                Label("Clear", systemImage: "trash")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(.red)
             .padding(.trailing, 6)
             Button(action: { onOpenSettings() }) {
                 Image(systemName: "gearshape.fill")
@@ -84,7 +85,6 @@ struct ContentView: View {
                                     if case .image(let image) = item.content {
                                         do {
                                             let text = try await ocrService.extractText(from: image)
-                                            // Copy to pasteboard and append as new item
                                             let textItem = ClipboardItem(date: Date(), content: .text(text))
                                             viewModel.setPasteboard(to: textItem)
                                             viewModel.insertNewItemAtTop(textItem)
@@ -116,7 +116,6 @@ struct ContentView: View {
                 .padding(12)
             }
             .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
-                // Reset selection to top and scroll to the first item
                 viewModel.searchText = ""
                 selectedIndex = 0
                 let items = viewModel.filteredItems

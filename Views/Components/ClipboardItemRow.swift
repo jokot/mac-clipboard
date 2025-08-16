@@ -6,7 +6,6 @@ struct ClipboardItemRow: View {
     let onRemove: () -> Void
     var isSelected: Bool = false
     
-    // New callbacks for OCR actions
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
 
@@ -48,18 +47,27 @@ struct ClipboardItemRow: View {
                 Spacer()
                 if isHovered {
                     Button(action: { onRemove() }) {
-                        Image(systemName: "trash")
+                        Label("Delete", systemImage: "trash")
+                            .font(.callout)
+                            .foregroundColor(.red)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                            )
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.trailing, 10)
         case .image(let image):
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "photo")
                     .font(.title3)
                     .foregroundColor(.accentColor)
                     .frame(width: 28)
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFit()
@@ -69,34 +77,66 @@ struct ClipboardItemRow: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                         )
+
+                    if isHovered {
+                        HStack(spacing: 8) {
+                            if let onExtractText {
+                                Button(action: { onExtractText(item) }) {
+                                    Label("Extract Text", systemImage: "text.viewfinder")
+                                        .font(.callout)
+                                        .foregroundColor(.accentColor)
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 10)
+                                        .frame(maxWidth: .infinity)
+                                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            if let onExtractBarcode {
+                                Button(action: { onExtractBarcode(item) }) {
+                                    Label("Extract Code", systemImage: "barcode.viewfinder")
+                                        .font(.callout)
+                                        .foregroundColor(.accentColor)
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 10)
+                                        .frame(maxWidth: .infinity)
+                                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            Button(action: { onRemove() }) {
+                                Label("Delete", systemImage: "trash")
+                                    .font(.callout)
+                                    .foregroundColor(.red)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .frame(maxWidth: .infinity) // allow the HStack to occupy full width so extracts can expand equally
+                    }
+
                     Text(item.date, style: .time)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                Spacer()
-                if isHovered {
-                    // New OCR action buttons
-                    VStack(spacing: 6) {
-                        if let onExtractText {
-                            Button(action: { onExtractText(item) }) {
-                                Label("Extract Text", systemImage: "text.viewfinder")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        if let onExtractBarcode {
-                            Button(action: { onExtractBarcode(item) }) {
-                                Label("Extract Code", systemImage: "barcode.viewfinder")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-
-                        Button(action: { onRemove() }) {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                }
+                Spacer(minLength: 0)
             }
+            .padding(.trailing, 2)
         }
     }
 }
