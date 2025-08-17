@@ -20,10 +20,10 @@ A simple macOS clipboard history app built with SwiftUI.
 - Developer notes: added URL utilities and tests, refactored components, and synced project versions to 1.5.0 (build 6).
 
 ## Preview
-![macclip-screenshot.png](https://github.com/user-attachments/assets/b54cba75-8c7f-4851-a0a3-15915e09b24c)
+![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
 
 ### Copy Clipboard Demo
-https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
+https://github.com/user-attachments/assets/55cb6c86-be5d-4175-98f1-ddbddc5ded3d
 
 ## Features
 - Captures copied text and images
