@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var selectedIndex: Int = 0
     
     private let ocrService: OCRServiceProtocol = OCRService()
+    @FocusState private var isSearchFocused: Bool
 
     init(viewModel: ClipboardListViewModel,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
@@ -43,6 +44,9 @@ struct ContentView: View {
         }
         .frame(minWidth: 480, minHeight: 480)
         .ignoresSafeArea(.container, edges: .top)
+        .onReceive(NotificationCenter.default.publisher(for: .overlayFocusSearch)) { _ in
+            isSearchFocused = true
+        }
     }
 
     private var header: some View {
@@ -52,6 +56,7 @@ struct ContentView: View {
             TextField("Search", text: $viewModel.searchText)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(maxWidth: 240)
+                .focused($isSearchFocused)
             Spacer()
             Button(action: { isShowingClearConfirm = true }) {
                 Image(systemName: "trash")
