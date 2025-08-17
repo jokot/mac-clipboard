@@ -97,20 +97,23 @@ struct ContentView: View {
                             onExtractText: { item in
                                 Task { @MainActor in
                                     if case .image(let imgContent) = item.content {
-                                        do {
-                                            let text = try await ocrService.extractText(from: imgContent.image)
-                                            if let url = URLUtils.linkURL(from: text) {
-                                                let urlItem = ClipboardItem(date: Date(), content: .url(url))
-                                                // Insert first to avoid duplicate when monitor detects pasteboard change
-                                                viewModel.insertNewItemAtTop(urlItem)
-                                                viewModel.setPasteboard(to: urlItem)
-                                            } else {
-                                                let textItem = ClipboardItem(date: Date(), content: .text(text))
-                                                viewModel.insertNewItemAtTop(textItem)
-                                                viewModel.setPasteboard(to: textItem)
+                                        // Check if we have cached text results
+                                        if let cachedText = imgContent.cachedText, !cachedText.isEmpty {
+                                            let resultItem = viewModel.promoteOrInsertResult(text: cachedText)
+                                            viewModel.setPasteboard(to: resultItem)
+                                        } else if let cachedBarcode = imgContent.cachedBarcode, !cachedBarcode.isEmpty {
+                                            // If barcode has already been extracted for this image, do nothing on text extraction
+                                            return
+                                        } else {
+                                            do {
+                                                let text = try await ocrService.extractText(from: imgContent.image)
+                                                let textId = text // For now, use text as ID
+                                                viewModel.updateImageItemCache(item, cachedText: text, cachedId: textId, cachedBarcode: nil)
+                                                let resultItem = viewModel.promoteOrInsertResult(text: text)
+                                                viewModel.setPasteboard(to: resultItem)
+                                            } catch {
+                                                NSSound.beep()
                                             }
-                                        } catch {
-                                            NSSound.beep()
                                         }
                                     }
                                 }
@@ -118,19 +121,23 @@ struct ContentView: View {
                             onExtractBarcode: { item in
                                 Task { @MainActor in
                                     if case .image(let imgContent) = item.content {
-                                        do {
-                                            let code = try await ocrService.extractBarcode(from: imgContent.image)
-                                            if let url = URLUtils.linkURL(from: code) {
-                                                let urlItem = ClipboardItem(date: Date(), content: .url(url))
-                                                viewModel.insertNewItemAtTop(urlItem)
-                                                viewModel.setPasteboard(to: urlItem)
-                                            } else {
-                                                let textItem = ClipboardItem(date: Date(), content: .text(code))
-                                                viewModel.insertNewItemAtTop(textItem)
-                                                viewModel.setPasteboard(to: textItem)
+                                        // Check if we have cached barcode results
+                                        if let barcode = imgContent.cachedBarcode, !barcode.isEmpty {
+                                            let resultItem = viewModel.promoteOrInsertResult(text: barcode)
+                                            viewModel.setPasteboard(to: resultItem)
+                                        } else if let cachedText = imgContent.cachedText, !cachedText.isEmpty {
+                                            // If text has already been extracted for this image, do nothing on barcode extraction
+                                            return
+                                        } else {
+                                            do {
+                                                let code = try await ocrService.extractBarcode(from: imgContent.image)
+                                                // Save code to both cachedId and cachedBarcode to differentiate source
+                                                viewModel.updateImageItemCache(item, cachedText: nil, cachedId: code, cachedBarcode: code)
+                                                let resultItem = viewModel.promoteOrInsertResult(text: code)
+                                                viewModel.setPasteboard(to: resultItem)
+                                            } catch {
+                                                NSSound.beep()
                                             }
-                                        } catch {
-                                            NSSound.beep()
                                         }
                                     }
                                 }

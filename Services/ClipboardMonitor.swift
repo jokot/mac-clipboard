@@ -33,7 +33,7 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
 
         // Prefer image, then URL, then text
         if let image = readImage(from: pb) {
-            let imgContent = ImageContent(image: image, cachedText: nil, cachedBarcode: nil)
+            let imgContent = ImageContent(image: image, cachedText: nil, cachedId: nil, cachedBarcode: nil)
             subject.send(ClipboardItem(date: Date(), content: .image(imgContent)))
             return
         }

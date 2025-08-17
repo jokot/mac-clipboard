@@ -17,6 +17,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let imageFilename: String?
         let url: String?
         let cachedText: String?
+        let cachedId: String?
         let cachedBarcode: String?
     }
 
@@ -41,7 +42,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 if let name = rec.imageFilename, let imagesDir {
                     let imgURL = imagesDir.appendingPathComponent(name)
                     if let data = try? Data(contentsOf: imgURL), let image = NSImage(data: data) {
-                        let imgContent = ImageContent(image: image, cachedText: rec.cachedText, cachedBarcode: rec.cachedBarcode)
+                        let imgContent = ImageContent(image: image, cachedText: rec.cachedText, cachedId: rec.cachedId, cachedBarcode: rec.cachedBarcode)
                         loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .image(imgContent)))
                     }
                 }
@@ -81,7 +82,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         for item in items {
             switch item.content {
             case .text(let text):
-                records.append(PersistRecord(id: item.id, date: item.date, type: "text", text: text, imageFilename: nil, url: nil, cachedText: nil, cachedBarcode: nil))
+                records.append(PersistRecord(id: item.id, date: item.date, type: "text", text: text, imageFilename: nil, url: nil, cachedText: nil, cachedId: nil, cachedBarcode: nil))
             case .image(let imgContent):
                 guard let imagesDir else { continue }
                 let filename = item.id.uuidString + ".png"
@@ -93,17 +94,17 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 // Check if we already saved this exact image data
                 if let existingFilename = savedImageHashes[pngData] {
                     // Reuse existing file
-                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: existingFilename, url: nil, cachedText: imgContent.cachedText, cachedBarcode: imgContent.cachedBarcode))
+                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: existingFilename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
                 } else {
                     // Write new PNG file
                     if !fm.fileExists(atPath: fileURL.path) {
                         try? pngData.write(to: fileURL, options: .atomic)
                     }
                     savedImageHashes[pngData] = filename
-                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedBarcode: imgContent.cachedBarcode))
+                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
                 }
             case .url(let u):
-                records.append(PersistRecord(id: item.id, date: item.date, type: "url", text: nil, imageFilename: nil, url: u.absoluteString, cachedText: nil, cachedBarcode: nil))
+                records.append(PersistRecord(id: item.id, date: item.date, type: "url", text: nil, imageFilename: nil, url: u.absoluteString, cachedText: nil, cachedId: nil, cachedBarcode: nil))
             }
         }
 

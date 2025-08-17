@@ -3,6 +3,7 @@ import Cocoa
 struct ImageContent {
     var image: NSImage
     var cachedText: String?
+    var cachedId: String?
     var cachedBarcode: String?
 }
 
