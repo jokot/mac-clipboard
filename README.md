@@ -11,6 +11,14 @@ A simple macOS clipboard history app built with SwiftUI.
 
 - [Download v1.5.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.5.0)
 
+## What's new in 1.5.0
+- Image extraction: extract text (OCR) and detect barcodes/QR codes from image items, with clear alerts when no result is found and per-image result caching to avoid re-processing.
+- Search UX: Command+F focuses the search field within the overlay.
+- Settings: added an auto-clean "days" input to control retention.
+- UI/UX: added an empty state for filtered lists with no matches, refined layout/styling, and improved safe-area handling and theme change notifications.
+- Clipboard handling: improved item promotion/insertion logic and caching behavior to prevent duplicates for extracted results.
+- Developer notes: added URL utilities and tests, refactored components, and synced project versions to 1.5.0 (build 6).
+
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/b54cba75-8c7f-4851-a0a3-15915e09b24c)
 
@@ -19,9 +27,10 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 
 ## Features
 - Captures copied text and images
+- Extract text from images (OCR) and detect barcodes/QR codes
 - Global hotkey Command+Control+V to toggle a floating window
 - Click any entry to copy it back to the pasteboard
-- Search clipboard history (text)
+- Search clipboard history (text) — use Command+F to focus the search field
 - Quit from overlay header or menu bar icon
 - Command+, opens Settings when overlay is visible; Settings also available in menu bar
 - Theme selection: System / Light / Dark (via Settings)
@@ -31,6 +40,7 @@ https://github.com/user-attachments/assets/bf1e34b1-2c07-476c-a4a6-a8ed99fd22e8
 - About/Info window with version details and GitHub link
 - Clear All History action
 - Persistent clipboard history on disk (JSON metadata + image files), async saving, and auto-save on changes and on quit
+- Empty state view when no items match your filter
 - Returns focus to the previously active window when closing the overlay
 - In-app update checking (Info screen), shows latest version and last-checked time
 
@@ -83,6 +93,7 @@ The test suite includes:
 - **InfoViewModelTests**: Update checking logic 
 - **HotkeyUtilsTests**: Hotkey description formatting
 - **TextPreviewTests**: Text truncation utilities
+- **URLUtilsTests**: URL utilities coverage
 
 ## Data Persistence
 
