@@ -12,9 +12,12 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
     private struct PersistRecord: Codable {
         let id: UUID
         let date: Date
-        let type: String // "text" or "image"
+        let type: String // "text", "image", or "url"
         let text: String?
         let imageFilename: String?
+        let url: String?
+        let cachedText: String?
+        let cachedBarcode: String?
     }
 
     // Serialize all disk operations to avoid race conditions and out-of-order writes
@@ -38,8 +41,13 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 if let name = rec.imageFilename, let imagesDir {
                     let imgURL = imagesDir.appendingPathComponent(name)
                     if let data = try? Data(contentsOf: imgURL), let image = NSImage(data: data) {
-                        loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .image(image)))
+                        let imgContent = ImageContent(image: image, cachedText: rec.cachedText, cachedBarcode: rec.cachedBarcode)
+                        loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .image(imgContent)))
                     }
+                }
+            case "url":
+                if let s = rec.url, let u = URL(string: s) {
+                    loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .url(u)))
                 }
             default:
                 continue
@@ -73,27 +81,29 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         for item in items {
             switch item.content {
             case .text(let text):
-                records.append(PersistRecord(id: item.id, date: item.date, type: "text", text: text, imageFilename: nil))
-            case .image(let image):
+                records.append(PersistRecord(id: item.id, date: item.date, type: "text", text: text, imageFilename: nil, url: nil, cachedText: nil, cachedBarcode: nil))
+            case .image(let imgContent):
                 guard let imagesDir else { continue }
                 let filename = item.id.uuidString + ".png"
                 let fileURL = imagesDir.appendingPathComponent(filename)
                 
                 // Get PNG data for comparison
-                guard let pngData = image.pngData() else { continue }
+                guard let pngData = imgContent.image.pngData() else { continue }
                 
                 // Check if we already saved this exact image data
                 if let existingFilename = savedImageHashes[pngData] {
                     // Reuse existing file
-                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: existingFilename))
+                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: existingFilename, url: nil, cachedText: imgContent.cachedText, cachedBarcode: imgContent.cachedBarcode))
                 } else {
                     // Write new PNG file
                     if !fm.fileExists(atPath: fileURL.path) {
                         try? pngData.write(to: fileURL, options: .atomic)
                     }
                     savedImageHashes[pngData] = filename
-                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename))
+                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedBarcode: imgContent.cachedBarcode))
                 }
+            case .url(let u):
+                records.append(PersistRecord(id: item.id, date: item.date, type: "url", text: nil, imageFilename: nil, url: u.absoluteString, cachedText: nil, cachedBarcode: nil))
             }
         }
 

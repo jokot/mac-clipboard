@@ -31,113 +31,152 @@ struct ClipboardItemRow: View {
     private var content: some View {
         switch item.content {
         case .text(let string):
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "doc.on.clipboard")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(TextPreview.preview(for: string))
-                        .font(.body)
-                        .lineLimit(4)
-                    Text(item.date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                if isHovered {
-                    Button(action: { onRemove() }) {
-                        Label("Delete", systemImage: "trash")
-                            .font(.callout)
-                            .foregroundColor(.red)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(Color.red.opacity(0.35), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.trailing, 10)
-        case .image(let image):
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "photo")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 8) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: 200)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                        )
-
-                    if isHovered {
-                        HStack(spacing: 8) {
-                            if let onExtractText {
-                                Button(action: { onExtractText(item) }) {
-                                    Label("Extract Text", systemImage: "text.viewfinder")
-                                        .font(.callout)
-                                        .foregroundColor(.accentColor)
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 10)
-                                        .frame(maxWidth: .infinity)
-                                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            if let onExtractBarcode {
-                                Button(action: { onExtractBarcode(item) }) {
-                                    Label("Extract Code", systemImage: "barcode.viewfinder")
-                                        .font(.callout)
-                                        .foregroundColor(.accentColor)
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 10)
-                                        .frame(maxWidth: .infinity)
-                                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            Button(action: { onRemove() }) {
-                                Label("Delete", systemImage: "trash")
-                                    .font(.callout)
-                                    .foregroundColor(.red)
-                                    .padding(.vertical, 6)
-                                    .padding(.horizontal, 10)
-                                    .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .stroke(Color.red.opacity(0.35), lineWidth: 1)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .frame(maxWidth: .infinity) // allow the HStack to occupy full width so extracts can expand equally
-                    }
-
-                    Text(item.date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.trailing, 2)
+            TextItemContent(string: string, date: item.date, isHovered: isHovered, onRemove: onRemove)
+        case .image(let imgContent):
+            ImageItemContent(imgContent: imgContent, item: item, isHovered: isHovered, onRemove: onRemove, onExtractText: onExtractText, onExtractBarcode: onExtractBarcode)
+        case .url(let url):
+            URLItemContent(url: url, date: item.date, isHovered: isHovered, onRemove: onRemove)
         }
     }
+}
+
+// MARK: - Private subviews (Option B)
+
+private struct TextItemContent: View {
+    let string: String
+    let date: Date
+    let isHovered: Bool
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "doc.on.clipboard")
+                .font(.title3)
+                .foregroundColor(.accentColor)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(TextPreview.preview(for: string))
+                    .font(.body)
+                    .lineLimit(4)
+                Text(date, style: .time)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            if isHovered {
+                pillButton(label: "Delete", systemImage: "trash", color: .red, outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
+            }
+        }
+        .padding(.trailing, 10)
+    }
+}
+
+private struct ImageItemContent: View {
+    let imgContent: ImageContent
+    let item: ClipboardItem
+    let isHovered: Bool
+    let onRemove: () -> Void
+    var onExtractText: ((ClipboardItem) -> Void)? = nil
+    var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "photo")
+                .font(.title3)
+                .foregroundColor(.accentColor)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 8) {
+                Image(nsImage: imgContent.image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: 200)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
+
+                if isHovered {
+                    HStack(spacing: 8) {
+                        if let onExtractText {
+                            pillButton(label: "Extract Text", systemImage: "text.viewfinder", color: .accentColor, outlineOpacity: 0.35, fillsWidth: true) {
+                                onExtractText(item)
+                            }
+                        }
+                        if let onExtractBarcode {
+                            pillButton(label: "Extract Code", systemImage: "barcode.viewfinder", color: .accentColor, outlineOpacity: 0.35, fillsWidth: true) {
+                                onExtractBarcode(item)
+                            }
+                        }
+
+                        pillButton(label: "Delete", systemImage: "trash", color: .red, outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                Text(item.date, style: .time)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.trailing, 2)
+    }
+}
+
+private struct URLItemContent: View {
+    let url: URL
+    let date: Date
+    let isHovered: Bool
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "link")
+                .font(.title3)
+                .foregroundColor(.accentColor)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(url.absoluteString)
+                    .font(.body)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                Text(date, style: .time)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            HStack(spacing: 8) {
+                if isHovered {
+                    pillButton(label: "Open", systemImage: "safari", color: .accentColor, outlineOpacity: 0.35, fillsWidth: false) {
+                        NSWorkspace.shared.open(url)
+                        NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+                    }
+                    pillButton(label: "Delete", systemImage: "trash", color: .red, outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
+                }
+            }
+        }
+        .padding(.trailing, 10)
+    }
+}
+
+// MARK: - Small styling helper
+
+@ViewBuilder
+private func pillButton(label: String, systemImage: String, color: Color, outlineOpacity: Double, fillsWidth: Bool = false, action: @escaping () -> Void) -> some View {
+    let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+    Button(action: action) {
+        Label(label, systemImage: systemImage)
+            .font(.callout)
+            .foregroundColor(color)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
+            .contentShape(shape)
+            .background(
+                shape
+                    .stroke(color.opacity(outlineOpacity), lineWidth: 1)
+            )
+    }
+    .buttonStyle(.plain)
 }

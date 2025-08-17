@@ -96,12 +96,19 @@ struct ContentView: View {
                             isSelected: index == selectedIndex,
                             onExtractText: { item in
                                 Task { @MainActor in
-                                    if case .image(let image) = item.content {
+                                    if case .image(let imgContent) = item.content {
                                         do {
-                                            let text = try await ocrService.extractText(from: image)
-                                            let textItem = ClipboardItem(date: Date(), content: .text(text))
-                                            viewModel.setPasteboard(to: textItem)
-                                            viewModel.insertNewItemAtTop(textItem)
+                                            let text = try await ocrService.extractText(from: imgContent.image)
+                                            if let url = URLUtils.linkURL(from: text) {
+                                                let urlItem = ClipboardItem(date: Date(), content: .url(url))
+                                                // Insert first to avoid duplicate when monitor detects pasteboard change
+                                                viewModel.insertNewItemAtTop(urlItem)
+                                                viewModel.setPasteboard(to: urlItem)
+                                            } else {
+                                                let textItem = ClipboardItem(date: Date(), content: .text(text))
+                                                viewModel.insertNewItemAtTop(textItem)
+                                                viewModel.setPasteboard(to: textItem)
+                                            }
                                         } catch {
                                             NSSound.beep()
                                         }
@@ -110,12 +117,18 @@ struct ContentView: View {
                             },
                             onExtractBarcode: { item in
                                 Task { @MainActor in
-                                    if case .image(let image) = item.content {
+                                    if case .image(let imgContent) = item.content {
                                         do {
-                                            let code = try await ocrService.extractBarcode(from: image)
-                                            let textItem = ClipboardItem(date: Date(), content: .text(code))
-                                            viewModel.setPasteboard(to: textItem)
-                                            viewModel.insertNewItemAtTop(textItem)
+                                            let code = try await ocrService.extractBarcode(from: imgContent.image)
+                                            if let url = URLUtils.linkURL(from: code) {
+                                                let urlItem = ClipboardItem(date: Date(), content: .url(url))
+                                                viewModel.insertNewItemAtTop(urlItem)
+                                                viewModel.setPasteboard(to: urlItem)
+                                            } else {
+                                                let textItem = ClipboardItem(date: Date(), content: .text(code))
+                                                viewModel.insertNewItemAtTop(textItem)
+                                                viewModel.setPasteboard(to: textItem)
+                                            }
                                         } catch {
                                             NSSound.beep()
                                         }

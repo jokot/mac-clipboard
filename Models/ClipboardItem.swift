@@ -1,8 +1,15 @@
 import Cocoa
 
+struct ImageContent {
+    var image: NSImage
+    var cachedText: String?
+    var cachedBarcode: String?
+}
+
 enum ClipboardItemContent {
     case text(String)
-    case image(NSImage)
+    case image(ImageContent)
+    case url(URL)
 }
 
 struct ClipboardItem: Identifiable {
@@ -23,7 +30,9 @@ extension ClipboardItem: Equatable {
         case let (.text(a), .text(b)):
             return a == b
         case let (.image(a), .image(b)):
-            return a.pngData() == b.pngData()
+            return a.image.pngData() == b.image.pngData()
+        case let (.url(a), .url(b)):
+            return a.absoluteString == b.absoluteString
         default:
             return false
         }

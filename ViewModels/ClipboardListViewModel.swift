@@ -80,9 +80,13 @@ final class ClipboardListViewModel: ObservableObject {
         switch item.content {
         case .text(let text):
             pasteboard.setString(text, forType: .string)
-        case .image(let image):
-            guard let tiffData = image.tiffRepresentation else { return }
+        case .image(let imgContent):
+            guard let tiffData = imgContent.image.tiffRepresentation else { return }
             pasteboard.setData(tiffData, forType: .tiff)
+        case .url(let url):
+            // Write both URL object and plain string for broad compatibility
+            _ = pasteboard.writeObjects([url as NSURL])
+            pasteboard.setString(url.absoluteString, forType: .string)
         }
     }
 
@@ -104,6 +108,8 @@ final class ClipboardListViewModel: ObservableObject {
                 return text.lowercased().contains(loweredQuery)
             case .image:
                 return false
+            case .url(let url):
+                return url.absoluteString.lowercased().contains(loweredQuery)
             }
         }
     }
