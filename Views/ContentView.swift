@@ -9,9 +9,15 @@ struct ContentView: View {
     var onOpenSettings: () -> Void = {}
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
-    
-    private let ocrService: OCRServiceProtocol = OCRService()
     @FocusState private var isSearchFocused: Bool
+    @State private var extractionAlert: ExtractionAlert?
+
+    private let ocrService: OCRServiceProtocol = OCRService()
+
+    struct ExtractionAlert: Identifiable {
+        let id = UUID()
+        let message: String
+    }
 
     init(viewModel: ClipboardListViewModel,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
@@ -46,6 +52,9 @@ struct ContentView: View {
         .ignoresSafeArea(.container, edges: .top)
         .onReceive(NotificationCenter.default.publisher(for: .overlayFocusSearch)) { _ in
             isSearchFocused = true
+        }
+        .alert(item: $extractionAlert) { alert in
+            Alert(title: Text("No Result"), message: Text(alert.message), dismissButton: .default(Text("OK")))
         }
     }
 
@@ -102,22 +111,47 @@ struct ContentView: View {
                             onExtractText: { item in
                                 Task { @MainActor in
                                     if case .image(let imgContent) = item.content {
-                                        // Check if we have cached text results
-                                        if let cachedText = imgContent.cachedText, !cachedText.isEmpty {
-                                            let resultItem = viewModel.promoteOrInsertResult(text: cachedText)
-                                            viewModel.setPasteboard(to: resultItem)
-                                        } else if let cachedBarcode = imgContent.cachedBarcode, !cachedBarcode.isEmpty {
-                                            // If barcode has already been extracted for this image, do nothing on text extraction
-                                            return
-                                        } else {
-                                            do {
-                                                let text = try await ocrService.extractText(from: imgContent.image)
-                                                let textId = text // For now, use text as ID
-                                                viewModel.updateImageItemCache(item, cachedText: text, cachedId: textId, cachedBarcode: nil)
-                                                let resultItem = viewModel.promoteOrInsertResult(text: text)
-                                                viewModel.setPasteboard(to: resultItem)
-                                            } catch {
+                                        // If we have a cached text result (including negative cache as empty string), use it
+                                        if let cachedText = imgContent.cachedText {
+                                            if cachedText.isEmpty {
                                                 NSSound.beep()
+                                                extractionAlert = ExtractionAlert(message: "No text found in the image.")
+                                                return
+                                            } else {
+                                                let resultItem = viewModel.promoteOrInsertResult(text: cachedText)
+                                                viewModel.setPasteboard(to: resultItem)
+                                                return
+                                            }
+                                        }
+
+                                        // No cached text yet: perform OCR
+                                        do {
+                                            let text = try await ocrService.extractText(from: imgContent.image)
+                                            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                                            guard !trimmed.isEmpty else {
+                                                // Cache negative result to avoid re-running unnecessarily
+                                                viewModel.updateImageItemCache(item, cachedText: "", cachedId: nil, cachedBarcode: nil)
+                                                NSSound.beep()
+                                                extractionAlert = ExtractionAlert(message: "No text found in the image.")
+                                                return
+                                            }
+                                            let textId = text
+                                            viewModel.updateImageItemCache(item, cachedText: text, cachedId: textId, cachedBarcode: nil)
+                                            let resultItem = viewModel.promoteOrInsertResult(text: text)
+                                            viewModel.setPasteboard(to: resultItem)
+                                        } catch {
+                                            NSSound.beep()
+                                            if let ocrError = error as? OCRService.OCRError {
+                                                switch ocrError {
+                                                case .noTextFound:
+                                                    // Cache negative result for next time
+                                                    viewModel.updateImageItemCache(item, cachedText: "", cachedId: nil, cachedBarcode: nil)
+                                                    extractionAlert = ExtractionAlert(message: "No text found in the image.")
+                                                case .imageProcessingFailed, .visionRequestFailed:
+                                                    extractionAlert = ExtractionAlert(message: "Failed to extract text from the image.")
+                                                case .noBarcodeFound:
+                                                    break
+                                                }
                                             }
                                         }
                                     }
@@ -126,22 +160,46 @@ struct ContentView: View {
                             onExtractBarcode: { item in
                                 Task { @MainActor in
                                     if case .image(let imgContent) = item.content {
-                                        // Check if we have cached barcode results
-                                        if let barcode = imgContent.cachedBarcode, !barcode.isEmpty {
-                                            let resultItem = viewModel.promoteOrInsertResult(text: barcode)
-                                            viewModel.setPasteboard(to: resultItem)
-                                        } else if let cachedText = imgContent.cachedText, !cachedText.isEmpty {
-                                            // If text has already been extracted for this image, do nothing on barcode extraction
-                                            return
-                                        } else {
-                                            do {
-                                                let code = try await ocrService.extractBarcode(from: imgContent.image)
-                                                // Save code to both cachedId and cachedBarcode to differentiate source
-                                                viewModel.updateImageItemCache(item, cachedText: nil, cachedId: code, cachedBarcode: code)
-                                                let resultItem = viewModel.promoteOrInsertResult(text: code)
-                                                viewModel.setPasteboard(to: resultItem)
-                                            } catch {
+                                        // If we have a cached barcode result (including negative cache as empty string), use it
+                                        if let barcode = imgContent.cachedBarcode {
+                                            if barcode.isEmpty {
                                                 NSSound.beep()
+                                                extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
+                                                return
+                                            } else {
+                                                let resultItem = viewModel.promoteOrInsertResult(text: barcode)
+                                                viewModel.setPasteboard(to: resultItem)
+                                                return
+                                            }
+                                        }
+
+                                        // No cached barcode yet: perform detection
+                                        do {
+                                            let code = try await ocrService.extractBarcode(from: imgContent.image)
+                                            let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+                                            guard !trimmed.isEmpty else {
+                                                // Cache negative result to avoid re-running unnecessarily
+                                                viewModel.updateImageItemCache(item, cachedText: nil, cachedId: nil, cachedBarcode: "")
+                                                NSSound.beep()
+                                                extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
+                                                return
+                                            }
+                                            viewModel.updateImageItemCache(item, cachedText: nil, cachedId: code, cachedBarcode: code)
+                                            let resultItem = viewModel.promoteOrInsertResult(text: code)
+                                            viewModel.setPasteboard(to: resultItem)
+                                        } catch {
+                                            NSSound.beep()
+                                            if let ocrError = error as? OCRService.OCRError {
+                                                switch ocrError {
+                                                case .noBarcodeFound:
+                                                    // Cache negative result for next time
+                                                    viewModel.updateImageItemCache(item, cachedText: nil, cachedId: nil, cachedBarcode: "")
+                                                    extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
+                                                case .imageProcessingFailed, .visionRequestFailed:
+                                                    extractionAlert = ExtractionAlert(message: "Failed to detect barcode in the image.")
+                                                case .noTextFound:
+                                                    break
+                                                }
                                             }
                                         }
                                     }
