@@ -9,7 +9,7 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.4.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.4.0)
+- [Download v1.5.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.5.0)
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/b54cba75-8c7f-4851-a0a3-15915e09b24c)
