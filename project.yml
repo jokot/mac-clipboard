@@ -26,8 +26,8 @@ targets:
       PRODUCT_NAME: MaClip
       PRODUCT_BUNDLE_IDENTIFIER: com.jokot.MacClipboard
       INFOPLIST_FILE: App/Info.plist
-      CURRENT_PROJECT_VERSION: 5
-      MARKETING_VERSION: 1.4.0
+      CURRENT_PROJECT_VERSION: 6
+      MARKETING_VERSION: 1.5.0
       DEFINES_MODULE: YES
     scheme:
       testTargets:

@@ -1,85 +1,93 @@
+import Foundation
 import Cocoa
 import Combine
 
-protocol ClipboardMonitorProtocol: AnyObject {
+protocol ClipboardMonitorProtocol {
     var itemPublisher: AnyPublisher<ClipboardItem, Never> { get }
     func start()
     func stop()
 }
 
 final class ClipboardMonitor: ClipboardMonitorProtocol {
-    private var timer: Timer?
-    private var debounceTimer: Timer?
-    private var lastChangeCount: Int = NSPasteboard.general.changeCount
-    private var isSettingPasteboard = false
     private let subject = PassthroughSubject<ClipboardItem, Never>()
+    var itemPublisher: AnyPublisher<ClipboardItem, Never> { subject.eraseToAnyPublisher() }
 
-    var itemPublisher: AnyPublisher<ClipboardItem, Never> {
-        subject.eraseToAnyPublisher()
-    }
+    private var timer: Timer?
+    private var lastChangeCount: Int = NSPasteboard.general.changeCount
 
     func start() {
-        stop()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            self?.checkPasteboard()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in
+            self?.pollPasteboard()
         }
-        RunLoop.main.add(timer!, forMode: .common)
     }
 
     func stop() {
         timer?.invalidate()
         timer = nil
-        debounceTimer?.invalidate()
-        debounceTimer = nil
     }
 
-    private func checkPasteboard() {
-        let pasteboard = NSPasteboard.general
-        let currentChangeCount = pasteboard.changeCount
+    private func pollPasteboard() {
+        let pb = NSPasteboard.general
+        guard pb.changeCount != lastChangeCount else { return }
+        lastChangeCount = pb.changeCount
 
-        if isSettingPasteboard {
-            isSettingPasteboard = false
-            lastChangeCount = currentChangeCount
+        // Prefer image, then URL, then text
+        if let image = readImage(from: pb) {
+            let imgContent = ImageContent(image: image, cachedText: nil, cachedId: nil, cachedBarcode: nil)
+            subject.send(ClipboardItem(date: Date(), content: .image(imgContent)))
             return
         }
 
-        guard currentChangeCount != lastChangeCount else { return }
-        lastChangeCount = currentChangeCount
-
-        // Cancel any existing debounce timer
-        debounceTimer?.invalidate()
-        
-        // Start a new debounce timer to handle rapid successive changes
-        debounceTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
-            self?.processPasteboardChange(from: pasteboard)
+        if let url = readURL(from: pb) {
+            subject.send(ClipboardItem(date: Date(), content: .url(url)))
+            return
         }
-    }
-    
-    private func processPasteboardChange(from pasteboard: NSPasteboard) {
-        if let item = readCurrentPasteboardItem(from: pasteboard) {
-            subject.send(item)
+
+        if let text = readText(from: pb) {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let detected = URLUtils.linkURL(from: trimmed) {
+                subject.send(ClipboardItem(date: Date(), content: .url(detected)))
+            } else {
+                subject.send(ClipboardItem(date: Date(), content: .text(text)))
+            }
         }
     }
 
-    private func readCurrentPasteboardItem(from pasteboard: NSPasteboard) -> ClipboardItem? {
-        if let image = readImage(from: pasteboard) {
-            return ClipboardItem(date: Date(), content: .image(image))
+    private func readText(from pasteboard: NSPasteboard) -> String? {
+        if let items = pasteboard.pasteboardItems, !items.isEmpty {
+            let item = items[0]
+            if let str = item.string(forType: .string) { return str }
         }
-        if let string = pasteboard.string(forType: .string), !string.isEmpty {
-            return ClipboardItem(date: Date(), content: .text(string))
+        return nil
+    }
+
+    private func readURL(from pasteboard: NSPasteboard) -> URL? {
+        if let objs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], let url = objs.first {
+            return url
+        }
+        if let items = pasteboard.pasteboardItems, let item = items.first {
+            if let s = item.string(forType: .URL), let url = URL(string: s) { return url }
+            // Some apps use public.url
+            if let s = item.string(forType: NSPasteboard.PasteboardType("public.url")), let url = URL(string: s) { return url }
         }
         return nil
     }
 
     private func readImage(from pasteboard: NSPasteboard) -> NSImage? {
-        if let data = pasteboard.data(forType: .png), let image = NSImage(data: data) { return image }
-        if let data = pasteboard.data(forType: .tiff), let image = NSImage(data: data) { return image }
-        if let data = pasteboard.data(forType: .pdf), let image = NSImage(data: data) { return image }
+        // Try robust Cocoa reading first
+        if let objs = pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage],
+           let img = objs.first {
+            return img
+        }
+        // Fallback: inspect first pasteboard item data for common image types
+        if let items = pasteboard.pasteboardItems, let item = items.first {
+            if let data = item.data(forType: .tiff), let image = NSImage(data: data) {
+                return image
+            }
+            if let data = item.data(forType: .png), let image = NSImage(data: data) {
+                return image
+            }
+        }
         return nil
-    }
-
-    // Expose a method to mark self-triggered pasteboard writes if needed
-    func markSettingPasteboard() {
-        isSettingPasteboard = true
     }
 }

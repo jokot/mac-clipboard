@@ -9,6 +9,7 @@ extension Notification.Name {
     static let overlaySelectCurrentItem = Notification.Name("OverlaySelectCurrentItem")
     static let overlayDidShow = Notification.Name("OverlayDidShow")
     static let overlayOpenSettings = Notification.Name("OverlayOpenSettings")
+    static let overlayFocusSearch = Notification.Name("OverlayFocusSearch")
 
     // Theme change
     static let themeChanged = Notification.Name("ThemeChanged")

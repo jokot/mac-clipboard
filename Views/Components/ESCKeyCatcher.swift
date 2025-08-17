@@ -36,9 +36,14 @@ final class KeyCatcherView: NSView {
             case 36, 76: // Return or Keypad Enter
                 NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
             default:
-                if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers, chars == "," {
-                    NotificationCenter.default.post(name: .overlayOpenSettings, object: nil)
-                    return
+                if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers {
+                    if chars == "," {
+                        NotificationCenter.default.post(name: .overlayOpenSettings, object: nil)
+                        return
+                    } else if chars.lowercased() == "f" {
+                        NotificationCenter.default.post(name: .overlayFocusSearch, object: nil)
+                        return
+                    }
                 }
                 super.keyDown(with: event)
         }
