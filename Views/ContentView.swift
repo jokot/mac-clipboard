@@ -126,7 +126,15 @@ struct ContentView: View {
 
                                         // No cached text yet: perform OCR
                                         do {
-                                            let text = try await ocrService.extractText(from: imgContent.image)
+                                            var resolvedImage: NSImage?
+                                            switch imgContent.source {
+                                            case .memory(let img): resolvedImage = img
+                                            case .file(let url):
+                                                if let data = try? Data(contentsOf: url) { resolvedImage = NSImage(data: data) }
+                                            }
+                                            guard let imageToProcess = resolvedImage else { throw OCRService.OCRError.imageProcessingFailed }
+                                            
+                                            let text = try await ocrService.extractText(from: imageToProcess)
                                             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                                             guard !trimmed.isEmpty else {
                                                 // Cache negative result to avoid re-running unnecessarily
@@ -175,7 +183,15 @@ struct ContentView: View {
 
                                         // No cached barcode yet: perform detection
                                         do {
-                                            let code = try await ocrService.extractBarcode(from: imgContent.image)
+                                            var resolvedImage: NSImage?
+                                            switch imgContent.source {
+                                            case .memory(let img): resolvedImage = img
+                                            case .file(let url):
+                                                if let data = try? Data(contentsOf: url) { resolvedImage = NSImage(data: data) }
+                                            }
+                                            guard let imageToProcess = resolvedImage else { throw OCRService.OCRError.imageProcessingFailed }
+                                            
+                                            let code = try await ocrService.extractBarcode(from: imageToProcess)
                                             let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
                                             guard !trimmed.isEmpty else {
                                                 // Cache negative result to avoid re-running unnecessarily

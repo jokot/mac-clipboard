@@ -78,6 +78,8 @@ private struct ImageItemContent: View {
     let onRemove: () -> Void
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
+    
+    @State private var loadedImage: NSImage? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -86,9 +88,7 @@ private struct ImageItemContent: View {
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 8) {
-                Image(nsImage: imgContent.image)
-                    .resizable()
-                    .scaledToFit()
+                imageView
                     .frame(maxWidth: .infinity, maxHeight: 200)
                     .cornerRadius(8)
                     .overlay(
@@ -121,6 +121,35 @@ private struct ImageItemContent: View {
             Spacer(minLength: 0)
         }
         .padding(.trailing, 2)
+    }
+    
+    @ViewBuilder
+    private var imageView: some View {
+        Group {
+            if let image = effectiveImage {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Color.secondary.opacity(0.1)
+                    .overlay(ProgressView())
+                    .task {
+                        if case .file(let url) = imgContent.source {
+                            if let data = try? Data(contentsOf: url), let img = NSImage(data: data) {
+                                self.loadedImage = img
+                            }
+                        }
+                    }
+            }
+        }
+    }
+    
+    // Use memory image if available, otherwise use loaded image
+    private var effectiveImage: NSImage? {
+        if case .memory(let img) = imgContent.source {
+            return img
+        }
+        return loadedImage
     }
 }
 

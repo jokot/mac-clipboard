@@ -81,7 +81,17 @@ final class ClipboardListViewModel: ObservableObject {
         case .text(let text):
             pasteboard.setString(text, forType: .string)
         case .image(let imgContent):
-            guard let tiffData = imgContent.image.tiffRepresentation else { return }
+            var image: NSImage?
+            switch imgContent.source {
+            case .memory(let img):
+                image = img
+            case .file(let url):
+                if let data = try? Data(contentsOf: url) {
+                    image = NSImage(data: data)
+                }
+            }
+            guard let validImage = image,
+                  let tiffData = validImage.tiffRepresentation else { return }
             pasteboard.setData(tiffData, forType: .tiff)
         case .url(let url):
             // Write both URL object and plain string for broad compatibility
@@ -119,7 +129,21 @@ final class ClipboardListViewModel: ObservableObject {
         if let last = items.first, last == item {
             return
         }
-        items.insert(item, at: 0)
+        
+        var itemToInsert = item
+        
+        // Optimize image storage:
+        // If we receive an image in memory, save it to disk immediately and use the file reference.
+        // This keeps the items array lightweight.
+        if case .image(let imgContent) = item.content,
+           case .memory(let image) = imgContent.source {
+            if let savedURL = repository.saveImage(image) {
+                let newContent = ImageContent(source: .file(savedURL), cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode)
+                itemToInsert = ClipboardItem(id: item.id, date: item.date, content: .image(newContent))
+            }
+        }
+        
+        items.insert(itemToInsert, at: 0)
         applyMaxItems(AppSettings.shared.maxItems)
         if AppSettings.shared.autoCleanEnabled { autoClean() }
         // Only save once after all modifications

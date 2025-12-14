@@ -1,10 +1,23 @@
 import Cocoa
+import Foundation
+
+enum ImageSource {
+    case memory(NSImage)
+    case file(URL)
+}
 
 struct ImageContent {
-    var image: NSImage
+    var source: ImageSource
     var cachedText: String?
     var cachedId: String?
     var cachedBarcode: String?
+
+    var image: NSImage? {
+        switch source {
+        case .memory(let img): return img
+        case .file: return nil // explicit nil to force async loading logic in views
+        }
+    }
 }
 
 enum ClipboardItemContent {
@@ -27,11 +40,21 @@ struct ClipboardItem: Identifiable {
 
 extension ClipboardItem: Equatable {
     static func == (lhs: ClipboardItem, rhs: ClipboardItem) -> Bool {
+        if lhs.id == rhs.id { return true }
+        
         switch (lhs.content, rhs.content) {
         case let (.text(a), .text(b)):
             return a == b
         case let (.image(a), .image(b)):
-            return a.image.pngData() == b.image.pngData()
+            switch (a.source, b.source) {
+            case let (.file(urlA), .file(urlB)):
+                return urlA == urlB
+            case let (.memory(imgA), .memory(imgB)):
+                // Fallback to object identity to avoid expensive data comparison
+                return imgA === imgB
+            default:
+                return false
+            }
         case let (.url(a), .url(b)):
             return a.absoluteString == b.absoluteString
         default:
