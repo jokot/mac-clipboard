@@ -98,6 +98,8 @@ final class ClipboardListViewModel: ObservableObject {
             _ = pasteboard.writeObjects([url as NSURL])
             pasteboard.setString(url.absoluteString, forType: .string)
         }
+        // Prevent the monitor from picking up our own pasteboard write.
+        monitor.ignoreCurrentChangeCount()
     }
 
     func applyMaxItems(_ limit: Int) {

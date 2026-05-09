@@ -63,6 +63,18 @@ final class ClipboardListViewModelTests: XCTestCase {
         }
         XCTAssertEqual(repo.saveAsyncCount, 1)
     }
+
+    @MainActor
+    func test_setPasteboard_callsIgnoreCurrentChangeCountOnce() {
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let item = ClipboardItem(date: Date(), content: .text("hello"))
+        vm.setPasteboard(to: item)
+
+        XCTAssertEqual(monitor.ignoreCallCount, 1)
+    }
 }
 
 // MARK: - Mocks
