@@ -6,6 +6,7 @@ protocol ClipboardMonitorProtocol {
     var itemPublisher: AnyPublisher<ClipboardItem, Never> { get }
     func start()
     func stop()
+    func ignoreCurrentChangeCount()
 }
 
 final class ClipboardMonitor: ClipboardMonitorProtocol {
@@ -24,6 +25,10 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
     func stop() {
         timer?.invalidate()
         timer = nil
+    }
+
+    func ignoreCurrentChangeCount() {
+        lastChangeCount = NSPasteboard.general.changeCount
     }
 
     private func pollPasteboard() {

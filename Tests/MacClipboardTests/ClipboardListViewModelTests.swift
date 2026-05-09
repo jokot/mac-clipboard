@@ -83,5 +83,8 @@ private final class MockMonitor: ClipboardMonitorProtocol {
     func start() {}
     func stop() {}
 
+    private(set) var ignoreCallCount: Int = 0
+    func ignoreCurrentChangeCount() { ignoreCallCount += 1 }
+
     func emit(_ item: ClipboardItem) { subject.send(item) }
 }
