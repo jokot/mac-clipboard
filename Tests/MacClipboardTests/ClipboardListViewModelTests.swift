@@ -74,6 +74,7 @@ private final class MockRepo: ClipboardRepositoryProtocol {
     func saveToDisk(items: [ClipboardItem]) { savedItems = items }
     func saveToDiskAsync(items: [ClipboardItem]) { savedItems = items; saveAsyncCount += 1 }
     func clearAllFiles() { savedItems.removeAll() }
+    func saveImage(_ image: NSImage) -> URL? { nil }
 }
 
 private final class MockMonitor: ClipboardMonitorProtocol {
