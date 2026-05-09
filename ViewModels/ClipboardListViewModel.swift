@@ -75,6 +75,11 @@ final class ClipboardListViewModel: ObservableObject {
     }
 
     func setPasteboard(to item: ClipboardItem) {
+        // Always reset the monitor's change-count baseline so the writes below
+        // (or any partial write before an early return) do not bounce back as
+        // new clipboard items.
+        defer { monitor.ignoreCurrentChangeCount() }
+
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         switch item.content {
@@ -98,8 +103,6 @@ final class ClipboardListViewModel: ObservableObject {
             _ = pasteboard.writeObjects([url as NSURL])
             pasteboard.setString(url.absoluteString, forType: .string)
         }
-        // Prevent the monitor from picking up our own pasteboard write.
-        monitor.ignoreCurrentChangeCount()
     }
 
     func applyMaxItems(_ limit: Int) {
