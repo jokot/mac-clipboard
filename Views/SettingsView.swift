@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Carbon.HIToolbox
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
@@ -76,6 +77,74 @@ struct SettingsView: View {
                     .padding(.leading)
                     .disabled(!settings.autoCleanEnabled)
                     .opacity(settings.autoCleanEnabled ? 1.0 : 0.5)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Privacy Settings
+            GroupBox("Privacy") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Excluded Apps")
+                        .font(.subheadline.bold())
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(settings.excludedBundleIDs, id: \.self) { bundleID in
+                            HStack(spacing: 8) {
+                                if let icon = AppMetadata.shared.icon(for: bundleID) {
+                                    Image(nsImage: icon).resizable().frame(width: 18, height: 18)
+                                } else {
+                                    Image(systemName: "questionmark.app.dashed").frame(width: 18, height: 18)
+                                }
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(AppMetadata.shared.displayName(for: bundleID) ?? bundleID)
+                                        .font(.body)
+                                    Text(bundleID).font(.caption).foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Button(action: {
+                                    settings.excludedBundleIDs.removeAll { $0 == bundleID }
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        if settings.excludedBundleIDs.isEmpty {
+                            Text("No apps excluded.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    Button("+ Add Application…") {
+                        addApplicationViaPicker()
+                    }
+                    Text("Clips copied from these apps will never be saved to your history.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Divider().padding(.vertical, 4)
+
+                    Toggle("Skip concealed clipboard items", isOn: $settings.skipConcealedItems)
+                    HStack {
+                        Text("Auto-clear concealed items after")
+                        Spacer()
+                        Picker("", selection: $settings.concealedClearTimeout) {
+                            Text("30 sec").tag(TimeInterval(30))
+                            Text("1 min").tag(TimeInterval(60))
+                            Text("2 min").tag(TimeInterval(120))
+                            Text("5 min").tag(TimeInterval(300))
+                            Text("10 min").tag(TimeInterval(600))
+                            Text("15 min").tag(TimeInterval(900))
+                            Text("30 min").tag(TimeInterval(1800))
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 110)
+                        .disabled(settings.skipConcealedItems)
+                    }
+                    Text("Items marked secret by apps like 1Password are kept with redacted preview, then removed automatically. Turn the toggle on to skip them entirely.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -156,6 +225,39 @@ struct SettingsView: View {
         isCapturingHotkey = false
     }
     
+    private func addApplicationViaPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        if panel.runModal() == .OK, let url = panel.url {
+            guard let bundleID = Bundle(url: url)?.bundleIdentifier else {
+                let alert = NSAlert()
+                alert.messageText = "Couldn't read bundle identifier"
+                alert.informativeText = "The selected file does not look like a valid macOS app."
+                alert.runModal()
+                return
+            }
+            if !settings.excludedBundleIDs.contains(bundleID) {
+                settings.excludedBundleIDs.append(bundleID)
+                let count = viewModel.items.filter { $0.sourceBundleID == bundleID }.count
+                if count > 0 {
+                    let alert = NSAlert()
+                    let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+                    alert.messageText = "Remove \(count) existing clip\(count == 1 ? "" : "s") from \(name)?"
+                    alert.informativeText = "These clips were captured before this app was excluded."
+                    alert.addButton(withTitle: "Remove")
+                    alert.addButton(withTitle: "Keep")
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        viewModel.purgeItems(matchingBundleID: bundleID)
+                    }
+                }
+            }
+        }
+    }
+
     private func applyTheme(_ theme: AppTheme) {
         switch theme {
         case .light:
@@ -172,7 +274,7 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
     init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
