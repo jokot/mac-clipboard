@@ -12,7 +12,7 @@ final class AppFocusService {
     /// Switch focus to the specified app and paste clipboard content
     func switchToAppAndPaste(_ app: NSRunningApplication) {
         cleanup() // Remove any previous observer
-        
+
         let center = NSWorkspace.shared.notificationCenter
         let targetPID = app.processIdentifier
         
@@ -31,15 +31,20 @@ final class AppFocusService {
             if let runningApp = runningApp, runningApp.processIdentifier == targetPID {
                 center.removeObserver(self.activationObserver as Any)
                 self.activationObserver = nil
-                PasteUtility.sendPasteKeystroke()
+                // Small delay so the target app finishes activation before keystroke arrives.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    PasteUtility.sendPasteKeystroke()
+                }
             }
         }
-        
+
         // Activate the target app
         app.activate(options: [.activateIgnoringOtherApps])
-        
-        // Fallback: if activation notification doesn't arrive within 200ms, paste anyway
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+
+        // Fallback: if activation notification doesn't arrive within 500ms, paste anyway.
+        // Bumped from 200ms because the prior value was firing before some target apps
+        // had fully accepted focus, causing the keystroke to land in the wrong app.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }
             if self.activationObserver != nil {
                 center.removeObserver(self.activationObserver as Any)
