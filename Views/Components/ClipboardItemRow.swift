@@ -8,6 +8,7 @@ struct ClipboardItemRow: View {
     
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
+    var onExcludeApp: ((String) -> Void)? = nil
 
     @State private var isHovered: Bool = false
 
@@ -25,6 +26,15 @@ struct ClipboardItemRow: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(Color.secondary.opacity((isHovered || isSelected) ? 0.35 : 0.1), lineWidth: 1)
             )
+            .contextMenu {
+                if let bundleID = item.sourceBundleID, let onExcludeApp {
+                    let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+                    Button("Exclude \"\(name)\" from history") { onExcludeApp(bundleID) }
+                } else {
+                    Text("Source unknown for this clip")
+                        .foregroundColor(.secondary)
+                }
+            }
     }
 
     @ViewBuilder
