@@ -28,6 +28,19 @@ final class AppSettings: ObservableObject {
     @Published var autoCleanEnabled: Bool {
         didSet { UserDefaults.standard.set(autoCleanEnabled, forKey: Keys.autoCleanEnabled) }
     }
+    @Published var excludedBundleIDs: [String] {
+        didSet {
+            if let data = try? JSONEncoder().encode(excludedBundleIDs) {
+                UserDefaults.standard.set(data, forKey: Keys.excludedBundleIDs)
+            }
+        }
+    }
+    @Published var skipConcealedItems: Bool {
+        didSet { UserDefaults.standard.set(skipConcealedItems, forKey: Keys.skipConcealedItems) }
+    }
+    @Published var concealedClearTimeout: TimeInterval {
+        didSet { UserDefaults.standard.set(concealedClearTimeout, forKey: Keys.concealedClearTimeout) }
+    }
     @Published var pasteOnClick: Bool {
         didSet { UserDefaults.standard.set(pasteOnClick, forKey: Keys.pasteOnClick) }
     }
@@ -43,6 +56,28 @@ final class AppSettings: ObservableObject {
         static let autoCleanEnabled = "settings.autoClean"
         static let pasteOnClick = "settings.pasteOnClick"
         static let moveTopOnClick = "settings.moveTopOnClick"
+        static let excludedBundleIDs = "settings.excludedBundleIDs"
+        static let skipConcealedItems = "settings.skipConcealedItems"
+        static let concealedClearTimeout = "settings.concealedClearTimeout"
+    }
+
+    static let defaultSeedExclusions: [String] = [
+        "com.agilebits.onepassword7",
+        "com.1password.1password",
+        "com.bitwarden.desktop",
+        "com.apple.keychainaccess",
+        "com.dashlane.dashlanephonefinal",
+        "com.lastpass.LastPassMacDesktop",
+        "com.jokot.MacClipboard",
+    ]
+
+    static func makeInitialExcludedBundleIDs() -> [String] {
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: Keys.excludedBundleIDs),
+           let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            return decoded   // user has explicit value (possibly empty); never re-seed
+        }
+        return defaultSeedExclusions
     }
 
     private init() {
@@ -58,6 +93,9 @@ final class AppSettings: ObservableObject {
         let storedMax = defaults.integer(forKey: Keys.maxItems)
         let initialMax = storedMax > 0 ? storedMax : 100
         let initialAutoClean = defaults.object(forKey: Keys.autoCleanEnabled) as? Bool ?? false
+        let initialExcluded = AppSettings.makeInitialExcludedBundleIDs()
+        let initialSkipConcealed = defaults.object(forKey: Keys.skipConcealedItems) as? Bool ?? false
+        let initialConcealedTimeout = (defaults.object(forKey: Keys.concealedClearTimeout) as? Double) ?? 300
         let initialPasteOnClick = defaults.object(forKey: Keys.pasteOnClick) as? Bool ?? true
         let initialMoveTopOnClick = defaults.object(forKey: Keys.moveTopOnClick) as? Bool ?? true
 
@@ -66,6 +104,9 @@ final class AppSettings: ObservableObject {
         self.theme = initialTheme
         self.maxItems = initialMax
         self.autoCleanEnabled = initialAutoClean
+        self.excludedBundleIDs = initialExcluded
+        self.skipConcealedItems = initialSkipConcealed
+        self.concealedClearTimeout = initialConcealedTimeout
         self.pasteOnClick = initialPasteOnClick
         self.moveTopOnClick = initialMoveTopOnClick
     }
