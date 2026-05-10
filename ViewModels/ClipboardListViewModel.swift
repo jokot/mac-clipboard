@@ -205,7 +205,14 @@ final class ClipboardListViewModel: ObservableObject {
            case .memory(let image) = imgContent.source {
             if let savedURL = repository.saveImage(image) {
                 let newContent = ImageContent(source: .file(savedURL), cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode)
-                itemToInsert = ClipboardItem(id: item.id, date: item.date, content: .image(newContent))
+                itemToInsert = ClipboardItem(
+                    id: item.id,
+                    date: item.date,
+                    content: .image(newContent),
+                    sourceBundleID: item.sourceBundleID,
+                    isConcealed: item.isConcealed,
+                    concealedExpiresAt: item.concealedExpiresAt
+                )
             }
         }
         

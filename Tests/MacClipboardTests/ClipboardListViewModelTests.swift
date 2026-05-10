@@ -176,6 +176,41 @@ final class ClipboardListViewModelTests: XCTestCase {
         XCTAssertEqual(vm.items.count, 1)
         XCTAssertEqual(vm.items.first?.id, alive.id)
     }
+
+    @MainActor
+    func test_imageAppendPreservesProvenanceAndConcealedFields() async throws {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let bundleID = "com.apple.Safari"
+        let expiry = Date(timeIntervalSinceNow: 60)
+        let img = NSImage(size: NSSize(width: 1, height: 1))
+        let imgContent = ImageContent(source: .memory(img), cachedText: nil, cachedId: nil, cachedBarcode: nil)
+        let item = ClipboardItem(
+            date: Date(),
+            content: .image(imgContent),
+            sourceBundleID: bundleID,
+            isConcealed: true,
+            concealedExpiresAt: expiry
+        )
+
+        monitor.emit(item)
+        // Drain main queue so Combine sink delivers append.
+        await MainActor.run { }
+
+        XCTAssertEqual(vm.items.count, 1)
+        let stored = vm.items[0]
+        XCTAssertEqual(stored.sourceBundleID, bundleID)
+        XCTAssertTrue(stored.isConcealed)
+        let storedExpiry = try XCTUnwrap(stored.concealedExpiresAt)
+        XCTAssertEqual(storedExpiry.timeIntervalSince1970,
+                       expiry.timeIntervalSince1970,
+                       accuracy: 0.001)
+    }
 }
 
 // MARK: - Mocks
@@ -187,7 +222,13 @@ private final class MockRepo: ClipboardRepositoryProtocol {
     func saveToDisk(items: [ClipboardItem]) { savedItems = items }
     func saveToDiskAsync(items: [ClipboardItem]) { savedItems = items; saveAsyncCount += 1 }
     func clearAllFiles() { savedItems.removeAll() }
-    func saveImage(_ image: NSImage) -> URL? { nil }
+    func saveImage(_ image: NSImage) -> URL? {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("MockRepo-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let fileURL = dir.appendingPathComponent(UUID().uuidString + ".png")
+        try? Data().write(to: fileURL)
+        return fileURL
+    }
 }
 
 private final class MockMonitor: ClipboardMonitorProtocol {
