@@ -178,6 +178,29 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_initDropsExpiredConcealedItemsFromLoadedHistory() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        // Repo returns one fresh + one expired concealed item.
+        let alive = ClipboardItem(date: Date(), content: .text("alive"),
+                                  isConcealed: true,
+                                  concealedExpiresAt: Date(timeIntervalSinceNow: 60))
+        let expired = ClipboardItem(date: Date(), content: .text("expired"),
+                                    isConcealed: true,
+                                    concealedExpiresAt: Date(timeIntervalSinceNow: -10))
+        let repo = MockRepo()
+        repo.savedItems = [alive, expired]
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        await MainActor.run {
+            XCTAssertEqual(vm.items.count, 1)
+            XCTAssertEqual(vm.items.first?.id, alive.id)
+        }
+    }
+
+    @MainActor
     func test_imageAppendPreservesProvenanceAndConcealedFields() async throws {
         AppSettings.shared.maxItems = 10
         AppSettings.shared.autoCleanEnabled = false

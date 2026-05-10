@@ -232,28 +232,37 @@ struct SettingsView: View {
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        if panel.runModal() == .OK, let url = panel.url {
-            guard let bundleID = Bundle(url: url)?.bundleIdentifier else {
-                let alert = NSAlert()
-                alert.messageText = "Couldn't read bundle identifier"
-                alert.informativeText = "The selected file does not look like a valid macOS app."
-                alert.runModal()
-                return
-            }
-            if !settings.excludedBundleIDs.contains(bundleID) {
-                settings.excludedBundleIDs.append(bundleID)
-                let count = viewModel.items.filter { $0.sourceBundleID == bundleID }.count
-                if count > 0 {
-                    let alert = NSAlert()
-                    let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
-                    alert.messageText = "Remove \(count) existing clip\(count == 1 ? "" : "s") from \(name)?"
-                    alert.informativeText = "These clips were captured before this app was excluded."
-                    alert.addButton(withTitle: "Remove")
-                    alert.addButton(withTitle: "Keep")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        viewModel.purgeItems(matchingBundleID: bundleID)
-                    }
-                }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        guard let bundleID = Bundle(url: url)?.bundleIdentifier else {
+            let alert = NSAlert()
+            alert.messageText = "Couldn't read bundle identifier"
+            alert.informativeText = "The selected file does not look like a valid macOS app."
+            alert.runModal()
+            return
+        }
+
+        if settings.excludedBundleIDs.contains(bundleID) { return }   // already excluded; no-op
+
+        let displayName = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+        let count = viewModel.items.filter { $0.sourceBundleID == bundleID }.count
+
+        let alert = NSAlert()
+        alert.messageText = "Exclude \(displayName) from history?"
+        alert.informativeText = "MaClip will no longer save clips copied from \(displayName). You can re-enable this in Settings → Privacy."
+        alert.addButton(withTitle: "Exclude")
+        alert.addButton(withTitle: "Cancel")
+
+        let checkbox = NSButton(checkboxWithTitle: "Also remove \(count) existing clip\(count == 1 ? "" : "s") from history",
+                                target: nil, action: nil)
+        checkbox.state = .on
+        checkbox.isHidden = (count == 0)
+        alert.accessoryView = checkbox
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            settings.excludedBundleIDs.append(bundleID)
+            if checkbox.state == .on && count > 0 {
+                viewModel.purgeItems(matchingBundleID: bundleID)
             }
         }
     }

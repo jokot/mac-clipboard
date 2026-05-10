@@ -22,10 +22,13 @@ final class ClipboardListViewModel: ObservableObject {
         
         // Apply current settings limits immediately after loading
         applyMaxItems(AppSettings.shared.maxItems)
-        if AppSettings.shared.autoCleanEnabled { 
-            autoClean() 
+        if AppSettings.shared.autoCleanEnabled {
+            autoClean()
         }
-        
+
+        // Drop already-expired concealed items before they're ever rendered.
+        runConcealedExpirySweep(now: Date())
+
         // Save the trimmed list back to disk if it was modified
         if items.count != loadedItems.count {
             repository.saveToDisk(items: items)
