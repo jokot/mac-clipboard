@@ -31,11 +31,31 @@ struct ClipboardItemRow: View {
     private var content: some View {
         switch item.content {
         case .text(let string):
-            TextItemContent(string: string, date: item.date, isHovered: isHovered, onRemove: onRemove)
+            TextItemContent(string: string,
+                            date: item.date,
+                            bundleID: item.sourceBundleID,
+                            isConcealed: item.isConcealed,
+                            concealedExpiresAt: item.concealedExpiresAt,
+                            isHovered: isHovered,
+                            onRemove: onRemove)
         case .image(let imgContent):
-            ImageItemContent(imgContent: imgContent, item: item, isHovered: isHovered, onRemove: onRemove, onExtractText: onExtractText, onExtractBarcode: onExtractBarcode)
+            ImageItemContent(imgContent: imgContent,
+                             item: item,
+                             bundleID: item.sourceBundleID,
+                             isConcealed: item.isConcealed,
+                             concealedExpiresAt: item.concealedExpiresAt,
+                             isHovered: isHovered,
+                             onRemove: onRemove,
+                             onExtractText: onExtractText,
+                             onExtractBarcode: onExtractBarcode)
         case .url(let url):
-            URLItemContent(url: url, date: item.date, isHovered: isHovered, onRemove: onRemove)
+            URLItemContent(url: url,
+                           date: item.date,
+                           bundleID: item.sourceBundleID,
+                           isConcealed: item.isConcealed,
+                           concealedExpiresAt: item.concealedExpiresAt,
+                           isHovered: isHovered,
+                           onRemove: onRemove)
         }
     }
 }
@@ -45,6 +65,9 @@ struct ClipboardItemRow: View {
 private struct TextItemContent: View {
     let string: String
     let date: Date
+    let bundleID: String?
+    let isConcealed: Bool
+    let concealedExpiresAt: Date?
     let isHovered: Bool
     let onRemove: () -> Void
 
@@ -55,16 +78,26 @@ private struct TextItemContent: View {
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 6) {
-                Text(TextPreview.preview(for: string))
+                let displayString = isConcealed
+                    ? String(repeating: "•", count: min(8, max(1, string.count)))
+                    : TextPreview.preview(for: string)
+                Text(displayString)
                     .font(.body)
                     .lineLimit(4)
-                Text(date, style: .time)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Text(date, style: .time)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if isConcealed {
+                        ConcealedBadge(expiresAt: concealedExpiresAt)
+                    }
+                }
             }
             Spacer()
+            SourceIconBadge(bundleID: bundleID)
             if isHovered {
-                pillButton(label: "Delete", systemImage: "trash", color: .red, outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
+                pillButton(label: "Delete", systemImage: "trash", color: .red,
+                           outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
             }
         }
         .padding(.trailing, 10)
@@ -74,11 +107,14 @@ private struct TextItemContent: View {
 private struct ImageItemContent: View {
     let imgContent: ImageContent
     let item: ClipboardItem
+    let bundleID: String?
+    let isConcealed: Bool
+    let concealedExpiresAt: Date?
     let isHovered: Bool
     let onRemove: () -> Void
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
-    
+
     @State private var loadedImage: NSImage? = nil
 
     var body: some View {
@@ -95,6 +131,17 @@ private struct ImageItemContent: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                     )
+                    .overlay {
+                        if isConcealed {
+                            ZStack {
+                                Color.black.opacity(0.45)
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 32, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .cornerRadius(8)
+                        }
+                    }
 
                 if isHovered {
                     HStack(spacing: 8) {
@@ -114,9 +161,16 @@ private struct ImageItemContent: View {
                     .frame(maxWidth: .infinity)
                 }
 
-                Text(item.date, style: .time)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Text(item.date, style: .time)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if isConcealed {
+                        ConcealedBadge(expiresAt: concealedExpiresAt)
+                    }
+                    Spacer()
+                    SourceIconBadge(bundleID: bundleID)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -156,6 +210,9 @@ private struct ImageItemContent: View {
 private struct URLItemContent: View {
     let url: URL
     let date: Date
+    let bundleID: String?
+    let isConcealed: Bool
+    let concealedExpiresAt: Date?
     let isHovered: Bool
     let onRemove: () -> Void
 
@@ -166,15 +223,28 @@ private struct URLItemContent: View {
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 6) {
-                Text(url.absoluteString)
+                let displayString: String = {
+                    if isConcealed {
+                        let n = min(8, max(1, url.absoluteString.count))
+                        return String(repeating: "•", count: n)
+                    }
+                    return url.absoluteString
+                }()
+                Text(displayString)
                     .font(.body)
                     .lineLimit(2)
                     .truncationMode(.tail)
-                Text(date, style: .time)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Text(date, style: .time)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if isConcealed {
+                        ConcealedBadge(expiresAt: concealedExpiresAt)
+                    }
+                }
             }
             Spacer()
+            SourceIconBadge(bundleID: bundleID)
             HStack(spacing: 8) {
                 if isHovered {
                     pillButton(label: "Open", systemImage: "safari", color: .accentColor, outlineOpacity: 0.35, fillsWidth: false) {
@@ -208,4 +278,54 @@ private func pillButton(label: String, systemImage: String, color: Color, outlin
             )
     }
     .buttonStyle(.plain)
+}
+
+private struct SourceIconBadge: View {
+    let bundleID: String?
+
+    var body: some View {
+        Group {
+            if let bundleID,
+               let icon = AppMetadata.shared.icon(for: bundleID) {
+                Image(nsImage: icon)
+                    .resizable()
+                    .frame(width: 16, height: 16)
+                    .help(AppMetadata.shared.displayName(for: bundleID) ?? bundleID)
+            } else {
+                Image(systemName: "questionmark.app.dashed")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .frame(width: 16, height: 16)
+                    .help("Unknown source")
+            }
+        }
+    }
+}
+
+private struct ConcealedBadge: View {
+    let expiresAt: Date?
+    @State private var now: Date = Date()
+    private let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.orange)
+            if let expiresAt {
+                let remaining = max(0, Int(expiresAt.timeIntervalSince(now)))
+                Text(formatRemaining(seconds: remaining))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundColor(.secondary)
+            }
+        }
+        .onReceive(timer) { now = $0 }
+    }
+
+    private func formatRemaining(seconds: Int) -> String {
+        if seconds >= 60 {
+            return "\(seconds / 60)m"
+        }
+        return "\(seconds)s"
+    }
 }
