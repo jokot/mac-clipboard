@@ -6,6 +6,7 @@ protocol ClipboardRepositoryProtocol {
     func saveToDisk(items: [ClipboardItem])
     func saveToDiskAsync(items: [ClipboardItem])
     func clearAllFiles()
+    func saveImage(_ image: NSImage) -> URL?
 }
 
 final class ClipboardRepository: ClipboardRepositoryProtocol {
@@ -24,6 +25,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
     // Serialize all disk operations to avoid race conditions and out-of-order writes
     private let saveQueue = DispatchQueue(label: "com.macclip.repository.save", qos: .utility)
     
+
     func loadFromDisk() -> [ClipboardItem] {
         guard let url = dataFileURL(), let data = try? Data(contentsOf: url) else { return [] }
         let decoder = JSONDecoder()
@@ -41,8 +43,11 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
             case "image":
                 if let name = rec.imageFilename, let imagesDir {
                     let imgURL = imagesDir.appendingPathComponent(name)
-                    if let data = try? Data(contentsOf: imgURL), let image = NSImage(data: data) {
-                        let imgContent = ImageContent(image: image, cachedText: rec.cachedText, cachedId: rec.cachedId, cachedBarcode: rec.cachedBarcode)
+                    // Lazy load: Do not read data here. Just store path.
+                    // We verify file existence to avoid showing broken items?
+                    // For performance, maybe skip verification or do it cheaply.
+                    if FileManager.default.fileExists(atPath: imgURL.path) {
+                        let imgContent = ImageContent(source: .file(imgURL), cachedText: rec.cachedText, cachedId: rec.cachedId, cachedBarcode: rec.cachedBarcode)
                         loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .image(imgContent)))
                     }
                 }
@@ -55,6 +60,25 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
             }
         }
         return loaded
+    }
+    
+    // Helper to persist a single image immediately (used by ViewModel to convert memory->file)
+    func saveImage(_ image: NSImage) -> URL? {
+        guard let imagesDir = imagesDirectory(),
+              let pngData = image.pngData() else { return nil }
+        
+        // We use a unique ID for the filename.
+        // Optimization: We could hash data to reuse files, but simpler to just write unique for now.
+        let filename = UUID().uuidString + ".png"
+        let fileURL = imagesDir.appendingPathComponent(filename)
+        
+        do {
+            try pngData.write(to: fileURL, options: .atomic)
+            return fileURL
+        } catch {
+            print("Failed to save image: \(error)")
+            return nil
+        }
     }
     
     func saveToDiskAsync(items: [ClipboardItem]) {
@@ -85,24 +109,35 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 records.append(PersistRecord(id: item.id, date: item.date, type: "text", text: text, imageFilename: nil, url: nil, cachedText: nil, cachedId: nil, cachedBarcode: nil))
             case .image(let imgContent):
                 guard let imagesDir else { continue }
-                let filename = item.id.uuidString + ".png"
-                let fileURL = imagesDir.appendingPathComponent(filename)
                 
-                // Get PNG data for comparison
-                guard let pngData = imgContent.image.pngData() else { continue }
+                var filename: String?
                 
-                // Check if we already saved this exact image data
-                if let existingFilename = savedImageHashes[pngData] {
-                    // Reuse existing file
-                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: existingFilename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
-                } else {
-                    // Write new PNG file
-                    if !fm.fileExists(atPath: fileURL.path) {
-                        try? pngData.write(to: fileURL, options: .atomic)
-                    }
-                    savedImageHashes[pngData] = filename
+                switch imgContent.source {
+                case .file(let url):
+                    filename = url.lastPathComponent
+                    // If it's a file, we assume it exists.
+                    // We can optionally add it to hashes if we read it, but that defeats lazy loading.
+                    // We just reference the filename.
                     records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
+                    
+                case .memory(let image):
+                    // Legacy path or failsafe: ensure it is written to disk
+                    let name = item.id.uuidString + ".png"
+                    let fileURL = imagesDir.appendingPathComponent(name)
+                     if let pngData = image.pngData() {
+                        if let existing = savedImageHashes[pngData] {
+                            filename = existing
+                        } else {
+                            if !fm.fileExists(atPath: fileURL.path) {
+                                try? pngData.write(to: fileURL, options: .atomic)
+                            }
+                            savedImageHashes[pngData] = name
+                            filename = name
+                        }
+                        records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
+                    }
                 }
+
             case .url(let u):
                 records.append(PersistRecord(id: item.id, date: item.date, type: "url", text: nil, imageFilename: nil, url: u.absoluteString, cachedText: nil, cachedId: nil, cachedBarcode: nil))
             }

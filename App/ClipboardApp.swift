@@ -50,9 +50,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Assign shared reference
         AppDelegate.shared = self
 
+        // Auto-paste requires Accessibility permission to synthesize Cmd+V via
+        // CGEventPost. Trigger the system prompt so users grant it on first launch.
+        // Trust is granted per binary path, so dev/release builds need separate grants.
+        let opts: [String: Bool] = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        _ = AXIsProcessTrustedWithOptions(opts as CFDictionary)
+
         // Prevent automatic window creation
         NSApp.setActivationPolicy(.prohibited)
-        
+
         overlay = OverlayWindowController(viewModel: viewModel)
 
         HotKeyService.shared.onPressed = { [weak self] in

@@ -114,10 +114,18 @@ final class OverlayWindowController: NSObject {
         let content = ContentView(viewModel: viewModel, onSelect: { [weak self] item in
             guard let self else { return }
             self.viewModel.setPasteboard(to: item)
-            self.viewModel.promote(item)
-            // Mark that we want to auto-paste after hiding the overlay
-            self.autoPastePending = true
-            self.hideImmediatelyAndPaste()
+
+            if AppSettings.shared.moveTopOnClick {
+                self.viewModel.promote(item)
+            }
+
+            if AppSettings.shared.pasteOnClick {
+                self.autoPastePending = true
+                self.hideImmediatelyAndPaste()
+            } else {
+                self.autoPastePending = false
+                self.hideImmediatelyRefocusOnly()
+            }
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
         })

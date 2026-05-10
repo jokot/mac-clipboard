@@ -79,7 +79,25 @@ struct SettingsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            
+
+            // Behavior Settings
+            GroupBox("Behavior") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Paste on selection", isOn: $settings.pasteOnClick)
+                    Text("Automatically paste to the previous app when selecting an item.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 24)
+
+                    Toggle("Move item to top on selection", isOn: $settings.moveTopOnClick)
+                    Text("When selecting an item, move it to the top of the history list.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 24)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             Spacer()
             
             // Action Buttons

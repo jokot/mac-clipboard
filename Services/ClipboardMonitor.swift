@@ -6,6 +6,7 @@ protocol ClipboardMonitorProtocol {
     var itemPublisher: AnyPublisher<ClipboardItem, Never> { get }
     func start()
     func stop()
+    func ignoreCurrentChangeCount()
 }
 
 final class ClipboardMonitor: ClipboardMonitorProtocol {
@@ -26,6 +27,10 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
         timer = nil
     }
 
+    func ignoreCurrentChangeCount() {
+        lastChangeCount = NSPasteboard.general.changeCount
+    }
+
     private func pollPasteboard() {
         let pb = NSPasteboard.general
         guard pb.changeCount != lastChangeCount else { return }
@@ -33,7 +38,7 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
 
         // Prefer image, then URL, then text
         if let image = readImage(from: pb) {
-            let imgContent = ImageContent(image: image, cachedText: nil, cachedId: nil, cachedBarcode: nil)
+            let imgContent = ImageContent(source: .memory(image), cachedText: nil, cachedId: nil, cachedBarcode: nil)
             subject.send(ClipboardItem(date: Date(), content: .image(imgContent)))
             return
         }

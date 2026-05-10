@@ -28,6 +28,12 @@ final class AppSettings: ObservableObject {
     @Published var autoCleanEnabled: Bool {
         didSet { UserDefaults.standard.set(autoCleanEnabled, forKey: Keys.autoCleanEnabled) }
     }
+    @Published var pasteOnClick: Bool {
+        didSet { UserDefaults.standard.set(pasteOnClick, forKey: Keys.pasteOnClick) }
+    }
+    @Published var moveTopOnClick: Bool {
+        didSet { UserDefaults.standard.set(moveTopOnClick, forKey: Keys.moveTopOnClick) }
+    }
 
     private struct Keys {
         static let hotkeyKeyCode = "settings.hotkey.keycode"
@@ -35,6 +41,8 @@ final class AppSettings: ObservableObject {
         static let theme = "settings.theme"
         static let maxItems = "settings.maxItems"
         static let autoCleanEnabled = "settings.autoClean"
+        static let pasteOnClick = "settings.pasteOnClick"
+        static let moveTopOnClick = "settings.moveTopOnClick"
     }
 
     private init() {
@@ -50,12 +58,16 @@ final class AppSettings: ObservableObject {
         let storedMax = defaults.integer(forKey: Keys.maxItems)
         let initialMax = storedMax > 0 ? storedMax : 100
         let initialAutoClean = defaults.object(forKey: Keys.autoCleanEnabled) as? Bool ?? false
+        let initialPasteOnClick = defaults.object(forKey: Keys.pasteOnClick) as? Bool ?? true
+        let initialMoveTopOnClick = defaults.object(forKey: Keys.moveTopOnClick) as? Bool ?? true
 
         self.hotkeyKeyCode = initialKeyCode
         self.hotkeyModifiers = initialModifiers
         self.theme = initialTheme
         self.maxItems = initialMax
         self.autoCleanEnabled = initialAutoClean
+        self.pasteOnClick = initialPasteOnClick
+        self.moveTopOnClick = initialMoveTopOnClick
     }
 }
 

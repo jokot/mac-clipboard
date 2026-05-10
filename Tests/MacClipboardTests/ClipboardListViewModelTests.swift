@@ -63,6 +63,18 @@ final class ClipboardListViewModelTests: XCTestCase {
         }
         XCTAssertEqual(repo.saveAsyncCount, 1)
     }
+
+    @MainActor
+    func test_setPasteboard_callsIgnoreCurrentChangeCountOnce() {
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let item = ClipboardItem(date: Date(), content: .text("hello"))
+        vm.setPasteboard(to: item)
+
+        XCTAssertEqual(monitor.ignoreCallCount, 1)
+    }
 }
 
 // MARK: - Mocks
@@ -74,6 +86,7 @@ private final class MockRepo: ClipboardRepositoryProtocol {
     func saveToDisk(items: [ClipboardItem]) { savedItems = items }
     func saveToDiskAsync(items: [ClipboardItem]) { savedItems = items; saveAsyncCount += 1 }
     func clearAllFiles() { savedItems.removeAll() }
+    func saveImage(_ image: NSImage) -> URL? { nil }
 }
 
 private final class MockMonitor: ClipboardMonitorProtocol {
@@ -81,6 +94,9 @@ private final class MockMonitor: ClipboardMonitorProtocol {
     var itemPublisher: AnyPublisher<ClipboardItem, Never> { subject.eraseToAnyPublisher() }
     func start() {}
     func stop() {}
+
+    private(set) var ignoreCallCount: Int = 0
+    func ignoreCurrentChangeCount() { ignoreCallCount += 1 }
 
     func emit(_ item: ClipboardItem) { subject.send(item) }
 }
