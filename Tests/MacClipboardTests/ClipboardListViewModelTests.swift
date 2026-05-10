@@ -102,6 +102,56 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_filterFromExactBundleIDMatches() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("a"), sourceBundleID: "com.apple.Safari"))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("b"), sourceBundleID: "com.apple.TextEdit"))
+
+        // Drain main queue so Combine sink delivers appends before filter read.
+        await MainActor.run { }
+
+        vm.searchText = "from:com.apple.Safari"
+        await MainActor.run {
+            XCTAssertEqual(vm.filteredItems.count, 1)
+            XCTAssertEqual(vm.filteredItems.first?.sourceBundleID, "com.apple.Safari")
+        }
+    }
+
+    @MainActor
+    func test_filterFromBundleIDAndTextCombined() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("hello world"),
+                                   sourceBundleID: "com.apple.Safari"))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("goodbye"),
+                                   sourceBundleID: "com.apple.Safari"))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("hello world"),
+                                   sourceBundleID: "com.apple.TextEdit"))
+
+        // Drain main queue so Combine sink delivers appends before filter read.
+        await MainActor.run { }
+
+        vm.searchText = "from:com.apple.Safari hello"
+        await MainActor.run {
+            XCTAssertEqual(vm.filteredItems.count, 1)
+            if case .text(let t) = vm.filteredItems.first?.content {
+                XCTAssertEqual(t, "hello world")
+            } else {
+                XCTFail("Expected .text content")
+            }
+        }
+    }
+
+    @MainActor
     func test_concealedExpirySweepRemovesPastItems() async {
         AppSettings.shared.maxItems = 10
         AppSettings.shared.autoCleanEnabled = false

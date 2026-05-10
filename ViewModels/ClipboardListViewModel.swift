@@ -144,18 +144,49 @@ final class ClipboardListViewModel: ObservableObject {
 
     // Derived data
     var filteredItems: [ClipboardItem] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return items }
-        let loweredQuery = query.lowercased()
-        return items.filter { item in
-            switch item.content {
-            case .text(let text):
-                return text.lowercased().contains(loweredQuery)
-            case .image:
-                return false
-            case .url(let url):
-                return url.absoluteString.lowercased().contains(loweredQuery)
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return items }
+
+        var sourceFilters: [String] = []
+        var textFilters: [String] = []
+
+        for token in trimmed.split(separator: " ", omittingEmptySubsequences: true) {
+            let s = String(token)
+            if s.lowercased().hasPrefix("from:") {
+                let value = String(s.dropFirst(5))
+                if !value.isEmpty { sourceFilters.append(value) }
+            } else {
+                textFilters.append(s.lowercased())
             }
+        }
+
+        return items.filter { item in
+            if !sourceFilters.isEmpty {
+                let bundleID = item.sourceBundleID
+                let displayName = bundleID.flatMap { AppMetadata.shared.displayName(for: $0) }
+                let matchesSource = sourceFilters.contains { token in
+                    if token.contains(".") {
+                        return bundleID == token
+                    } else {
+                        return displayName?.localizedCaseInsensitiveContains(token) ?? false
+                    }
+                }
+                if !matchesSource { return false }
+            }
+
+            if !textFilters.isEmpty {
+                let haystack: String
+                switch item.content {
+                case .text(let t): haystack = t.lowercased()
+                case .url(let u):  haystack = u.absoluteString.lowercased()
+                case .image:       haystack = ""
+                }
+                for token in textFilters where !haystack.contains(token) {
+                    return false
+                }
+            }
+
+            return true
         }
     }
 
