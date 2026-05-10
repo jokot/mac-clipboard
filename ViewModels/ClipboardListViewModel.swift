@@ -10,6 +10,7 @@ final class ClipboardListViewModel: ObservableObject {
     private let repository: ClipboardRepositoryProtocol
     private let monitor: ClipboardMonitorProtocol
     private var cancellables = Set<AnyCancellable>()
+    private var concealedTimer: Timer?
 
     init(repository: ClipboardRepositoryProtocol = ClipboardRepository(), monitor: ClipboardMonitorProtocol = ClipboardMonitor()) {
         self.repository = repository
@@ -39,6 +40,13 @@ final class ClipboardListViewModel: ObservableObject {
             .store(in: &cancellables)
         monitor.start()
 
+        // Sweep concealed items every 30 s.
+        self.concealedTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.runConcealedExpirySweep(now: Date())
+            }
+        }
+
         // Save on termination via Combine
         NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .receive(on: RunLoop.main)
@@ -51,6 +59,7 @@ final class ClipboardListViewModel: ObservableObject {
 
     deinit {
         monitor.stop()
+        concealedTimer?.invalidate()
     }
 
     // Intents
@@ -65,6 +74,27 @@ final class ClipboardListViewModel: ObservableObject {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items.remove(at: idx)
         repository.saveToDiskAsync(items: items)
+    }
+
+    @discardableResult
+    func purgeItems(matchingBundleID bundleID: String) -> Int {
+        let before = items.count
+        items.removeAll { $0.sourceBundleID == bundleID }
+        let removed = before - items.count
+        if removed > 0 {
+            repository.saveToDiskAsync(items: items)
+        }
+        return removed
+    }
+
+    func runConcealedExpirySweep(now: Date) {
+        let before = items.count
+        items.removeAll { item in
+            item.isConcealed && (item.concealedExpiresAt.map { $0 <= now } ?? false)
+        }
+        if items.count != before {
+            repository.saveToDiskAsync(items: items)
+        }
     }
 
     func promote(_ item: ClipboardItem) {

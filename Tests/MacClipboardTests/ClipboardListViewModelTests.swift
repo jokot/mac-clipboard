@@ -75,6 +75,57 @@ final class ClipboardListViewModelTests: XCTestCase {
 
         XCTAssertEqual(monitor.ignoreCallCount, 1)
     }
+
+    @MainActor
+    func test_purgeItemsRemovesAllMatchingBundleID() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let safari = ClipboardItem(date: Date(), content: .text("a"), sourceBundleID: "com.apple.Safari")
+        let textEdit = ClipboardItem(date: Date(), content: .text("b"), sourceBundleID: "com.apple.TextEdit")
+        let safari2 = ClipboardItem(date: Date(), content: .text("c"), sourceBundleID: "com.apple.Safari")
+        monitor.emit(safari)
+        monitor.emit(textEdit)
+        monitor.emit(safari2)
+
+        // Drain main queue so Combine sink delivers appends before purge.
+        await MainActor.run { }
+
+        let removed = vm.purgeItems(matchingBundleID: "com.apple.Safari")
+
+        XCTAssertEqual(removed, 2)
+        XCTAssertEqual(vm.items.count, 1)
+        XCTAssertEqual(vm.items.first?.sourceBundleID, "com.apple.TextEdit")
+    }
+
+    @MainActor
+    func test_concealedExpirySweepRemovesPastItems() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let alive = ClipboardItem(date: Date(), content: .text("alive"),
+                                  isConcealed: true,
+                                  concealedExpiresAt: Date(timeIntervalSinceNow: 60))
+        let expired = ClipboardItem(date: Date(), content: .text("expired"),
+                                    isConcealed: true,
+                                    concealedExpiresAt: Date(timeIntervalSinceNow: -1))
+        monitor.emit(alive)
+        monitor.emit(expired)
+
+        // Drain main queue so Combine sink delivers appends before sweep.
+        await MainActor.run { }
+
+        vm.runConcealedExpirySweep(now: Date())
+
+        XCTAssertEqual(vm.items.count, 1)
+        XCTAssertEqual(vm.items.first?.id, alive.id)
+    }
 }
 
 // MARK: - Mocks
