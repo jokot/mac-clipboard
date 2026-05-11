@@ -360,6 +360,8 @@ private struct OCRBadge: View {
         Image(systemName: "text.viewfinder")
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(.secondary)
+            .frame(width: 16, height: 16)
+            .contentShape(Rectangle())
             .help("Extracted from image")
     }
 }
