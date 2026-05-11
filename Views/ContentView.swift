@@ -62,7 +62,7 @@ struct ContentView: View {
         HStack {
             Text("Clipboard History")
                 .font(.headline)
-            TextField("Search", text: $viewModel.searchText)
+            TextField("Search… (try \"from:Safari\")", text: $viewModel.searchText)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(maxWidth: 240)
                 .focused($isSearchFocused)
@@ -220,6 +220,9 @@ struct ContentView: View {
                                         }
                                     }
                                 }
+                            },
+                            onExcludeApp: { bundleID in
+                                confirmExclude(bundleID: bundleID)
                             }
                         )
                         .id(item.id)
@@ -271,5 +274,31 @@ struct ContentView: View {
         let items = viewModel.filteredItems
         guard items.indices.contains(selectedIndex) else { return }
         onSelect(items[selectedIndex])
+    }
+
+    private func confirmExclude(bundleID: String) {
+        let displayName = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+        let count = viewModel.items.filter { $0.sourceBundleID == bundleID }.count
+
+        let alert = NSAlert()
+        alert.messageText = "Exclude \(displayName) from history?"
+        alert.informativeText = "MaClip will no longer save clips copied from \(displayName). You can re-enable this in Settings → Privacy."
+        alert.addButton(withTitle: "Exclude")
+        alert.addButton(withTitle: "Cancel")
+
+        let checkbox = NSButton(checkboxWithTitle: "Also remove \(count) existing clip\(count == 1 ? "" : "s") from history",
+                                target: nil, action: nil)
+        checkbox.state = .on
+        checkbox.isHidden = (count == 0)
+        alert.accessoryView = checkbox
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            if !AppSettings.shared.excludedBundleIDs.contains(bundleID) {
+                AppSettings.shared.excludedBundleIDs.append(bundleID)
+            }
+            if checkbox.state == .on && count > 0 {
+                viewModel.purgeItems(matchingBundleID: bundleID)
+            }
+        }
     }
 }

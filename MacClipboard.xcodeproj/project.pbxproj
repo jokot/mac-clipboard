@@ -21,7 +21,9 @@
 		7170F47F267388BAF4517709 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7F2BCE8886027192AD2307 /* Notifications.swift */; };
 		7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E827E59109586E92EF348B3C /* AppSettingsTests.swift */; };
 		7D307A167F9C9108005E211D /* HotKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */; };
+		7D36C39CD905DCAE569715DC /* AppMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = D561C754CE8B3377968813CC /* AppMetadata.swift */; };
 		7E0D43030BBB9BE895CCF2C2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA06703AB7DD76075D2895A4 /* SettingsView.swift */; };
+		7F3572A26C94675BE9BEC70F /* AppMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18F8150D9761A140088F983 /* AppMetadataTests.swift */; };
 		831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19935DAD7985C6E587966A20 /* OverlayWindow.swift */; };
 		87011F9E077DDB68590A1E5D /* TextPreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */; };
 		9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */; };
@@ -38,6 +40,7 @@
 		E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */; };
 		E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A5E1B92A0543BA5D33AD02 /* InfoView.swift */; };
 		F4C53B0274A8E0982EF17495 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72305A678DEF1D5E247BFC8C /* AppSettings.swift */; };
+		F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */; };
 		FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -67,6 +70,7 @@
 		5FAC45A87AF3BC309EC56D4D /* ClipboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
 		63ECD86587A3DE062DB598C0 /* ClipboardListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardListViewModel.swift; sourceTree = "<group>"; };
 		668DB323E10EDCA899DDC163 /* AppFocusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFocusService.swift; sourceTree = "<group>"; };
+		69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItemRepositoryTests.swift; sourceTree = "<group>"; };
 		6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLUtils.swift; sourceTree = "<group>"; };
 		72305A678DEF1D5E247BFC8C /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		72AD13AA20CF1337FECA2753 /* ESCKeyCatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESCKeyCatcher.swift; sourceTree = "<group>"; };
@@ -77,9 +81,11 @@
 		A4235CBBB175E9BB87DE8791 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
 		A64179F24FF8AFF7D440BC24 /* HotkeyCapturingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyCapturingView.swift; sourceTree = "<group>"; };
 		AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtilsTests.swift; sourceTree = "<group>"; };
+		B18F8150D9761A140088F983 /* AppMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadataTests.swift; sourceTree = "<group>"; };
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtils.swift; sourceTree = "<group>"; };
+		D561C754CE8B3377968813CC /* AppMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadata.swift; sourceTree = "<group>"; };
 		DA06703AB7DD76075D2895A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextPreviewTests.swift; sourceTree = "<group>"; };
 		E827E59109586E92EF348B3C /* AppSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsTests.swift; sourceTree = "<group>"; };
@@ -144,6 +150,7 @@
 		BDAF052DF3FCD06F22B3CE2D /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				D561C754CE8B3377968813CC /* AppMetadata.swift */,
 				1D2888C02F1F29FE5B864D3A /* FirstMouseHostingView.swift */,
 				C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */,
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
@@ -157,7 +164,9 @@
 		C5E842DCA154264153D18330 /* MacClipboardTests */ = {
 			isa = PBXGroup;
 			children = (
+				B18F8150D9761A140088F983 /* AppMetadataTests.swift */,
 				E827E59109586E92EF348B3C /* AppSettingsTests.swift */,
+				69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */,
 				524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */,
 				AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */,
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
@@ -288,7 +297,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7F3572A26C94675BE9BEC70F /* AppMetadataTests.swift in Sources */,
 				7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */,
+				F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */,
 				FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */,
 				E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */,
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
@@ -303,6 +314,7 @@
 			files = (
 				22EC2CF891DA3B0121A16B69 /* AppFocusService.swift in Sources */,
 				19742895E7A968E617947BA6 /* AppIconView.swift in Sources */,
+				7D36C39CD905DCAE569715DC /* AppMetadata.swift in Sources */,
 				F4C53B0274A8E0982EF17495 /* AppSettings.swift in Sources */,
 				9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */,
 				C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */,
@@ -418,7 +430,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEFINES_MODULE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -426,7 +438,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.6.0;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jokot.MacClipboard;
 				PRODUCT_NAME = MaClip;
 				SDKROOT = macosx;
@@ -455,7 +467,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEFINES_MODULE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -463,7 +475,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.6.0;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jokot.MacClipboard;
 				PRODUCT_NAME = MaClip;
 				SDKROOT = macosx;

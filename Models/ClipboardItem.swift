@@ -30,11 +30,22 @@ struct ClipboardItem: Identifiable {
     let id: UUID
     let date: Date
     let content: ClipboardItemContent
+    let sourceBundleID: String?
+    let isConcealed: Bool
+    let concealedExpiresAt: Date?
 
-    init(id: UUID = UUID(), date: Date, content: ClipboardItemContent) {
+    init(id: UUID = UUID(),
+         date: Date,
+         content: ClipboardItemContent,
+         sourceBundleID: String? = nil,
+         isConcealed: Bool = false,
+         concealedExpiresAt: Date? = nil) {
         self.id = id
         self.date = date
         self.content = content
+        self.sourceBundleID = sourceBundleID
+        self.isConcealed = isConcealed
+        self.concealedExpiresAt = concealedExpiresAt
     }
 }
 

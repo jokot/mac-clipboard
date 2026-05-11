@@ -10,6 +10,7 @@ final class ClipboardListViewModel: ObservableObject {
     private let repository: ClipboardRepositoryProtocol
     private let monitor: ClipboardMonitorProtocol
     private var cancellables = Set<AnyCancellable>()
+    private var concealedTimer: Timer?
 
     init(repository: ClipboardRepositoryProtocol = ClipboardRepository(), monitor: ClipboardMonitorProtocol = ClipboardMonitor()) {
         self.repository = repository
@@ -21,10 +22,13 @@ final class ClipboardListViewModel: ObservableObject {
         
         // Apply current settings limits immediately after loading
         applyMaxItems(AppSettings.shared.maxItems)
-        if AppSettings.shared.autoCleanEnabled { 
-            autoClean() 
+        if AppSettings.shared.autoCleanEnabled {
+            autoClean()
         }
-        
+
+        // Drop already-expired concealed items before they're ever rendered.
+        runConcealedExpirySweep(now: Date())
+
         // Save the trimmed list back to disk if it was modified
         if items.count != loadedItems.count {
             repository.saveToDisk(items: items)
@@ -39,6 +43,13 @@ final class ClipboardListViewModel: ObservableObject {
             .store(in: &cancellables)
         monitor.start()
 
+        // Sweep concealed items every 30 s.
+        self.concealedTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.runConcealedExpirySweep(now: Date())
+            }
+        }
+
         // Save on termination via Combine
         NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .receive(on: RunLoop.main)
@@ -51,6 +62,7 @@ final class ClipboardListViewModel: ObservableObject {
 
     deinit {
         monitor.stop()
+        concealedTimer?.invalidate()
     }
 
     // Intents
@@ -65,6 +77,27 @@ final class ClipboardListViewModel: ObservableObject {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items.remove(at: idx)
         repository.saveToDiskAsync(items: items)
+    }
+
+    @discardableResult
+    func purgeItems(matchingBundleID bundleID: String) -> Int {
+        let before = items.count
+        items.removeAll { $0.sourceBundleID == bundleID }
+        let removed = before - items.count
+        if removed > 0 {
+            repository.saveToDiskAsync(items: items)
+        }
+        return removed
+    }
+
+    func runConcealedExpirySweep(now: Date) {
+        let before = items.count
+        items.removeAll { item in
+            item.isConcealed && (item.concealedExpiresAt.map { $0 <= now } ?? false)
+        }
+        if items.count != before {
+            repository.saveToDiskAsync(items: items)
+        }
     }
 
     func promote(_ item: ClipboardItem) {
@@ -114,18 +147,49 @@ final class ClipboardListViewModel: ObservableObject {
 
     // Derived data
     var filteredItems: [ClipboardItem] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return items }
-        let loweredQuery = query.lowercased()
-        return items.filter { item in
-            switch item.content {
-            case .text(let text):
-                return text.lowercased().contains(loweredQuery)
-            case .image:
-                return false
-            case .url(let url):
-                return url.absoluteString.lowercased().contains(loweredQuery)
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return items }
+
+        var sourceFilters: [String] = []
+        var textFilters: [String] = []
+
+        for token in trimmed.split(separator: " ", omittingEmptySubsequences: true) {
+            let s = String(token)
+            if s.lowercased().hasPrefix("from:") {
+                let value = String(s.dropFirst(5))
+                if !value.isEmpty { sourceFilters.append(value) }
+            } else {
+                textFilters.append(s.lowercased())
             }
+        }
+
+        return items.filter { item in
+            if !sourceFilters.isEmpty {
+                let bundleID = item.sourceBundleID
+                let displayName = bundleID.flatMap { AppMetadata.shared.displayName(for: $0) }
+                let matchesSource = sourceFilters.contains { token in
+                    if token.contains(".") {
+                        return bundleID == token
+                    } else {
+                        return displayName?.localizedCaseInsensitiveContains(token) ?? false
+                    }
+                }
+                if !matchesSource { return false }
+            }
+
+            if !textFilters.isEmpty {
+                let haystack: String
+                switch item.content {
+                case .text(let t): haystack = t.lowercased()
+                case .url(let u):  haystack = u.absoluteString.lowercased()
+                case .image:       haystack = ""
+                }
+                for token in textFilters where !haystack.contains(token) {
+                    return false
+                }
+            }
+
+            return true
         }
     }
 
@@ -144,7 +208,14 @@ final class ClipboardListViewModel: ObservableObject {
            case .memory(let image) = imgContent.source {
             if let savedURL = repository.saveImage(image) {
                 let newContent = ImageContent(source: .file(savedURL), cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode)
-                itemToInsert = ClipboardItem(id: item.id, date: item.date, content: .image(newContent))
+                itemToInsert = ClipboardItem(
+                    id: item.id,
+                    date: item.date,
+                    content: .image(newContent),
+                    sourceBundleID: item.sourceBundleID,
+                    isConcealed: item.isConcealed,
+                    concealedExpiresAt: item.concealedExpiresAt
+                )
             }
         }
         

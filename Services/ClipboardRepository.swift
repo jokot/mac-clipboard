@@ -20,6 +20,10 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let cachedText: String?
         let cachedId: String?
         let cachedBarcode: String?
+        // Added in 1.7.0; optional so legacy JSON without these keys still decodes.
+        let sourceBundleID: String?
+        let isConcealed: Bool?
+        let concealedExpiresAt: Date?
     }
 
     // Serialize all disk operations to avoid race conditions and out-of-order writes
@@ -35,25 +39,41 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let imagesDir = imagesDirectory()
         
         for rec in records {
+            let isConcealed = rec.isConcealed ?? false
             switch rec.type {
             case "text":
                 if let text = rec.text {
-                    loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .text(text)))
+                    loaded.append(ClipboardItem(
+                        id: rec.id, date: rec.date, content: .text(text),
+                        sourceBundleID: rec.sourceBundleID,
+                        isConcealed: isConcealed,
+                        concealedExpiresAt: rec.concealedExpiresAt
+                    ))
                 }
             case "image":
                 if let name = rec.imageFilename, let imagesDir {
                     let imgURL = imagesDir.appendingPathComponent(name)
-                    // Lazy load: Do not read data here. Just store path.
-                    // We verify file existence to avoid showing broken items?
-                    // For performance, maybe skip verification or do it cheaply.
                     if FileManager.default.fileExists(atPath: imgURL.path) {
-                        let imgContent = ImageContent(source: .file(imgURL), cachedText: rec.cachedText, cachedId: rec.cachedId, cachedBarcode: rec.cachedBarcode)
-                        loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .image(imgContent)))
+                        let imgContent = ImageContent(source: .file(imgURL),
+                                                      cachedText: rec.cachedText,
+                                                      cachedId: rec.cachedId,
+                                                      cachedBarcode: rec.cachedBarcode)
+                        loaded.append(ClipboardItem(
+                            id: rec.id, date: rec.date, content: .image(imgContent),
+                            sourceBundleID: rec.sourceBundleID,
+                            isConcealed: isConcealed,
+                            concealedExpiresAt: rec.concealedExpiresAt
+                        ))
                     }
                 }
             case "url":
                 if let s = rec.url, let u = URL(string: s) {
-                    loaded.append(ClipboardItem(id: rec.id, date: rec.date, content: .url(u)))
+                    loaded.append(ClipboardItem(
+                        id: rec.id, date: rec.date, content: .url(u),
+                        sourceBundleID: rec.sourceBundleID,
+                        isConcealed: isConcealed,
+                        concealedExpiresAt: rec.concealedExpiresAt
+                    ))
                 }
             default:
                 continue
@@ -106,25 +126,32 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         for item in items {
             switch item.content {
             case .text(let text):
-                records.append(PersistRecord(id: item.id, date: item.date, type: "text", text: text, imageFilename: nil, url: nil, cachedText: nil, cachedId: nil, cachedBarcode: nil))
+                records.append(PersistRecord(
+                    id: item.id, date: item.date, type: "text",
+                    text: text, imageFilename: nil, url: nil,
+                    cachedText: nil, cachedId: nil, cachedBarcode: nil,
+                    sourceBundleID: item.sourceBundleID,
+                    isConcealed: item.isConcealed,
+                    concealedExpiresAt: item.concealedExpiresAt
+                ))
             case .image(let imgContent):
                 guard let imagesDir else { continue }
-                
                 var filename: String?
-                
                 switch imgContent.source {
                 case .file(let url):
                     filename = url.lastPathComponent
-                    // If it's a file, we assume it exists.
-                    // We can optionally add it to hashes if we read it, but that defeats lazy loading.
-                    // We just reference the filename.
-                    records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
-                    
+                    records.append(PersistRecord(
+                        id: item.id, date: item.date, type: "image",
+                        text: nil, imageFilename: filename, url: nil,
+                        cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode,
+                        sourceBundleID: item.sourceBundleID,
+                        isConcealed: item.isConcealed,
+                        concealedExpiresAt: item.concealedExpiresAt
+                    ))
                 case .memory(let image):
-                    // Legacy path or failsafe: ensure it is written to disk
                     let name = item.id.uuidString + ".png"
                     let fileURL = imagesDir.appendingPathComponent(name)
-                     if let pngData = image.pngData() {
+                    if let pngData = image.pngData() {
                         if let existing = savedImageHashes[pngData] {
                             filename = existing
                         } else {
@@ -134,12 +161,25 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                             savedImageHashes[pngData] = name
                             filename = name
                         }
-                        records.append(PersistRecord(id: item.id, date: item.date, type: "image", text: nil, imageFilename: filename, url: nil, cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode))
+                        records.append(PersistRecord(
+                            id: item.id, date: item.date, type: "image",
+                            text: nil, imageFilename: filename, url: nil,
+                            cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode,
+                            sourceBundleID: item.sourceBundleID,
+                            isConcealed: item.isConcealed,
+                            concealedExpiresAt: item.concealedExpiresAt
+                        ))
                     }
                 }
-
             case .url(let u):
-                records.append(PersistRecord(id: item.id, date: item.date, type: "url", text: nil, imageFilename: nil, url: u.absoluteString, cachedText: nil, cachedId: nil, cachedBarcode: nil))
+                records.append(PersistRecord(
+                    id: item.id, date: item.date, type: "url",
+                    text: nil, imageFilename: nil, url: u.absoluteString,
+                    cachedText: nil, cachedId: nil, cachedBarcode: nil,
+                    sourceBundleID: item.sourceBundleID,
+                    isConcealed: item.isConcealed,
+                    concealedExpiresAt: item.concealedExpiresAt
+                ))
             }
         }
 
