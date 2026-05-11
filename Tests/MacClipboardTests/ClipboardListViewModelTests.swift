@@ -234,6 +234,84 @@ final class ClipboardListViewModelTests: XCTestCase {
                        expiry.timeIntervalSince1970,
                        accuracy: 0.001)
     }
+
+    @MainActor
+    func test_imageAppendPreservesIsOCRResult() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let img = NSImage(size: NSSize(width: 1, height: 1))
+        let imgContent = ImageContent(source: .memory(img), cachedText: nil, cachedId: nil, cachedBarcode: nil)
+        let item = ClipboardItem(
+            date: Date(),
+            content: .image(imgContent),
+            sourceBundleID: "com.apple.Preview",
+            isOCRResult: true
+        )
+
+        monitor.emit(item)
+        await MainActor.run {
+            XCTAssertEqual(vm.items.count, 1)
+            XCTAssertEqual(vm.items[0].sourceBundleID, "com.apple.Preview")
+            XCTAssertTrue(vm.items[0].isOCRResult)
+        }
+    }
+
+    @MainActor
+    func test_promoteOrInsertResultMarksOCRAndForwardsSource() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let result = vm.promoteOrInsertResult(text: "extracted text",
+                                              sourceBundleID: "com.apple.Preview",
+                                              isOCRResult: true)
+        XCTAssertEqual(result.sourceBundleID, "com.apple.Preview")
+        XCTAssertTrue(result.isOCRResult)
+        XCTAssertEqual(vm.items.first?.id, result.id)
+    }
+
+    @MainActor
+    func test_updateImageItemCachePreservesProvenance() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let img = NSImage(size: NSSize(width: 1, height: 1))
+        let imgContent = ImageContent(source: .memory(img), cachedText: nil, cachedId: nil, cachedBarcode: nil)
+        let item = ClipboardItem(
+            date: Date(),
+            content: .image(imgContent),
+            sourceBundleID: "com.apple.Preview",
+            isConcealed: false,
+            concealedExpiresAt: nil,
+            isOCRResult: false
+        )
+        monitor.emit(item)
+
+        await MainActor.run {
+            let inserted = vm.items[0]
+            vm.updateImageItemCache(inserted, cachedText: "hello", cachedId: nil, cachedBarcode: nil)
+            let updated = vm.items[0]
+            XCTAssertEqual(updated.sourceBundleID, "com.apple.Preview")
+            XCTAssertFalse(updated.isOCRResult)
+            if case .image(let c) = updated.content {
+                XCTAssertEqual(c.cachedText, "hello")
+            } else {
+                XCTFail("expected image content")
+            }
+        }
+    }
 }
 
 // MARK: - Mocks
