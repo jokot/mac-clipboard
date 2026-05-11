@@ -86,36 +86,40 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Excluded Apps")
                         .font(.subheadline.bold())
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(settings.excludedBundleIDs, id: \.self) { bundleID in
-                            HStack(spacing: 8) {
-                                if let icon = AppMetadata.shared.icon(for: bundleID) {
-                                    Image(nsImage: icon).resizable().frame(width: 18, height: 18)
-                                } else {
-                                    Image(systemName: "questionmark.app.dashed").frame(width: 18, height: 18)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(settings.excludedBundleIDs, id: \.self) { bundleID in
+                                HStack(spacing: 8) {
+                                    if let icon = AppMetadata.shared.icon(for: bundleID) {
+                                        Image(nsImage: icon).resizable().frame(width: 18, height: 18)
+                                    } else {
+                                        Image(systemName: "questionmark.app.dashed").frame(width: 18, height: 18)
+                                    }
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        Text(AppMetadata.shared.displayName(for: bundleID) ?? bundleID)
+                                            .font(.body)
+                                        Text(bundleID).font(.caption).foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    Button(action: {
+                                        settings.excludedBundleIDs.removeAll { $0 == bundleID }
+                                    }) {
+                                        Image(systemName: "minus.circle.fill")
+                                            .foregroundColor(.red)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                VStack(alignment: .leading, spacing: 0) {
-                                    Text(AppMetadata.shared.displayName(for: bundleID) ?? bundleID)
-                                        .font(.body)
-                                    Text(bundleID).font(.caption).foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Button(action: {
-                                    settings.excludedBundleIDs.removeAll { $0 == bundleID }
-                                }) {
-                                    Image(systemName: "minus.circle.fill")
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(.plain)
+                                .padding(.vertical, 2)
                             }
-                            .padding(.vertical, 2)
+                            if settings.excludedBundleIDs.isEmpty {
+                                Text("No apps excluded.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        if settings.excludedBundleIDs.isEmpty {
-                            Text("No apps excluded.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(maxHeight: 160)
                     Button("+ Add Application…") {
                         addApplicationViaPicker()
                     }
