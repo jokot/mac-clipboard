@@ -118,7 +118,11 @@ struct ContentView: View {
                                                 extractionAlert = ExtractionAlert(message: "No text found in the image.")
                                                 return
                                             } else {
-                                                let resultItem = viewModel.promoteOrInsertResult(text: cachedText)
+                                                let resultItem = viewModel.promoteOrInsertResult(
+                                                    text: cachedText,
+                                                    sourceBundleID: item.sourceBundleID,
+                                                    isOCRResult: true
+                                                )
                                                 viewModel.setPasteboard(to: resultItem)
                                                 return
                                             }
@@ -145,7 +149,11 @@ struct ContentView: View {
                                             }
                                             let textId = text
                                             viewModel.updateImageItemCache(item, cachedText: text, cachedId: textId, cachedBarcode: nil)
-                                            let resultItem = viewModel.promoteOrInsertResult(text: text)
+                                            let resultItem = viewModel.promoteOrInsertResult(
+                                                text: text,
+                                                sourceBundleID: item.sourceBundleID,
+                                                isOCRResult: true
+                                            )
                                             viewModel.setPasteboard(to: resultItem)
                                         } catch {
                                             NSSound.beep()
@@ -175,7 +183,11 @@ struct ContentView: View {
                                                 extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
                                                 return
                                             } else {
-                                                let resultItem = viewModel.promoteOrInsertResult(text: barcode)
+                                                let resultItem = viewModel.promoteOrInsertResult(
+                                                    text: barcode,
+                                                    sourceBundleID: item.sourceBundleID,
+                                                    isOCRResult: true
+                                                )
                                                 viewModel.setPasteboard(to: resultItem)
                                                 return
                                             }
@@ -201,7 +213,11 @@ struct ContentView: View {
                                                 return
                                             }
                                             viewModel.updateImageItemCache(item, cachedText: nil, cachedId: code, cachedBarcode: code)
-                                            let resultItem = viewModel.promoteOrInsertResult(text: code)
+                                            let resultItem = viewModel.promoteOrInsertResult(
+                                                text: code,
+                                                sourceBundleID: item.sourceBundleID,
+                                                isOCRResult: true
+                                            )
                                             viewModel.setPasteboard(to: resultItem)
                                         } catch {
                                             NSSound.beep()
