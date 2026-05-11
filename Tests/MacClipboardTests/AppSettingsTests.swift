@@ -150,4 +150,20 @@ final class AppSettingsTests: XCTestCase {
         AppSettings.shared.moveTopOnClick = true
         XCTAssertEqual(UserDefaults.standard.object(forKey: moveKey) as? Bool, true)
     }
+
+    func test_restorePrivacyDefaultsResetsAllThree() {
+        AppSettings.shared.excludedBundleIDs = ["com.foo.bar"]
+        AppSettings.shared.skipConcealedItems = true
+        AppSettings.shared.concealedClearTimeout = 60
+
+        AppSettings.shared.restorePrivacyDefaults()
+
+        XCTAssertEqual(Set(AppSettings.shared.excludedBundleIDs), Self.seedExclusions)
+        XCTAssertFalse(AppSettings.shared.skipConcealedItems)
+        XCTAssertEqual(AppSettings.shared.concealedClearTimeout, 300, accuracy: 0.001)
+
+        UserDefaults.standard.removeObject(forKey: excludedKey)
+        UserDefaults.standard.removeObject(forKey: skipConcealedKey)
+        UserDefaults.standard.removeObject(forKey: concealedTimeoutKey)
+    }
 }

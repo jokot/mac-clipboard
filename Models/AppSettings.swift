@@ -99,6 +99,12 @@ final class AppSettings: ObservableObject {
         try? Data().write(to: url, options: .atomic)
     }
 
+    func restorePrivacyDefaults() {
+        excludedBundleIDs = AppSettings.defaultSeedExclusions
+        skipConcealedItems = false
+        concealedClearTimeout = 300
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         let defaultKeyCode: UInt32 = UInt32(kVK_ANSI_V)
