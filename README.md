@@ -19,15 +19,6 @@ A simple macOS clipboard history app built with SwiftUI.
 - Settings refactored: split the previously-tall settings sheet into four tabs — General / Storage / Privacy / Behavior — with action buttons (Clear All History / About / Close) always visible across tabs.
 - Internals: version 1.7.0, build 8.
 
-## What's new in 1.6.0
-- Paste on selection (default on): auto-pastes the selected clip into the previously focused app via synthesized ⌘V. Toggleable in Settings → Behavior — when off, the item is copied to the clipboard and you paste manually with ⌘V.
-- Move to top on selection (default on): selected items move to the top of the history. Toggleable in Settings → Behavior — when off, history order stays stable.
-- Auto-paste reliability: switched the keystroke event source to `.combinedSessionState` posted via `.cgAnnotatedSessionEventTap`, added a 50 ms gap between keyDown/keyUp and a 100 ms post-activation delay, and bumped the activation fallback 200 ms → 500 ms.
-- Accessibility permission prompt: auto-paste needs Accessibility trust to synthesize ⌘V. MaClip triggers the system prompt on first launch instead of silently failing. Trust is granted per binary path, so dev and release builds need separate grants.
-- Self-write dedupe: re-selecting an existing clip no longer produces a duplicate history entry. The monitor's change-count baseline is reset after each pasteboard write via `defer`, covering all return paths (including image-decoding failures).
-- Settings: new "Behavior" section.
-- Internals: version 1.6.0, build 7.
-
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
 
