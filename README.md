@@ -9,15 +9,16 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.5.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.5.0)
+- [Download v1.6.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.6.0)
 
-## What's new in 1.5.0
-- Image extraction: extract text (OCR) and detect barcodes/QR codes from image items, with clear alerts when no result is found and per-image result caching to avoid re-processing.
-- Search UX: Command+F focuses the search field within the overlay.
-- Settings: added an auto-clean "days" input to control retention.
-- UI/UX: added an empty state for filtered lists with no matches, refined layout/styling, and improved safe-area handling and theme change notifications.
-- Clipboard handling: improved item promotion/insertion logic and caching behavior to prevent duplicates for extracted results.
-- Developer notes: added URL utilities and tests, refactored components, and synced project versions to 1.5.0 (build 6).
+## What's new in 1.6.0
+- Paste on selection (default on): auto-pastes the selected clip into the previously focused app via synthesized ⌘V. Toggleable in Settings → Behavior — when off, the item is copied to the clipboard and you paste manually with ⌘V.
+- Move to top on selection (default on): selected items move to the top of the history. Toggleable in Settings → Behavior — when off, history order stays stable.
+- Auto-paste reliability: switched the keystroke event source to `.combinedSessionState` posted via `.cgAnnotatedSessionEventTap`, added a 50 ms gap between keyDown/keyUp and a 100 ms post-activation delay, and bumped the activation fallback 200 ms → 500 ms.
+- Accessibility permission prompt: auto-paste needs Accessibility trust to synthesize ⌘V. MaClip triggers the system prompt on first launch instead of silently failing. Trust is granted per binary path, so dev and release builds need separate grants.
+- Self-write dedupe: re-selecting an existing clip no longer produces a duplicate history entry. The monitor's change-count baseline is reset after each pasteboard write via `defer`, covering all return paths (including image-decoding failures).
+- Settings: new "Behavior" section.
+- Internals: version 1.6.0, build 7.
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
