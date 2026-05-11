@@ -19,15 +19,28 @@ final class AppSettingsTests: XCTestCase {
         "com.jokot.MacClipboard",
     ]
 
+    private static func sentinelURL() -> URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?
+            .appendingPathComponent("MaClip", isDirectory: true)
+            .appendingPathComponent(".seeded")
+    }
+
     override func setUp() {
         super.setUp()
         UserDefaults.standard.removeObject(forKey: pasteKey)
         UserDefaults.standard.removeObject(forKey: moveKey)
+        if let sentinel = Self.sentinelURL() {
+            try? FileManager.default.removeItem(at: sentinel)
+        }
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: pasteKey)
         UserDefaults.standard.removeObject(forKey: moveKey)
+        if let sentinel = Self.sentinelURL() {
+            try? FileManager.default.removeItem(at: sentinel)
+        }
         super.tearDown()
     }
 
@@ -37,12 +50,48 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(Set(initial), Self.seedExclusions)
     }
 
-    func test_emptyArrayPersistsAndIsNotReseeded() {
-        let encoded = try! JSONEncoder().encode([String]())
-        UserDefaults.standard.set(encoded, forKey: excludedKey)
+    func test_sentinelAbsentTriggersSeedAndWritesSentinel() throws {
+        let fm = FileManager.default
+        let sentinel = try XCTUnwrap(Self.sentinelURL())
+        try? fm.removeItem(at: sentinel)
+        UserDefaults.standard.removeObject(forKey: excludedKey)
+
+        let initial = AppSettings.makeInitialExcludedBundleIDs()
+        XCTAssertEqual(Set(initial), Self.seedExclusions)
+        XCTAssertTrue(fm.fileExists(atPath: sentinel.path))
+
+        try? fm.removeItem(at: sentinel)
+    }
+
+    func test_sentinelPresentRespectsExplicitEmptyArray() throws {
+        let fm = FileManager.default
+        let sentinel = try XCTUnwrap(Self.sentinelURL())
+        try? fm.createDirectory(at: sentinel.deletingLastPathComponent(),
+                                withIntermediateDirectories: true)
+        try Data().write(to: sentinel)
+        let emptyData = try JSONEncoder().encode([String]())
+        UserDefaults.standard.set(emptyData, forKey: excludedKey)
+
         let initial = AppSettings.makeInitialExcludedBundleIDs()
         XCTAssertEqual(initial, [])
+
         UserDefaults.standard.removeObject(forKey: excludedKey)
+        try? fm.removeItem(at: sentinel)
+    }
+
+    func test_sentinelAbsentButKeyPresentReseedsOnUpgrade() throws {
+        let fm = FileManager.default
+        let sentinel = try XCTUnwrap(Self.sentinelURL())
+        try? fm.removeItem(at: sentinel)
+        let emptyData = try JSONEncoder().encode([String]())
+        UserDefaults.standard.set(emptyData, forKey: excludedKey)
+
+        let initial = AppSettings.makeInitialExcludedBundleIDs()
+        XCTAssertEqual(Set(initial), Self.seedExclusions)
+        XCTAssertTrue(fm.fileExists(atPath: sentinel.path))
+
+        UserDefaults.standard.removeObject(forKey: excludedKey)
+        try? fm.removeItem(at: sentinel)
     }
 
     func test_skipConcealedDefaultFalse() {

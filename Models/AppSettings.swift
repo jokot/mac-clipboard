@@ -73,11 +73,30 @@ final class AppSettings: ObservableObject {
 
     static func makeInitialExcludedBundleIDs() -> [String] {
         let defaults = UserDefaults.standard
-        if let data = defaults.data(forKey: Keys.excludedBundleIDs),
+        let fm = FileManager.default
+        let sentinelURL = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?
+            .appendingPathComponent("MaClip", isDirectory: true)
+            .appendingPathComponent(".seeded")
+
+        let sentinelExists = sentinelURL.map { fm.fileExists(atPath: $0.path) } ?? false
+
+        if sentinelExists,
+           let data = defaults.data(forKey: Keys.excludedBundleIDs),
            let decoded = try? JSONDecoder().decode([String].self, from: data) {
-            return decoded   // user has explicit value (possibly empty); never re-seed
+            return decoded
         }
+
+        writeSentinel(at: sentinelURL)
         return defaultSeedExclusions
+    }
+
+    private static func writeSentinel(at url: URL?) {
+        guard let url else { return }
+        let fm = FileManager.default
+        try? fm.createDirectory(at: url.deletingLastPathComponent(),
+                                withIntermediateDirectories: true)
+        try? Data().write(to: url, options: .atomic)
     }
 
     private init() {
