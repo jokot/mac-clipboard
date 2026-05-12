@@ -35,6 +35,7 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
         let pb = NSPasteboard.general
         guard pb.changeCount != lastChangeCount else { return }
         lastChangeCount = pb.changeCount
+        NSLog("[MaClip] pollPasteboard: types=\(pb.types?.map(\.rawValue) ?? [])")
 
         let frontmost = NSWorkspace.shared.frontmostApplication
         let sourceBundleID = frontmost?.bundleIdentifier
