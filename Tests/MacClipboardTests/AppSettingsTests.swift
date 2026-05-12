@@ -8,6 +8,8 @@ final class AppSettingsTests: XCTestCase {
     private let excludedKey = "settings.excludedBundleIDs"
     private let skipConcealedKey = "settings.skipConcealedItems"
     private let concealedTimeoutKey = "settings.concealedClearTimeout"
+    private let autoDismissEnabledKey = "settings.autoDismissOverlay.enabled"
+    private let autoDismissTimeoutKey = "settings.autoDismissOverlay.timeout"
 
     private static let seedExclusions: Set<String> = [
         "com.agilebits.onepassword7",
@@ -157,6 +159,32 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(UserDefaults.standard.object(forKey: moveKey) as? Bool, false)
         AppSettings.shared.moveTopOnClick = true
         XCTAssertEqual(UserDefaults.standard.object(forKey: moveKey) as? Bool, true)
+    }
+
+    func test_autoDismissEnabledDefaultTrue() {
+        UserDefaults.standard.removeObject(forKey: autoDismissEnabledKey)
+        let value = UserDefaults.standard.object(forKey: autoDismissEnabledKey) as? Bool ?? true
+        XCTAssertTrue(value)
+    }
+
+    func test_autoDismissTimeoutDefault20() {
+        UserDefaults.standard.removeObject(forKey: autoDismissTimeoutKey)
+        let value = (UserDefaults.standard.object(forKey: autoDismissTimeoutKey) as? Double) ?? 20
+        XCTAssertEqual(value, 20, accuracy: 0.001)
+    }
+
+    func test_autoDismissEnabledPersists() {
+        AppSettings.shared.autoDismissOverlayEnabled = false
+        XCTAssertEqual(UserDefaults.standard.object(forKey: autoDismissEnabledKey) as? Bool, false)
+        AppSettings.shared.autoDismissOverlayEnabled = true
+        UserDefaults.standard.removeObject(forKey: autoDismissEnabledKey)
+    }
+
+    func test_autoDismissTimeoutPersists() {
+        AppSettings.shared.autoDismissOverlayTimeout = 30
+        XCTAssertEqual(UserDefaults.standard.object(forKey: autoDismissTimeoutKey) as? Double, 30)
+        AppSettings.shared.autoDismissOverlayTimeout = 20
+        UserDefaults.standard.removeObject(forKey: autoDismissTimeoutKey)
     }
 
     func test_restorePrivacyDefaultsResetsAllThree() {

@@ -362,6 +362,30 @@ private struct BehaviorTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            GroupBox("Auto-dismiss") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("Auto-dismiss overlay after idle", isOn: $settings.autoDismissOverlayEnabled)
+                    HStack {
+                        Text("Close after")
+                        Spacer()
+                        Picker("", selection: $settings.autoDismissOverlayTimeout) {
+                            Text("5 sec").tag(TimeInterval(5))
+                            Text("10 sec").tag(TimeInterval(10))
+                            Text("20 sec").tag(TimeInterval(20))
+                            Text("30 sec").tag(TimeInterval(30))
+                            Text("1 min").tag(TimeInterval(60))
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 110)
+                        .disabled(!settings.autoDismissOverlayEnabled)
+                    }
+                    Text("Closes the clipboard overlay automatically when there is no keyboard, mouse, or scroll activity inside the window.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             GroupBox("Behavior") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("Paste on selection", isOn: $settings.pasteOnClick)

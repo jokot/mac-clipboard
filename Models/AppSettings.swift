@@ -47,6 +47,12 @@ final class AppSettings: ObservableObject {
     @Published var moveTopOnClick: Bool {
         didSet { UserDefaults.standard.set(moveTopOnClick, forKey: Keys.moveTopOnClick) }
     }
+    @Published var autoDismissOverlayEnabled: Bool {
+        didSet { UserDefaults.standard.set(autoDismissOverlayEnabled, forKey: Keys.autoDismissOverlayEnabled) }
+    }
+    @Published var autoDismissOverlayTimeout: TimeInterval {
+        didSet { UserDefaults.standard.set(autoDismissOverlayTimeout, forKey: Keys.autoDismissOverlayTimeout) }
+    }
 
     private struct Keys {
         static let hotkeyKeyCode = "settings.hotkey.keycode"
@@ -59,6 +65,8 @@ final class AppSettings: ObservableObject {
         static let excludedBundleIDs = "settings.excludedBundleIDs"
         static let skipConcealedItems = "settings.skipConcealedItems"
         static let concealedClearTimeout = "settings.concealedClearTimeout"
+        static let autoDismissOverlayEnabled = "settings.autoDismissOverlay.enabled"
+        static let autoDismissOverlayTimeout = "settings.autoDismissOverlay.timeout"
     }
 
     static let defaultSeedExclusions: [String] = [
@@ -123,6 +131,8 @@ final class AppSettings: ObservableObject {
         let initialConcealedTimeout = (defaults.object(forKey: Keys.concealedClearTimeout) as? Double) ?? 300
         let initialPasteOnClick = defaults.object(forKey: Keys.pasteOnClick) as? Bool ?? true
         let initialMoveTopOnClick = defaults.object(forKey: Keys.moveTopOnClick) as? Bool ?? true
+        let initialAutoDismissEnabled = defaults.object(forKey: Keys.autoDismissOverlayEnabled) as? Bool ?? true
+        let initialAutoDismissTimeout = (defaults.object(forKey: Keys.autoDismissOverlayTimeout) as? Double) ?? 20
 
         self.hotkeyKeyCode = initialKeyCode
         self.hotkeyModifiers = initialModifiers
@@ -134,6 +144,8 @@ final class AppSettings: ObservableObject {
         self.concealedClearTimeout = initialConcealedTimeout
         self.pasteOnClick = initialPasteOnClick
         self.moveTopOnClick = initialMoveTopOnClick
+        self.autoDismissOverlayEnabled = initialAutoDismissEnabled
+        self.autoDismissOverlayTimeout = initialAutoDismissTimeout
     }
 }
 

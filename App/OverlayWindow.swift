@@ -9,7 +9,10 @@ final class OverlayWindowController: NSObject {
     private let onCloseRequested: (() -> Void)?
     private var escMonitor: Any?
     private var backgroundView: NSVisualEffectView?
-    
+    private var idleTimer: Timer?
+    private var idleMonitor: Any?
+    private var lastActivity: Date = Date()
+
     // Track the previously active app to restore focus and paste into it
     private var previousActiveApp: NSRunningApplication?
     internal var autoPastePending: Bool = false  // Make this internal so KeyCatcherView can access
@@ -77,9 +80,11 @@ final class OverlayWindowController: NSObject {
         applyTheme()
         // Ensure overlay window stays key when toggled via hotkey
         window.level = .floating
+        startIdleTracking()
     }
 
     func hide() {
+        stopIdleTracking()
         window?.orderOut(nil)
         if let escMonitor {
             NSEvent.removeMonitor(escMonitor)
@@ -95,6 +100,7 @@ final class OverlayWindowController: NSObject {
     }
     
     func hideImmediatelyAndPaste() {
+        stopIdleTracking()
         // Hide window first for instant visual response
         window?.orderOut(nil)
         if let escMonitor {
@@ -138,6 +144,7 @@ final class OverlayWindowController: NSObject {
             backing: .buffered,
             defer: false
         )
+        window.acceptsMouseMovedEvents = true
         window.title = "Clipboard"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -183,6 +190,37 @@ final class OverlayWindowController: NSObject {
         SettingsWindowController.shared.show()
         applyTheme()
     }
+
+    private func startIdleTracking() {
+        stopIdleTracking()
+        guard AppSettings.shared.autoDismissOverlayEnabled else { return }
+        lastActivity = Date()
+        idleMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown, .keyUp, .mouseMoved, .leftMouseDown, .rightMouseDown, .scrollWheel]
+        ) { [weak self] event in
+            self?.lastActivity = Date()
+            return event
+        }
+        idleTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let elapsed = Date().timeIntervalSince(self.lastActivity)
+                if elapsed >= AppSettings.shared.autoDismissOverlayTimeout {
+                    self.stopIdleTracking()
+                    self.hideImmediatelyRefocusOnly()
+                }
+            }
+        }
+    }
+
+    private func stopIdleTracking() {
+        idleTimer?.invalidate()
+        idleTimer = nil
+        if let idleMonitor {
+            NSEvent.removeMonitor(idleMonitor)
+            self.idleMonitor = nil
+        }
+    }
 }
 
 private extension OverlayWindowController {
@@ -215,6 +253,7 @@ private extension OverlayWindowController {
     }
 
     func hideImmediatelyRefocusOnly() {
+        stopIdleTracking()
         // Hide window first for instant visual response
         window?.orderOut(nil)
         if let escMonitor {
