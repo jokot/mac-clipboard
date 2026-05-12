@@ -85,6 +85,13 @@ private struct TextItemContent: View {
     let isHovered: Bool
     let onRemove: () -> Void
 
+    @State private var revealedUntil: Date? = nil
+
+    private var isCurrentlyRevealed: Bool {
+        guard let revealedUntil else { return false }
+        return revealedUntil > Date()
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "doc.on.clipboard")
@@ -92,7 +99,7 @@ private struct TextItemContent: View {
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 6) {
-                let displayString = isConcealed
+                let displayString = (isConcealed && !isCurrentlyRevealed)
                     ? String(repeating: "•", count: min(8, max(1, string.count)))
                     : TextPreview.preview(for: string)
                 Text(displayString)
@@ -110,6 +117,16 @@ private struct TextItemContent: View {
             Spacer()
             if isOCRResult {
                 OCRBadge()
+            }
+            if isConcealed && isHovered {
+                RevealButton {
+                    revealedUntil = Date().addingTimeInterval(5)
+                    Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+                        Task { @MainActor in
+                            revealedUntil = nil
+                        }
+                    }
+                }
             }
             SourceIconBadge(bundleID: bundleID)
             if isHovered {
@@ -134,6 +151,12 @@ private struct ImageItemContent: View {
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
 
     @State private var loadedImage: NSImage? = nil
+    @State private var revealedUntil: Date? = nil
+
+    private var isCurrentlyRevealed: Bool {
+        guard let revealedUntil else { return false }
+        return revealedUntil > Date()
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -150,7 +173,7 @@ private struct ImageItemContent: View {
                             .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                     )
                     .overlay {
-                        if isConcealed {
+                        if isConcealed && !isCurrentlyRevealed {
                             ZStack {
                                 Color.black.opacity(0.45)
                                 Image(systemName: "lock.fill")
@@ -189,6 +212,16 @@ private struct ImageItemContent: View {
                     Spacer()
                     if isOCRResult {
                         OCRBadge()
+                    }
+                    if isConcealed && isHovered {
+                        RevealButton {
+                            revealedUntil = Date().addingTimeInterval(5)
+                            Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+                                Task { @MainActor in
+                                    revealedUntil = nil
+                                }
+                            }
+                        }
                     }
                     SourceIconBadge(bundleID: bundleID)
                 }
@@ -238,6 +271,13 @@ private struct URLItemContent: View {
     let isHovered: Bool
     let onRemove: () -> Void
 
+    @State private var revealedUntil: Date? = nil
+
+    private var isCurrentlyRevealed: Bool {
+        guard let revealedUntil else { return false }
+        return revealedUntil > Date()
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "link")
@@ -246,7 +286,7 @@ private struct URLItemContent: View {
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 6) {
                 let displayString: String = {
-                    if isConcealed {
+                    if isConcealed && !isCurrentlyRevealed {
                         let n = min(8, max(1, url.absoluteString.count))
                         return String(repeating: "•", count: n)
                     }
@@ -268,6 +308,16 @@ private struct URLItemContent: View {
             Spacer()
             if isOCRResult {
                 OCRBadge()
+            }
+            if isConcealed && isHovered {
+                RevealButton {
+                    revealedUntil = Date().addingTimeInterval(5)
+                    Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+                        Task { @MainActor in
+                            revealedUntil = nil
+                        }
+                    }
+                }
             }
             SourceIconBadge(bundleID: bundleID)
             HStack(spacing: 8) {
@@ -363,5 +413,20 @@ private struct OCRBadge: View {
             .frame(width: 16, height: 16)
             .contentShape(Rectangle())
             .help("Extracted from image")
+    }
+}
+
+private struct RevealButton: View {
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "eye")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+                .help("Reveal for 5 seconds")
+        }
+        .buttonStyle(.plain)
     }
 }
