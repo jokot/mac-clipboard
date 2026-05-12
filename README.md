@@ -9,15 +9,13 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.7.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.7.0)
+- [Download v1.7.1](https://github.com/jokot/mac-clipboard/releases/tag/v1.7.1)
 
-## What's new in 1.7.0
-- Source provenance: every clip now records the bundle ID of the app that copied it, and the overlay shows a 16×16 source-app icon on each row with a hover tooltip. Legacy clips from older versions show a "?" placeholder.
-- `from:` search syntax: filter history by source app — `from:Safari` (display-name substring) or `from:com.apple.Safari` (exact bundle ID). Combines with text tokens: `from:Safari hello`.
-- App exclusion list: copies from apps you exclude are never saved to history. Seeded on first launch with common password managers (1Password 7/8, Bitwarden, Keychain Access, Dashlane, LastPass) plus MaClip itself. Manage via Settings → Privacy → Excluded Apps, or right-click any clip → "Exclude [App]" with an optional retroactive purge of existing clips from that app.
-- Concealed clipboard items: items marked secret by apps like 1Password (via `org.nspasteboard.ConcealedType` / `com.apple.is-sensitive`) are saved with a redacted preview, a lock badge, and a countdown that auto-clears them after a configurable timeout (30 s – 30 min, default 5 min). A toggle in Settings → Privacy lets you skip these items entirely. Expired items are also dropped at app launch.
-- Settings refactored: split the previously-tall settings sheet into four tabs — General / Storage / Privacy / Behavior — with action buttons (Clear All History / About / Close) always visible across tabs.
-- Internals: version 1.7.0, build 8.
+## What's new in 1.7.1
+- OCR / barcode results keep their source app: extracted text or QR clips now inherit the parent image's source-app icon and show a small `text.viewfinder` badge with an "Extracted from image" tooltip, so you can tell the row came from extraction rather than a direct copy.
+- Fresh-install re-seed via a sentinel file: MaClip writes `~/Library/Application Support/MaClip/.seeded` the first time the default exclusion list is applied. Uninstalling with AppCleaner (or otherwise deleting Application Support) now triggers a clean re-seed on next launch — no Terminal commands required.
+- Restore Privacy Defaults: a new red button at the bottom of Settings → Privacy resets the exclusion list to the password-manager seed, turns off "Skip concealed clipboard items", and sets the auto-clear timeout back to 5 minutes. Scoped to the Privacy tab; other settings stay untouched.
+- Internals: version 1.7.1, build 9.
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
