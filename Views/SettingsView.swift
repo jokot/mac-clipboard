@@ -428,9 +428,13 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         window.initialFirstResponder = window.contentView
 
-        // Local monitor: catch Command+, while Settings is key and close
+        // Local monitor: catch Escape or Command+, while Settings is key and close
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self, self.window?.isKeyWindow == true else { return event }
+            if event.keyCode == 53 {   // Escape
+                self.window?.close()
+                return nil
+            }
             if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
                 self.window?.close()
                 return nil

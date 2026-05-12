@@ -110,6 +110,20 @@ final class InfoWindowController: NSObject {
             // Match Settings window behavior: use floating level so order can change among app windows
             window.level = .floating
             self.window = window
+
+            // Local monitor: catch Escape or Command+I while Info is key and close
+            NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self, self.window?.isKeyWindow == true else { return event }
+                if event.keyCode == 53 {   // Escape
+                    self.window?.close()
+                    return nil
+                }
+                if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "i" {
+                    self.window?.close()
+                    return nil
+                }
+                return event
+            }
         }
         guard let window else { return }
         window.center()
