@@ -46,6 +46,7 @@ struct ClipboardItemRow: View {
                             bundleID: item.sourceBundleID,
                             isConcealed: item.isConcealed,
                             concealedExpiresAt: item.concealedExpiresAt,
+                            isOCRResult: item.isOCRResult,
                             isHovered: isHovered,
                             onRemove: onRemove)
         case .image(let imgContent):
@@ -54,6 +55,7 @@ struct ClipboardItemRow: View {
                              bundleID: item.sourceBundleID,
                              isConcealed: item.isConcealed,
                              concealedExpiresAt: item.concealedExpiresAt,
+                             isOCRResult: item.isOCRResult,
                              isHovered: isHovered,
                              onRemove: onRemove,
                              onExtractText: onExtractText,
@@ -64,6 +66,7 @@ struct ClipboardItemRow: View {
                            bundleID: item.sourceBundleID,
                            isConcealed: item.isConcealed,
                            concealedExpiresAt: item.concealedExpiresAt,
+                           isOCRResult: item.isOCRResult,
                            isHovered: isHovered,
                            onRemove: onRemove)
         }
@@ -78,6 +81,7 @@ private struct TextItemContent: View {
     let bundleID: String?
     let isConcealed: Bool
     let concealedExpiresAt: Date?
+    let isOCRResult: Bool
     let isHovered: Bool
     let onRemove: () -> Void
 
@@ -104,6 +108,9 @@ private struct TextItemContent: View {
                 }
             }
             Spacer()
+            if isOCRResult {
+                OCRBadge()
+            }
             SourceIconBadge(bundleID: bundleID)
             if isHovered {
                 pillButton(label: "Delete", systemImage: "trash", color: .red,
@@ -120,6 +127,7 @@ private struct ImageItemContent: View {
     let bundleID: String?
     let isConcealed: Bool
     let concealedExpiresAt: Date?
+    let isOCRResult: Bool
     let isHovered: Bool
     let onRemove: () -> Void
     var onExtractText: ((ClipboardItem) -> Void)? = nil
@@ -179,6 +187,9 @@ private struct ImageItemContent: View {
                         ConcealedBadge(expiresAt: concealedExpiresAt)
                     }
                     Spacer()
+                    if isOCRResult {
+                        OCRBadge()
+                    }
                     SourceIconBadge(bundleID: bundleID)
                 }
             }
@@ -223,6 +234,7 @@ private struct URLItemContent: View {
     let bundleID: String?
     let isConcealed: Bool
     let concealedExpiresAt: Date?
+    let isOCRResult: Bool
     let isHovered: Bool
     let onRemove: () -> Void
 
@@ -254,6 +266,9 @@ private struct URLItemContent: View {
                 }
             }
             Spacer()
+            if isOCRResult {
+                OCRBadge()
+            }
             SourceIconBadge(bundleID: bundleID)
             HStack(spacing: 8) {
                 if isHovered {
@@ -337,5 +352,16 @@ private struct ConcealedBadge: View {
             return "\(seconds / 60)m"
         }
         return "\(seconds)s"
+    }
+}
+
+private struct OCRBadge: View {
+    var body: some View {
+        Image(systemName: "text.viewfinder")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.secondary)
+            .frame(width: 16, height: 16)
+            .contentShape(Rectangle())
+            .help("Extracted from image")
     }
 }

@@ -214,7 +214,8 @@ final class ClipboardListViewModel: ObservableObject {
                     content: .image(newContent),
                     sourceBundleID: item.sourceBundleID,
                     isConcealed: item.isConcealed,
-                    concealedExpiresAt: item.concealedExpiresAt
+                    concealedExpiresAt: item.concealedExpiresAt,
+                    isOCRResult: item.isOCRResult
                 )
             }
         }
@@ -247,7 +248,16 @@ final class ClipboardListViewModel: ObservableObject {
             if let cachedBarcode = cachedBarcode {
                 newContent.cachedBarcode = cachedBarcode
             }
-            items[idx] = ClipboardItem(id: items[idx].id, date: items[idx].date, content: .image(newContent))
+            let existing = items[idx]
+            items[idx] = ClipboardItem(
+                id: existing.id,
+                date: existing.date,
+                content: .image(newContent),
+                sourceBundleID: existing.sourceBundleID,
+                isConcealed: existing.isConcealed,
+                concealedExpiresAt: existing.concealedExpiresAt,
+                isOCRResult: existing.isOCRResult
+            )
             repository.saveToDiskAsync(items: items)
         }
     }
@@ -268,12 +278,23 @@ final class ClipboardListViewModel: ObservableObject {
 
     // Promote existing result or insert a new one; returns the item put on top
     func promoteOrInsertResult(text: String) -> ClipboardItem {
+        return promoteOrInsertResult(text: text, sourceBundleID: nil, isOCRResult: false)
+    }
+
+    func promoteOrInsertResult(text: String,
+                               sourceBundleID: String?,
+                               isOCRResult: Bool) -> ClipboardItem {
         if let url = URLUtils.linkURL(from: text) {
             if let existing = items.first(where: { if case .url(let u) = $0.content { return u == url } else { return false } }) {
                 promote(existing)
                 return existing
             } else {
-                let newItem = ClipboardItem(date: Date(), content: .url(url))
+                let newItem = ClipboardItem(
+                    date: Date(),
+                    content: .url(url),
+                    sourceBundleID: sourceBundleID,
+                    isOCRResult: isOCRResult
+                )
                 insertNewItemAtTop(newItem)
                 return newItem
             }
@@ -282,7 +303,12 @@ final class ClipboardListViewModel: ObservableObject {
                 promote(existing)
                 return existing
             } else {
-                let newItem = ClipboardItem(date: Date(), content: .text(text))
+                let newItem = ClipboardItem(
+                    date: Date(),
+                    content: .text(text),
+                    sourceBundleID: sourceBundleID,
+                    isOCRResult: isOCRResult
+                )
                 insertNewItemAtTop(newItem)
                 return newItem
             }

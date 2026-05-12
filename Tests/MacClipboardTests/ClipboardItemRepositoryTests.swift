@@ -30,6 +30,26 @@ final class ClipboardItemRepositoryTests: XCTestCase {
                        accuracy: 0.001)
     }
 
+    func test_isOCRResultRoundTrips() throws {
+        let item = ClipboardItem(
+            id: UUID(),
+            date: Date(),
+            content: .text("hello"),
+            sourceBundleID: "com.apple.Preview",
+            isConcealed: false,
+            concealedExpiresAt: nil,
+            isOCRResult: true
+        )
+
+        let repo = ClipboardRepository()
+        repo.saveToDisk(items: [item])
+        let loaded = repo.loadFromDisk()
+        defer { repo.clearAllFiles() }
+
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertTrue(loaded[0].isOCRResult)
+    }
+
     func test_legacyJSONDecodesWithDefaults() throws {
         let legacyJSON = """
         [

@@ -24,6 +24,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let sourceBundleID: String?
         let isConcealed: Bool?
         let concealedExpiresAt: Date?
+        let isOCRResult: Bool?
     }
 
     // Serialize all disk operations to avoid race conditions and out-of-order writes
@@ -47,7 +48,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         id: rec.id, date: rec.date, content: .text(text),
                         sourceBundleID: rec.sourceBundleID,
                         isConcealed: isConcealed,
-                        concealedExpiresAt: rec.concealedExpiresAt
+                        concealedExpiresAt: rec.concealedExpiresAt,
+                        isOCRResult: rec.isOCRResult ?? false
                     ))
                 }
             case "image":
@@ -62,7 +64,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                             id: rec.id, date: rec.date, content: .image(imgContent),
                             sourceBundleID: rec.sourceBundleID,
                             isConcealed: isConcealed,
-                            concealedExpiresAt: rec.concealedExpiresAt
+                            concealedExpiresAt: rec.concealedExpiresAt,
+                            isOCRResult: rec.isOCRResult ?? false
                         ))
                     }
                 }
@@ -72,7 +75,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         id: rec.id, date: rec.date, content: .url(u),
                         sourceBundleID: rec.sourceBundleID,
                         isConcealed: isConcealed,
-                        concealedExpiresAt: rec.concealedExpiresAt
+                        concealedExpiresAt: rec.concealedExpiresAt,
+                        isOCRResult: rec.isOCRResult ?? false
                     ))
                 }
             default:
@@ -132,7 +136,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     cachedText: nil, cachedId: nil, cachedBarcode: nil,
                     sourceBundleID: item.sourceBundleID,
                     isConcealed: item.isConcealed,
-                    concealedExpiresAt: item.concealedExpiresAt
+                    concealedExpiresAt: item.concealedExpiresAt,
+                    isOCRResult: item.isOCRResult
                 ))
             case .image(let imgContent):
                 guard let imagesDir else { continue }
@@ -146,7 +151,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode,
                         sourceBundleID: item.sourceBundleID,
                         isConcealed: item.isConcealed,
-                        concealedExpiresAt: item.concealedExpiresAt
+                        concealedExpiresAt: item.concealedExpiresAt,
+                        isOCRResult: item.isOCRResult
                     ))
                 case .memory(let image):
                     let name = item.id.uuidString + ".png"
@@ -167,7 +173,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                             cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode,
                             sourceBundleID: item.sourceBundleID,
                             isConcealed: item.isConcealed,
-                            concealedExpiresAt: item.concealedExpiresAt
+                            concealedExpiresAt: item.concealedExpiresAt,
+                            isOCRResult: item.isOCRResult
                         ))
                     }
                 }
@@ -178,7 +185,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     cachedText: nil, cachedId: nil, cachedBarcode: nil,
                     sourceBundleID: item.sourceBundleID,
                     isConcealed: item.isConcealed,
-                    concealedExpiresAt: item.concealedExpiresAt
+                    concealedExpiresAt: item.concealedExpiresAt,
+                    isOCRResult: item.isOCRResult
                 ))
             }
         }

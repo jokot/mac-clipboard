@@ -257,6 +257,7 @@ private struct PrivacyTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
     let addApplicationViaPicker: () -> Void
+    @State private var showingRestoreConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -329,6 +330,21 @@ private struct PrivacyTab: View {
             Text("Items marked secret by apps like 1Password are kept with redacted preview, then removed automatically. Turn the toggle on to skip them entirely.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+
+            Divider().padding(.vertical, 4)
+
+            Button("Restore Privacy Defaults") {
+                showingRestoreConfirm = true
+            }
+            .foregroundColor(.red)
+            .alert("Restore Privacy defaults?", isPresented: $showingRestoreConfirm) {
+                Button("Cancel", role: .cancel) { }
+                Button("Restore", role: .destructive) {
+                    AppSettings.shared.restorePrivacyDefaults()
+                }
+            } message: {
+                Text("This resets the excluded apps list to the default password-manager seed, turns off \"Skip concealed clipboard items\", and sets the auto-clear timeout to 5 minutes.")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
