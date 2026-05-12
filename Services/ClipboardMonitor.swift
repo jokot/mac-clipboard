@@ -64,8 +64,9 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
             return
         }
 
+        let timeout = AppSettings.shared.concealedClearTimeout
         let expiry: Date? = isConcealed
-            ? Date().addingTimeInterval(AppSettings.shared.concealedClearTimeout)
+            ? (timeout == -1 ? Date.distantFuture : Date().addingTimeInterval(timeout))
             : nil
 
         // Read content (image > URL > text) — same priority as before.

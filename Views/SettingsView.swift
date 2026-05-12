@@ -315,6 +315,9 @@ private struct PrivacyTab: View {
                 Text("Auto-clear concealed items after")
                 Spacer()
                 Picker("", selection: $settings.concealedClearTimeout) {
+                    Text("5 sec").tag(TimeInterval(5))
+                    Text("10 sec").tag(TimeInterval(10))
+                    Text("20 sec").tag(TimeInterval(20))
                     Text("30 sec").tag(TimeInterval(30))
                     Text("1 min").tag(TimeInterval(60))
                     Text("2 min").tag(TimeInterval(120))
@@ -322,6 +325,7 @@ private struct PrivacyTab: View {
                     Text("10 min").tag(TimeInterval(600))
                     Text("15 min").tag(TimeInterval(900))
                     Text("30 min").tag(TimeInterval(1800))
+                    Text("Never").tag(TimeInterval(-1))
                 }
                 .pickerStyle(.menu)
                 .frame(width: 110)

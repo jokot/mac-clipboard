@@ -129,6 +129,14 @@ final class AppSettingsTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: concealedTimeoutKey)
     }
 
+    func test_concealedClearTimeoutCanBeNeverSentinel() {
+        AppSettings.shared.concealedClearTimeout = -1
+        XCTAssertEqual(AppSettings.shared.concealedClearTimeout, -1)
+        XCTAssertEqual(UserDefaults.standard.object(forKey: concealedTimeoutKey) as? Double, -1)
+        AppSettings.shared.concealedClearTimeout = 300
+        UserDefaults.standard.removeObject(forKey: concealedTimeoutKey)
+    }
+
     func test_defaultsAreTrueWhenKeysAbsent() {
         // Mirrors AppSettings.init's read pattern.
         let pasteDefault = UserDefaults.standard.object(forKey: pasteKey) as? Bool ?? true
