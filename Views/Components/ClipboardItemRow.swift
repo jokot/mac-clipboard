@@ -387,7 +387,7 @@ private struct ConcealedBadge: View {
             Image(systemName: "lock.fill")
                 .font(.system(size: 12))
                 .foregroundColor(.orange)
-            if let expiresAt {
+            if let expiresAt, expiresAt < Date.distantFuture {
                 let remaining = max(0, Int(expiresAt.timeIntervalSince(now)))
                 Text(formatRemaining(seconds: remaining))
                     .font(.caption2.monospacedDigit())
