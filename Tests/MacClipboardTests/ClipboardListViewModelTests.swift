@@ -178,6 +178,37 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_concealedSweepSkipsNeverTimeoutItems() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let neverItem = ClipboardItem(
+            date: Date(),
+            content: .text("never expires"),
+            isConcealed: true,
+            concealedExpiresAt: Date.distantFuture
+        )
+        let expiredItem = ClipboardItem(
+            date: Date(),
+            content: .text("already expired"),
+            isConcealed: true,
+            concealedExpiresAt: Date(timeIntervalSinceNow: -1)
+        )
+        monitor.emit(neverItem)
+        monitor.emit(expiredItem)
+
+        await MainActor.run {
+            vm.runConcealedExpirySweep(now: Date())
+            XCTAssertEqual(vm.items.count, 1)
+            XCTAssertEqual(vm.items.first?.id, neverItem.id)
+        }
+    }
+
+    @MainActor
     func test_initDropsExpiredConcealedItemsFromLoadedHistory() async {
         AppSettings.shared.maxItems = 10
         AppSettings.shared.autoCleanEnabled = false

@@ -315,6 +315,9 @@ private struct PrivacyTab: View {
                 Text("Auto-clear concealed items after")
                 Spacer()
                 Picker("", selection: $settings.concealedClearTimeout) {
+                    Text("5 sec").tag(TimeInterval(5))
+                    Text("10 sec").tag(TimeInterval(10))
+                    Text("20 sec").tag(TimeInterval(20))
                     Text("30 sec").tag(TimeInterval(30))
                     Text("1 min").tag(TimeInterval(60))
                     Text("2 min").tag(TimeInterval(120))
@@ -322,6 +325,7 @@ private struct PrivacyTab: View {
                     Text("10 min").tag(TimeInterval(600))
                     Text("15 min").tag(TimeInterval(900))
                     Text("30 min").tag(TimeInterval(1800))
+                    Text("Never").tag(TimeInterval(-1))
                 }
                 .pickerStyle(.menu)
                 .frame(width: 110)
@@ -358,6 +362,30 @@ private struct BehaviorTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            GroupBox("Auto-dismiss") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("Auto-dismiss overlay after idle", isOn: $settings.autoDismissOverlayEnabled)
+                    HStack {
+                        Text("Close after")
+                        Spacer()
+                        Picker("", selection: $settings.autoDismissOverlayTimeout) {
+                            Text("5 sec").tag(TimeInterval(5))
+                            Text("10 sec").tag(TimeInterval(10))
+                            Text("20 sec").tag(TimeInterval(20))
+                            Text("30 sec").tag(TimeInterval(30))
+                            Text("1 min").tag(TimeInterval(60))
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 110)
+                        .disabled(!settings.autoDismissOverlayEnabled)
+                    }
+                    Text("Closes the clipboard overlay automatically when there is no keyboard, mouse, or scroll activity inside the window.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             GroupBox("Behavior") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("Paste on selection", isOn: $settings.pasteOnClick)
@@ -400,9 +428,13 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         window.initialFirstResponder = window.contentView
 
-        // Local monitor: catch Command+, while Settings is key and close
+        // Local monitor: catch Escape or Command+, while Settings is key and close
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self, self.window?.isKeyWindow == true else { return event }
+            if event.keyCode == 53 {   // Escape
+                self.window?.close()
+                return nil
+            }
             if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
                 self.window?.close()
                 return nil
