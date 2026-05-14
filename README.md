@@ -9,13 +9,14 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.7.1](https://github.com/jokot/mac-clipboard/releases/tag/v1.7.1)
+- [Download v1.7.2](https://github.com/jokot/mac-clipboard/releases/tag/v1.7.2)
 
-## What's new in 1.7.1
-- OCR / barcode results keep their source app: extracted text or QR clips now inherit the parent image's source-app icon and show a small `text.viewfinder` badge with an "Extracted from image" tooltip, so you can tell the row came from extraction rather than a direct copy.
-- Fresh-install re-seed via a sentinel file: MaClip writes `~/Library/Application Support/MaClip/.seeded` the first time the default exclusion list is applied. Uninstalling with AppCleaner (or otherwise deleting Application Support) now triggers a clean re-seed on next launch — no Terminal commands required.
-- Restore Privacy Defaults: a new red button at the bottom of Settings → Privacy resets the exclusion list to the password-manager seed, turns off "Skip concealed clipboard items", and sets the auto-clear timeout back to 5 minutes. Scoped to the Privacy tab; other settings stay untouched.
-- Internals: version 1.7.1, build 9.
+## What's new in 1.7.2
+- Auto-dismiss the overlay after idle: the clipboard window closes automatically when there is no keyboard, mouse, or scroll activity inside it. Default ON at 20 seconds; configurable in Settings → Behavior → Auto-dismiss (5 sec / 10 sec / 20 sec / 30 sec / 1 min) or toggle off entirely.
+- Reveal masked content: hover any concealed clipboard row to surface a small eye button. Clicking reveals the real content for 5 seconds, then re-masks. Clicking the row (not the eye) still pastes the real content as before.
+- Faster concealed-clear options and "Never": the Settings → Privacy auto-clear timeout picker now includes 5 sec / 10 sec / 20 sec at the short end and a "Never" entry at the bottom. Picking "Never" keeps masked items until you remove them manually; the row hides the countdown so only the lock icon shows.
+- ESC and opening shortcut close Settings and Info: Settings now dismisses on ESC or a second press of ⌘,. The About / Info window dismisses on ESC or a second press of ⌘I. Mirrors the clipboard overlay's behavior.
+- Internals: version 1.7.2, build 10.
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
