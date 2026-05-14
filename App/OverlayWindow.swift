@@ -67,8 +67,8 @@ final class OverlayWindowController: NSObject {
 
         if escMonitor == nil {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+                guard let self = self, self.window?.isKeyWindow == true else { return event }
                 if event.keyCode == 53 { // Escape key
-                    guard let self = self else { return nil }
                     // Hide immediately and only refocus the previous app (no paste)
                     self.hideImmediatelyRefocusOnly()
                     return nil
