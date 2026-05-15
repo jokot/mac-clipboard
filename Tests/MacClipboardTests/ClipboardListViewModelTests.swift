@@ -412,6 +412,31 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_appendSameTextPromotesExistingItem() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("first")))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("second")))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("first")))   // re-copy of "first"
+
+        await MainActor.run {
+            XCTAssertEqual(vm.items.count, 2)   // no duplicate
+            // "first" promoted to top
+            if case .text(let t) = vm.items[0].content {
+                XCTAssertEqual(t, "first")
+            } else { XCTFail("expected text") }
+            if case .text(let t) = vm.items[1].content {
+                XCTAssertEqual(t, "second")
+            } else { XCTFail("expected text") }
+        }
+    }
+
+    @MainActor
     func test_updateImageItemCachePreservesProvenance() async {
         AppSettings.shared.maxItems = 10
         AppSettings.shared.autoCleanEnabled = false

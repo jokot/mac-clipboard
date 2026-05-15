@@ -97,10 +97,16 @@ private struct TextItemContent: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: ContentTagDetector.primaryTag(for: fullItem)?.symbolName ?? "doc.on.clipboard")
-                .font(.title3)
-                .foregroundColor(.accentColor)
-                .frame(width: 28)
+            let primary = ContentTagDetector.primaryTag(for: fullItem)
+            if primary == .color {
+                ColorSwatchView(hex: string)
+                    .frame(width: 28)
+            } else {
+                Image(systemName: primary?.symbolName ?? "doc.on.clipboard")
+                    .font(.title3)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 28)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 let displayString = (isConcealed && !isCurrentlyRevealed)
                     ? String(repeating: "•", count: min(8, max(1, string.count)))
@@ -417,6 +423,43 @@ private struct OCRBadge: View {
             .frame(width: 16, height: 16)
             .contentShape(Rectangle())
             .help("Extracted from image")
+    }
+}
+
+private struct ColorSwatchView: View {
+    let hex: String
+    var body: some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(Self.color(fromHex: hex) ?? Color.gray)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+            )
+            .frame(width: 22, height: 22)
+    }
+
+    private static func color(fromHex hex: String) -> Color? {
+        var s = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.hasPrefix("#") { s.removeFirst() }
+        // Accept 3 / 6 / 8 hex digits.
+        if s.count == 3 {
+            s = s.map { "\($0)\($0)" }.joined()
+        }
+        guard s.count == 6 || s.count == 8,
+              let value = UInt64(s, radix: 16) else { return nil }
+        let r, g, b, a: Double
+        if s.count == 8 {
+            r = Double((value & 0xFF000000) >> 24) / 255.0
+            g = Double((value & 0x00FF0000) >> 16) / 255.0
+            b = Double((value & 0x0000FF00) >> 8)  / 255.0
+            a = Double( value & 0x000000FF)        / 255.0
+        } else {
+            r = Double((value & 0xFF0000) >> 16) / 255.0
+            g = Double((value & 0x00FF00) >> 8)  / 255.0
+            b = Double( value & 0x0000FF)        / 255.0
+            a = 1.0
+        }
+        return Color(red: r, green: g, blue: b, opacity: a)
     }
 }
 

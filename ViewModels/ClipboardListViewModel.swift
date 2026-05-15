@@ -215,10 +215,15 @@ final class ClipboardListViewModel: ObservableObject {
 
     // Private
     private func append(_ item: ClipboardItem) {
-        if let last = items.first, last == item {
+        // Promote-if-exists: if the same content already lives in history, move it to top.
+        if let existingIdx = items.firstIndex(where: { $0 == item }) {
+            if existingIdx == 0 { return }   // already on top
+            let existing = items.remove(at: existingIdx)
+            items.insert(existing, at: 0)
+            repository.saveToDiskAsync(items: items)
             return
         }
-        
+
         var itemToInsert = item
         
         // Optimize image storage:
