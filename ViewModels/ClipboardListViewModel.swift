@@ -67,6 +67,7 @@ final class ClipboardListViewModel: ObservableObject {
 
     // Intents
     func clearHistory() {
+        ContentTagDetector.clearCache()
         items.removeAll()
         repository.clearAllFiles()
         // Use synchronous save for critical operations to avoid race conditions
@@ -152,16 +153,28 @@ final class ClipboardListViewModel: ObservableObject {
 
         var sourceFilters: [String] = []
         var textFilters: [String] = []
+        var tagFilters: [ContentTag] = []
+        var hasUnknownTag = false
 
         for token in trimmed.split(separator: " ", omittingEmptySubsequences: true) {
             let s = String(token)
-            if s.lowercased().hasPrefix("from:") {
+            let lower = s.lowercased()
+            if lower.hasPrefix("from:") {
                 let value = String(s.dropFirst(5))
                 if !value.isEmpty { sourceFilters.append(value) }
+            } else if lower.hasPrefix("tag:") {
+                let value = String(s.dropFirst(4)).lowercased()
+                if let tag = ContentTag(rawValue: value) {
+                    tagFilters.append(tag)
+                } else {
+                    hasUnknownTag = true
+                }
             } else {
-                textFilters.append(s.lowercased())
+                textFilters.append(lower)
             }
         }
+
+        if hasUnknownTag { return [] }
 
         return items.filter { item in
             if !sourceFilters.isEmpty {
@@ -175,6 +188,13 @@ final class ClipboardListViewModel: ObservableObject {
                     }
                 }
                 if !matchesSource { return false }
+            }
+
+            if !tagFilters.isEmpty {
+                let tags = ContentTagDetector.tags(for: item)
+                for required in tagFilters where !tags.contains(required) {
+                    return false
+                }
             }
 
             if !textFilters.isEmpty {
