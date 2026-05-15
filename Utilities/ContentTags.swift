@@ -44,6 +44,17 @@ enum ContentTagDetector {
         cache.removeAll()
     }
 
+    /// Returns the highest-priority detected tag, or nil if the item has no tags.
+    /// Priority order favors specificity: url > email > phone > color > json > diff > code.
+    static func primaryTag(for item: ClipboardItem) -> ContentTag? {
+        let tags = tags(for: item)
+        let priority: [ContentTag] = [.url, .email, .phone, .color, .json, .diff, .code]
+        for tag in priority where tags.contains(tag) {
+            return tag
+        }
+        return nil
+    }
+
     private static func computeTags(for item: ClipboardItem) -> Set<ContentTag> {
         switch item.content {
         case .url:

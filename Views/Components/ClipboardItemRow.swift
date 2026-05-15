@@ -97,7 +97,7 @@ private struct TextItemContent: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "doc.on.clipboard")
+            Image(systemName: ContentTagDetector.primaryTag(for: fullItem)?.symbolName ?? "doc.on.clipboard")
                 .font(.title3)
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
@@ -118,7 +118,6 @@ private struct TextItemContent: View {
                 }
             }
             Spacer()
-            TagBadgesView(tags: ContentTagDetector.tags(for: fullItem))
             if isOCRResult {
                 OCRBadge()
             }
@@ -214,7 +213,6 @@ private struct ImageItemContent: View {
                         ConcealedBadge(expiresAt: concealedExpiresAt)
                     }
                     Spacer()
-                    TagBadgesView(tags: ContentTagDetector.tags(for: item))
                     if isOCRResult {
                         OCRBadge()
                     }
@@ -286,7 +284,7 @@ private struct URLItemContent: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "link")
+            Image(systemName: ContentTagDetector.primaryTag(for: fullItem)?.symbolName ?? "link")
                 .font(.title3)
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
@@ -312,7 +310,6 @@ private struct URLItemContent: View {
                 }
             }
             Spacer()
-            TagBadgesView(tags: ContentTagDetector.tags(for: fullItem))
             if isOCRResult {
                 OCRBadge()
             }
@@ -435,24 +432,5 @@ private struct RevealButton: View {
                 .help("Reveal for 5 seconds")
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct TagBadgesView: View {
-    let tags: Set<ContentTag>
-
-    var body: some View {
-        if !tags.isEmpty {
-            HStack(spacing: 4) {
-                ForEach(Array(tags).sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { tag in
-                    Image(systemName: tag.symbolName)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 16, height: 16)
-                        .contentShape(Rectangle())
-                        .help(tag.displayName)
-                }
-            }
-        }
     }
 }

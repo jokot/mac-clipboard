@@ -108,4 +108,15 @@ final class ContentTagsTests: XCTestCase {
         let tags = ContentTagDetector.tags(for: text("https://example.com"))
         XCTAssertTrue(tags.contains(.url))
     }
+
+    func test_primaryTagPriority() {
+        // A URL inside a JSON value: both url + json detected; url wins by priority.
+        let item = ClipboardItem(date: Date(), content: .text("https://example.com"))
+        XCTAssertEqual(ContentTagDetector.primaryTag(for: item), .url)
+    }
+
+    func test_primaryTagNilForUntagged() {
+        let item = ClipboardItem(date: Date(), content: .text("hello"))
+        XCTAssertNil(ContentTagDetector.primaryTag(for: item))
+    }
 }
