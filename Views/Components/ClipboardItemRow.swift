@@ -48,6 +48,7 @@ struct ClipboardItemRow: View {
                             concealedExpiresAt: item.concealedExpiresAt,
                             isOCRResult: item.isOCRResult,
                             isHovered: isHovered,
+                            fullItem: item,
                             onRemove: onRemove)
         case .image(let imgContent):
             ImageItemContent(imgContent: imgContent,
@@ -68,6 +69,7 @@ struct ClipboardItemRow: View {
                            concealedExpiresAt: item.concealedExpiresAt,
                            isOCRResult: item.isOCRResult,
                            isHovered: isHovered,
+                           fullItem: item,
                            onRemove: onRemove)
         }
     }
@@ -83,6 +85,7 @@ private struct TextItemContent: View {
     let concealedExpiresAt: Date?
     let isOCRResult: Bool
     let isHovered: Bool
+    let fullItem: ClipboardItem
     let onRemove: () -> Void
 
     @State private var revealedUntil: Date? = nil
@@ -115,6 +118,7 @@ private struct TextItemContent: View {
                 }
             }
             Spacer()
+            TagBadgesView(tags: ContentTagDetector.tags(for: fullItem))
             if isOCRResult {
                 OCRBadge()
             }
@@ -210,6 +214,7 @@ private struct ImageItemContent: View {
                         ConcealedBadge(expiresAt: concealedExpiresAt)
                     }
                     Spacer()
+                    TagBadgesView(tags: ContentTagDetector.tags(for: item))
                     if isOCRResult {
                         OCRBadge()
                     }
@@ -269,6 +274,7 @@ private struct URLItemContent: View {
     let concealedExpiresAt: Date?
     let isOCRResult: Bool
     let isHovered: Bool
+    let fullItem: ClipboardItem
     let onRemove: () -> Void
 
     @State private var revealedUntil: Date? = nil
@@ -306,6 +312,7 @@ private struct URLItemContent: View {
                 }
             }
             Spacer()
+            TagBadgesView(tags: ContentTagDetector.tags(for: fullItem))
             if isOCRResult {
                 OCRBadge()
             }
@@ -428,5 +435,24 @@ private struct RevealButton: View {
                 .help("Reveal for 5 seconds")
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct TagBadgesView: View {
+    let tags: Set<ContentTag>
+
+    var body: some View {
+        if !tags.isEmpty {
+            HStack(spacing: 4) {
+                ForEach(Array(tags).sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { tag in
+                    Image(systemName: tag.symbolName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
+                        .help(tag.displayName)
+                }
+            }
+        }
     }
 }
