@@ -98,15 +98,13 @@ private struct TextItemContent: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             let primary = ContentTagDetector.primaryTag(for: fullItem)
-            if primary == .color {
-                ColorSwatchView(hex: string)
-                    .frame(width: 28)
-            } else {
-                Image(systemName: primary?.symbolName ?? "doc.on.clipboard")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
-            }
+            let iconColor: Color = (primary == .color)
+                ? (ColorParser.color(fromHex: string) ?? .accentColor)
+                : .accentColor
+            Image(systemName: primary?.symbolName ?? "doc.on.clipboard")
+                .font(.title3)
+                .foregroundColor(iconColor)
+                .frame(width: 28)
             VStack(alignment: .leading, spacing: 6) {
                 let displayString = (isConcealed && !isCurrentlyRevealed)
                     ? String(repeating: "•", count: min(8, max(1, string.count)))
@@ -426,19 +424,8 @@ private struct OCRBadge: View {
     }
 }
 
-private struct ColorSwatchView: View {
-    let hex: String
-    var body: some View {
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
-            .fill(Self.color(fromHex: hex) ?? Color.gray)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-            )
-            .frame(width: 22, height: 22)
-    }
-
-    private static func color(fromHex hex: String) -> Color? {
+private enum ColorParser {
+    static func color(fromHex hex: String) -> Color? {
         var s = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.hasPrefix("#") { s.removeFirst() }
         // Accept 3 / 6 / 8 hex digits.
