@@ -39,10 +39,6 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
         let frontmost = NSWorkspace.shared.frontmostApplication
         let sourceBundleID = frontmost?.bundleIdentifier
 
-        // Self-capture guard. Belt-and-suspenders against any race in
-        // ClipboardListViewModel.setPasteboard's ignoreCurrentChangeCount() (1.6.0).
-        if sourceBundleID == "com.jokot.MacClipboard" { return }
-
         // Exclusion list — never ingest from these apps.
         if let id = sourceBundleID,
            AppSettings.shared.excludedBundleIDs.contains(id) {
