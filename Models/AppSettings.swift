@@ -76,6 +76,7 @@ final class AppSettings: ObservableObject {
         "com.apple.keychainaccess",
         "com.dashlane.dashlanephonefinal",
         "com.lastpass.LastPassMacDesktop",
+        "com.jokot.MacClipboard",
     ]
 
     static func makeInitialExcludedBundleIDs() -> [String] {

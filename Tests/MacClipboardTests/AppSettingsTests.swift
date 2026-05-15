@@ -18,6 +18,7 @@ final class AppSettingsTests: XCTestCase {
         "com.apple.keychainaccess",
         "com.dashlane.dashlanephonefinal",
         "com.lastpass.LastPassMacDesktop",
+        "com.jokot.MacClipboard",
     ]
 
     private static func sentinelURL() -> URL? {
