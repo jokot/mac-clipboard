@@ -62,7 +62,7 @@ struct ContentView: View {
         HStack {
             Text("Clipboard History")
                 .font(.headline)
-            TextField("Search… (try \"from:Safari\")", text: $viewModel.searchText)
+            TextField("Search… (try \"from:Safari\", \"tag:code\")", text: $viewModel.searchText)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(maxWidth: 240)
                 .focused($isSearchFocused)
