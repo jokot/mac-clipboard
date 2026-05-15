@@ -48,6 +48,7 @@ struct ClipboardItemRow: View {
                             concealedExpiresAt: item.concealedExpiresAt,
                             isOCRResult: item.isOCRResult,
                             isHovered: isHovered,
+                            fullItem: item,
                             onRemove: onRemove)
         case .image(let imgContent):
             ImageItemContent(imgContent: imgContent,
@@ -68,6 +69,7 @@ struct ClipboardItemRow: View {
                            concealedExpiresAt: item.concealedExpiresAt,
                            isOCRResult: item.isOCRResult,
                            isHovered: isHovered,
+                           fullItem: item,
                            onRemove: onRemove)
         }
     }
@@ -83,6 +85,7 @@ private struct TextItemContent: View {
     let concealedExpiresAt: Date?
     let isOCRResult: Bool
     let isHovered: Bool
+    let fullItem: ClipboardItem
     let onRemove: () -> Void
 
     @State private var revealedUntil: Date? = nil
@@ -94,9 +97,13 @@ private struct TextItemContent: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "doc.on.clipboard")
+            let primary = ContentTagDetector.primaryTag(for: fullItem)
+            let iconColor: Color = (primary == .color)
+                ? (ColorParser.color(fromHex: string) ?? .accentColor)
+                : .accentColor
+            Image(systemName: primary?.symbolName ?? "doc.on.clipboard")
                 .font(.title3)
-                .foregroundColor(.accentColor)
+                .foregroundColor(iconColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 6) {
                 let displayString = (isConcealed && !isCurrentlyRevealed)
@@ -269,6 +276,7 @@ private struct URLItemContent: View {
     let concealedExpiresAt: Date?
     let isOCRResult: Bool
     let isHovered: Bool
+    let fullItem: ClipboardItem
     let onRemove: () -> Void
 
     @State private var revealedUntil: Date? = nil
@@ -280,7 +288,7 @@ private struct URLItemContent: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "link")
+            Image(systemName: ContentTagDetector.primaryTag(for: fullItem)?.symbolName ?? "link")
                 .font(.title3)
                 .foregroundColor(.accentColor)
                 .frame(width: 28)
@@ -413,6 +421,32 @@ private struct OCRBadge: View {
             .frame(width: 16, height: 16)
             .contentShape(Rectangle())
             .help("Extracted from image")
+    }
+}
+
+private enum ColorParser {
+    static func color(fromHex hex: String) -> Color? {
+        var s = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.hasPrefix("#") { s.removeFirst() }
+        // Accept 3 / 6 / 8 hex digits.
+        if s.count == 3 {
+            s = s.map { "\($0)\($0)" }.joined()
+        }
+        guard s.count == 6 || s.count == 8,
+              let value = UInt64(s, radix: 16) else { return nil }
+        let r, g, b, a: Double
+        if s.count == 8 {
+            r = Double((value & 0xFF000000) >> 24) / 255.0
+            g = Double((value & 0x00FF0000) >> 16) / 255.0
+            b = Double((value & 0x0000FF00) >> 8)  / 255.0
+            a = Double( value & 0x000000FF)        / 255.0
+        } else {
+            r = Double((value & 0xFF0000) >> 16) / 255.0
+            g = Double((value & 0x00FF00) >> 8)  / 255.0
+            b = Double( value & 0x0000FF)        / 255.0
+            a = 1.0
+        }
+        return Color(red: r, green: g, blue: b, opacity: a)
     }
 }
 

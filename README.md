@@ -9,14 +9,14 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.7.2](https://github.com/jokot/mac-clipboard/releases/tag/v1.7.2)
+- [Download v1.8.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.8.0)
 
-## What's new in 1.7.2
-- Auto-dismiss the overlay after idle: the clipboard window closes automatically when there is no keyboard, mouse, or scroll activity inside it. Default ON at 20 seconds; configurable in Settings → Behavior → Auto-dismiss (5 sec / 10 sec / 20 sec / 30 sec / 1 min) or toggle off entirely.
-- Reveal masked content: hover any concealed clipboard row to surface a small eye button. Clicking reveals the real content for 5 seconds, then re-masks. Clicking the row (not the eye) still pastes the real content as before.
-- Faster concealed-clear options and "Never": the Settings → Privacy auto-clear timeout picker now includes 5 sec / 10 sec / 20 sec at the short end and a "Never" entry at the bottom. Picking "Never" keeps masked items until you remove them manually; the row hides the countdown so only the lock icon shows.
-- ESC and opening shortcut close Settings and Info: Settings now dismisses on ESC or a second press of ⌘,. The About / Info window dismisses on ESC or a second press of ⌘I. Mirrors the clipboard overlay's behavior.
-- Internals: version 1.7.2, build 10.
+## What's new in 1.8.0
+- Smart content tags: MaClip auto-detects what's in each clip (URL, email, phone, JSON, code, hex color, diff) and shows it as the row's leading icon. Detection runs locally at render time — no new fields, no migration. Hex colors tint the palette icon with the actual color.
+- `tag:` search syntax: filter history by detected kind — `tag:code`, `tag:json`, `tag:email`, etc. Combines with the existing `from:` source filter and free-text tokens, e.g. `tag:url from:Safari`, `tag:json hello`. Unknown values yield an empty result.
+- No more duplicate entries: re-copying content already in history promotes the existing item to the top instead of creating a duplicate.
+- Screenshots while the overlay is up: removed the hard-coded self-guard from the monitor; combined with the existing change-count dedupe, screenshots and other clipboard writes that happen while MaClip is focused are now captured. (Default behavior unchanged: MaClip stays in the seeded exclusion list, so users still need to remove it if they want this.)
+- Internals: version 1.8.0, build 11.
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)

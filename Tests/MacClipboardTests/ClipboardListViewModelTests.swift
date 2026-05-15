@@ -310,6 +310,133 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_filterTagJSON() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("{\"a\":1}")))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("hello world")))
+
+        // Drain main queue so Combine sink delivers appends before filter read.
+        await MainActor.run { }
+
+        vm.searchText = "tag:json"
+        await MainActor.run {
+            XCTAssertEqual(vm.filteredItems.count, 1)
+            if case .text(let t) = vm.filteredItems.first?.content {
+                XCTAssertEqual(t, "{\"a\":1}")
+            }
+        }
+    }
+
+    @MainActor
+    func test_filterTagCodeAndText() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let codeWithHello = """
+        func hello() {
+            return "hi"
+        }
+        """
+        let plainHello = "hello world"
+        monitor.emit(ClipboardItem(date: Date(), content: .text(codeWithHello)))
+        monitor.emit(ClipboardItem(date: Date(), content: .text(plainHello)))
+
+        // Drain main queue so Combine sink delivers appends before filter read.
+        await MainActor.run { }
+
+        vm.searchText = "tag:code hello"
+        await MainActor.run {
+            XCTAssertEqual(vm.filteredItems.count, 1)
+            if case .text(let t) = vm.filteredItems.first?.content {
+                XCTAssertEqual(t, codeWithHello)
+            }
+        }
+    }
+
+    @MainActor
+    func test_filterUnknownTagReturnsEmpty() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("{\"a\":1}")))
+
+        // Drain main queue so Combine sink delivers appends before filter read.
+        await MainActor.run { }
+
+        vm.searchText = "tag:nonsense"
+        await MainActor.run {
+            XCTAssertTrue(vm.filteredItems.isEmpty)
+        }
+    }
+
+    @MainActor
+    func test_filterTagWithFromCombined() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let urlSafari = ClipboardItem(date: Date(),
+                                      content: .url(URL(string: "https://example.com")!),
+                                      sourceBundleID: "com.apple.Safari")
+        let urlTextEdit = ClipboardItem(date: Date(),
+                                        content: .url(URL(string: "https://other.com")!),
+                                        sourceBundleID: "com.apple.TextEdit")
+        monitor.emit(urlSafari)
+        monitor.emit(urlTextEdit)
+
+        // Drain main queue so Combine sink delivers appends before filter read.
+        await MainActor.run { }
+
+        vm.searchText = "tag:url from:com.apple.Safari"
+        await MainActor.run {
+            XCTAssertEqual(vm.filteredItems.count, 1)
+            XCTAssertEqual(vm.filteredItems.first?.sourceBundleID, "com.apple.Safari")
+        }
+    }
+
+    @MainActor
+    func test_appendSameTextPromotesExistingItem() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("first")))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("second")))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("first")))   // re-copy of "first"
+
+        await MainActor.run {
+            XCTAssertEqual(vm.items.count, 2)   // no duplicate
+            // "first" promoted to top
+            if case .text(let t) = vm.items[0].content {
+                XCTAssertEqual(t, "first")
+            } else { XCTFail("expected text") }
+            if case .text(let t) = vm.items[1].content {
+                XCTAssertEqual(t, "second")
+            } else { XCTFail("expected text") }
+        }
+    }
+
+    @MainActor
     func test_updateImageItemCachePreservesProvenance() async {
         AppSettings.shared.maxItems = 10
         AppSettings.shared.autoCleanEnabled = false
