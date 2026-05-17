@@ -488,6 +488,9 @@ private final class MockRepo: ClipboardRepositoryProtocol {
         try? Data().write(to: fileURL)
         return fileURL
     }
+    func readImageData(at encURL: URL) -> Data? {
+        return try? Data(contentsOf: encURL)
+    }
 }
 
 private final class MockMonitor: ClipboardMonitorProtocol {

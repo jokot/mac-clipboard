@@ -50,6 +50,85 @@ final class ClipboardItemRepositoryTests: XCTestCase {
         XCTAssertTrue(loaded[0].isOCRResult)
     }
 
+    func test_encryptedRoundTrip() throws {
+        let item = ClipboardItem(
+            id: UUID(),
+            date: Date(),
+            content: .text("encrypted hello"),
+            sourceBundleID: "com.apple.TextEdit",
+            isConcealed: false,
+            concealedExpiresAt: nil,
+            isOCRResult: false
+        )
+
+        let repo = ClipboardRepository()
+        repo.saveToDisk(items: [item])
+        let loaded = repo.loadFromDisk()
+        defer { repo.clearAllFiles() }
+
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded[0].sourceBundleID, "com.apple.TextEdit")
+        if case .text(let t) = loaded[0].content {
+            XCTAssertEqual(t, "encrypted hello")
+        } else { XCTFail("expected text") }
+
+        // On-disk file should be history.bin, NOT history.json, and inspecting it must NOT
+        // reveal plaintext.
+        let appSupport = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first!
+            .appendingPathComponent("MaClip", isDirectory: true)
+        let binURL = appSupport.appendingPathComponent("history.bin")
+        let jsonURL = appSupport.appendingPathComponent("history.json")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: binURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: jsonURL.path))
+        let raw = try Data(contentsOf: binURL)
+        XCTAssertFalse(String(data: raw, encoding: .utf8)?.contains("encrypted hello") ?? false,
+                       "plaintext should not be readable in the on-disk binary")
+    }
+
+    func test_legacyJSONMigratesToEncryptedAtFirstLoad() throws {
+        let appSupport = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first!
+            .appendingPathComponent("MaClip", isDirectory: true)
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+
+        try? FileManager.default.removeItem(at: appSupport.appendingPathComponent("history.bin"))
+        try? FileManager.default.removeItem(at: appSupport.appendingPathComponent("history.json"))
+        try? FileManager.default.removeItem(at: appSupport.appendingPathComponent(".encrypted"))
+
+        let legacyJSON = """
+        [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "date": 770000000,
+            "type": "text",
+            "text": "legacy item",
+            "imageFilename": null,
+            "url": null,
+            "cachedText": null,
+            "cachedId": null,
+            "cachedBarcode": null
+          }
+        ]
+        """.data(using: .utf8)!
+        try legacyJSON.write(to: appSupport.appendingPathComponent("history.json"), options: .atomic)
+
+        let repo = ClipboardRepository()
+        let loaded = repo.loadFromDisk()
+        defer { repo.clearAllFiles() }
+
+        XCTAssertEqual(loaded.count, 1)
+        if case .text(let t) = loaded[0].content {
+            XCTAssertEqual(t, "legacy item")
+        } else { XCTFail("expected text") }
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: appSupport.appendingPathComponent("history.json").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: appSupport.appendingPathComponent("history.bin").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: appSupport.appendingPathComponent(".encrypted").path))
+    }
+
     func test_legacyJSONDecodesWithDefaults() throws {
         let legacyJSON = """
         [
