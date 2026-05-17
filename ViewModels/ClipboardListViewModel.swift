@@ -125,7 +125,7 @@ final class ClipboardListViewModel: ObservableObject {
             case .memory(let img):
                 image = img
             case .file(let url):
-                if let data = try? Data(contentsOf: url) {
+                if let data = repository.readImageData(at: url) {
                     image = NSImage(data: data)
                 }
             }
@@ -137,6 +137,12 @@ final class ClipboardListViewModel: ObservableObject {
             _ = pasteboard.writeObjects([url as NSURL])
             pasteboard.setString(url.absoluteString, forType: .string)
         }
+    }
+
+    /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).
+    /// Returns the plaintext PNG `Data` suitable for `NSImage(data:)`, or `nil` on failure.
+    func imageData(at url: URL) -> Data? {
+        repository.readImageData(at: url)
     }
 
     func applyMaxItems(_ limit: Int) {
