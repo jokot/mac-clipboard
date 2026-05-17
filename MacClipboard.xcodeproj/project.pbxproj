@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		03AC489464E5D2A5DC7208DD /* ClipboardItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9C1B3758DFC3B21C63A452 /* ClipboardItemRow.swift */; };
+		0414F7BC1B9B2B06BD0E210F /* HistoryCryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */; };
 		0EFE4D34B1B4FC0A9B17E1B6 /* TextPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF81986603D19912EF59AD1 /* TextPreview.swift */; };
 		112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */; };
 		19742895E7A968E617947BA6 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2A25C559C9759FD8E4AF7B /* AppIconView.swift */; };
@@ -17,6 +18,7 @@
 		22EC2CF891DA3B0121A16B69 /* AppFocusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668DB323E10EDCA899DDC163 /* AppFocusService.swift */; };
 		267E94E7370774D745DC3C2C /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = EF7344C6550C102B4815F469 /* AppIcon.icns */; };
 		2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */; };
+		4CB64154952712185733A483 /* HistoryCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */; };
 		571B862018FC471035814617 /* URLUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */; };
 		59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F4194F31C555F3F3166BDA /* OCRService.swift */; };
 		7170F47F267388BAF4517709 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7F2BCE8886027192AD2307 /* Notifications.swift */; };
@@ -88,11 +90,13 @@
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtils.swift; sourceTree = "<group>"; };
+		C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCryptoTests.swift; sourceTree = "<group>"; };
 		D561C754CE8B3377968813CC /* AppMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadata.swift; sourceTree = "<group>"; };
 		DA06703AB7DD76075D2895A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextPreviewTests.swift; sourceTree = "<group>"; };
 		E827E59109586E92EF348B3C /* AppSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsTests.swift; sourceTree = "<group>"; };
 		E8F4194F31C555F3F3166BDA /* OCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRService.swift; sourceTree = "<group>"; };
+		EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCrypto.swift; sourceTree = "<group>"; };
 		EF7344C6550C102B4815F469 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentTagsTests.swift; sourceTree = "<group>"; };
 		F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViewModel.swift; sourceTree = "<group>"; };
@@ -174,6 +178,7 @@
 				69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */,
 				524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */,
 				F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */,
+				C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */,
 				AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */,
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
 				DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */,
@@ -212,6 +217,7 @@
 				668DB323E10EDCA899DDC163 /* AppFocusService.swift */,
 				5FAC45A87AF3BC309EC56D4D /* ClipboardMonitor.swift */,
 				233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */,
+				EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */,
 				B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */,
 				E8F4194F31C555F3F3166BDA /* OCRService.swift */,
 				A4235CBBB175E9BB87DE8791 /* UpdateService.swift */,
@@ -308,6 +314,7 @@
 				F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */,
 				FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */,
 				E30B468F5CA2FC0F21CC9586 /* ContentTagsTests.swift in Sources */,
+				0414F7BC1B9B2B06BD0E210F /* HistoryCryptoTests.swift in Sources */,
 				E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */,
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
 				87011F9E077DDB68590A1E5D /* TextPreviewTests.swift in Sources */,
@@ -333,6 +340,7 @@
 				B6E3A6C5EE7070AABCCAC0DC /* ContentView.swift in Sources */,
 				1D6DE4479371170E637893FB /* ESCKeyCatcher.swift in Sources */,
 				B7D4E2B42C30142CC9A044ED /* FirstMouseHostingView.swift in Sources */,
+				4CB64154952712185733A483 /* HistoryCrypto.swift in Sources */,
 				7D307A167F9C9108005E211D /* HotKeyService.swift in Sources */,
 				E0C61B17E9A3D544890A8A61 /* HotkeyCapturingView.swift in Sources */,
 				A4C23EAC12FAF4990FA8D75F /* HotkeyUtils.swift in Sources */,
@@ -438,7 +446,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEFINES_MODULE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -446,7 +454,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jokot.MacClipboard;
 				PRODUCT_NAME = MaClip;
 				SDKROOT = macosx;
@@ -475,7 +483,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEFINES_MODULE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -483,7 +491,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jokot.MacClipboard;
 				PRODUCT_NAME = MaClip;
 				SDKROOT = macosx;

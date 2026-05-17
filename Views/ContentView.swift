@@ -134,10 +134,10 @@ struct ContentView: View {
                                             switch imgContent.source {
                                             case .memory(let img): resolvedImage = img
                                             case .file(let url):
-                                                if let data = try? Data(contentsOf: url) { resolvedImage = NSImage(data: data) }
+                                                if let data = viewModel.imageData(at: url) { resolvedImage = NSImage(data: data) }
                                             }
                                             guard let imageToProcess = resolvedImage else { throw OCRService.OCRError.imageProcessingFailed }
-                                            
+
                                             let text = try await ocrService.extractText(from: imageToProcess)
                                             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                                             guard !trimmed.isEmpty else {
@@ -199,10 +199,10 @@ struct ContentView: View {
                                             switch imgContent.source {
                                             case .memory(let img): resolvedImage = img
                                             case .file(let url):
-                                                if let data = try? Data(contentsOf: url) { resolvedImage = NSImage(data: data) }
+                                                if let data = viewModel.imageData(at: url) { resolvedImage = NSImage(data: data) }
                                             }
                                             guard let imageToProcess = resolvedImage else { throw OCRService.OCRError.imageProcessingFailed }
-                                            
+
                                             let code = try await ocrService.extractBarcode(from: imageToProcess)
                                             let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
                                             guard !trimmed.isEmpty else {
@@ -239,7 +239,8 @@ struct ContentView: View {
                             },
                             onExcludeApp: { bundleID in
                                 confirmExclude(bundleID: bundleID)
-                            }
+                            },
+                            loadImageData: { url in viewModel.imageData(at: url) }
                         )
                         .id(item.id)
                         Divider()

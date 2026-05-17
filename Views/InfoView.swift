@@ -52,6 +52,15 @@ struct InfoView: View {
             }
             .font(.footnote)
             .foregroundColor(.secondary)
+
+            if HistoryDecryptFailure.didFailOnThisLaunch {
+                Text("Couldn't decrypt clipboard history on this launch. A new encryption key will be created when you next copy something. Past clips are unrecoverable on this device.")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
         }
         .padding(24)
         .frame(minWidth: 360)

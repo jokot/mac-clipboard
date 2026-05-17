@@ -9,6 +9,9 @@ struct ClipboardItemRow: View {
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
     var onExcludeApp: ((String) -> Void)? = nil
+    /// Decrypts image bytes from an `Images/*.enc` URL. Required for `.file` image
+    /// sources after history encryption (1.9.0); without it, the preview stays blank.
+    var loadImageData: ((URL) -> Data?)? = nil
 
     @State private var isHovered: Bool = false
 
@@ -60,7 +63,8 @@ struct ClipboardItemRow: View {
                              isHovered: isHovered,
                              onRemove: onRemove,
                              onExtractText: onExtractText,
-                             onExtractBarcode: onExtractBarcode)
+                             onExtractBarcode: onExtractBarcode,
+                             loadImageData: loadImageData)
         case .url(let url):
             URLItemContent(url: url,
                            date: item.date,
@@ -156,6 +160,7 @@ private struct ImageItemContent: View {
     let onRemove: () -> Void
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
+    var loadImageData: ((URL) -> Data?)? = nil
 
     @State private var loadedImage: NSImage? = nil
     @State private var revealedUntil: Date? = nil
@@ -250,7 +255,7 @@ private struct ImageItemContent: View {
                     .overlay(ProgressView())
                     .task {
                         if case .file(let url) = imgContent.source {
-                            if let data = try? Data(contentsOf: url), let img = NSImage(data: data) {
+                            if let data = loadImageData?(url), let img = NSImage(data: data) {
                                 self.loadedImage = img
                             }
                         }

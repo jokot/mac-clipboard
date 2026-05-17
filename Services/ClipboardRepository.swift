@@ -7,6 +7,7 @@ protocol ClipboardRepositoryProtocol {
     func saveToDiskAsync(items: [ClipboardItem])
     func clearAllFiles()
     func saveImage(_ image: NSImage) -> URL?
+    func readImageData(at encURL: URL) -> Data?
 }
 
 final class ClipboardRepository: ClipboardRepositoryProtocol {
@@ -32,13 +33,25 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
     
 
     func loadFromDisk() -> [ClipboardItem] {
-        guard let url = dataFileURL(), let data = try? Data(contentsOf: url) else { return [] }
+        migrateToEncryptedIfNeeded()
+
+        guard let url = encryptedDataFileURL(),
+              let ciphertext = try? Data(contentsOf: url) else { return [] }
+        let data: Data
+        do {
+            data = try HistoryCrypto.open(ciphertext)
+        } catch {
+            NSLog("[MaClip] failed to decrypt history.bin: \(error)")
+            HistoryDecryptFailure.flag()
+            return []
+        }
+
         let decoder = JSONDecoder()
         guard let records = try? decoder.decode([PersistRecord].self, from: data) else { return [] }
-        
+
         var loaded: [ClipboardItem] = []
         let imagesDir = imagesDirectory()
-        
+
         for rec in records {
             let isConcealed = rec.isConcealed ?? false
             switch rec.type {
@@ -54,9 +67,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 }
             case "image":
                 if let name = rec.imageFilename, let imagesDir {
-                    let imgURL = imagesDir.appendingPathComponent(name)
-                    if FileManager.default.fileExists(atPath: imgURL.path) {
-                        let imgContent = ImageContent(source: .file(imgURL),
+                    let encURL = imagesDir.appendingPathComponent(name)
+                    if FileManager.default.fileExists(atPath: encURL.path) {
+                        let imgContent = ImageContent(source: .file(encURL),
                                                       cachedText: rec.cachedText,
                                                       cachedId: rec.cachedId,
                                                       cachedBarcode: rec.cachedBarcode)
@@ -85,24 +98,63 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         }
         return loaded
     }
-    
+
     // Helper to persist a single image immediately (used by ViewModel to convert memory->file)
     func saveImage(_ image: NSImage) -> URL? {
         guard let imagesDir = imagesDirectory(),
-              let pngData = image.pngData() else { return nil }
-        
-        // We use a unique ID for the filename.
-        // Optimization: We could hash data to reuse files, but simpler to just write unique for now.
-        let filename = UUID().uuidString + ".png"
+              let pngData = image.pngData(),
+              let ciphertext = try? HistoryCrypto.seal(pngData) else { return nil }
+        let filename = UUID().uuidString + ".enc"
         let fileURL = imagesDir.appendingPathComponent(filename)
-        
         do {
-            try pngData.write(to: fileURL, options: .atomic)
+            try ciphertext.write(to: fileURL, options: .atomic)
             return fileURL
         } catch {
-            print("Failed to save image: \(error)")
+            NSLog("[MaClip] saveImage failed: \(error)")
             return nil
         }
+    }
+
+    func readImageData(at encURL: URL) -> Data? {
+        guard let ciphertext = try? Data(contentsOf: encURL),
+              let plaintext = try? HistoryCrypto.open(ciphertext) else { return nil }
+        return plaintext
+    }
+
+    // MARK: - Migration
+
+    private func migrateToEncryptedIfNeeded() {
+        guard let sentinelURL = encryptedSentinelURL() else { return }
+        let fm = FileManager.default
+        if fm.fileExists(atPath: sentinelURL.path) { return }
+
+        // Migrate history.json → history.bin if a legacy file exists.
+        if let jsonURL = legacyDataFileURL(),
+           fm.fileExists(atPath: jsonURL.path),
+           let plaintext = try? Data(contentsOf: jsonURL) {
+            if let ciphertext = try? HistoryCrypto.seal(plaintext),
+               let binURL = encryptedDataFileURL() {
+                try? ciphertext.write(to: binURL, options: .atomic)
+                try? fm.removeItem(at: jsonURL)
+            } else {
+                NSLog("[MaClip] migrate: failed to encrypt history.json")
+                return
+            }
+        }
+
+        // Migrate each Images/*.png to Images/*.enc.
+        if let imagesDir = imagesDirectory(),
+           let contents = try? fm.contentsOfDirectory(at: imagesDir, includingPropertiesForKeys: nil) {
+            for url in contents where url.pathExtension.lowercased() == "png" {
+                guard let pngData = try? Data(contentsOf: url),
+                      let pngCiphertext = try? HistoryCrypto.seal(pngData) else { continue }
+                let encURL = url.deletingPathExtension().appendingPathExtension("enc")
+                try? pngCiphertext.write(to: encURL, options: .atomic)
+                try? fm.removeItem(at: url)
+            }
+        }
+
+        try? Data().write(to: sentinelURL, options: .atomic)
     }
     
     func saveToDiskAsync(items: [ClipboardItem]) {
@@ -121,7 +173,6 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
 
     // Actual save implementation executed on saveQueue only
     private func performSave(items: [ClipboardItem]) {
-        guard let dataURL = dataFileURL() else { return }
         var records: [PersistRecord] = []
         let imagesDir = imagesDirectory()
         let fm = FileManager.default
@@ -155,14 +206,16 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         isOCRResult: item.isOCRResult
                     ))
                 case .memory(let image):
-                    let name = item.id.uuidString + ".png"
+                    let name = item.id.uuidString + ".enc"
                     let fileURL = imagesDir.appendingPathComponent(name)
                     if let pngData = image.pngData() {
                         if let existing = savedImageHashes[pngData] {
                             filename = existing
                         } else {
                             if !fm.fileExists(atPath: fileURL.path) {
-                                try? pngData.write(to: fileURL, options: .atomic)
+                                if let pngCiphertext = try? HistoryCrypto.seal(pngData) {
+                                    try? pngCiphertext.write(to: fileURL, options: .atomic)
+                                }
                             }
                             savedImageHashes[pngData] = name
                             filename = name
@@ -193,10 +246,15 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
-        if let data = try? encoder.encode(records) {
-            try? data.write(to: dataURL, options: .atomic)
+        guard let plaintext = try? encoder.encode(records) else { return }
+        guard let ciphertext = try? HistoryCrypto.seal(plaintext) else {
+            NSLog("[MaClip] failed to encrypt history; not writing")
+            return
         }
-        
+        if let binURL = encryptedDataFileURL() {
+            try? ciphertext.write(to: binURL, options: .atomic)
+        }
+
         // Cleanup: remove any image files not referenced by current records
         if let imagesDir,
            let contents = try? fm.contentsOfDirectory(at: imagesDir, includingPropertiesForKeys: nil, options: []) {
@@ -213,11 +271,19 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         // Ensure no save is running while we clear files
         saveQueue.sync {
             let fm = FileManager.default
-            // Remove history.json
-            if let dataURL = dataFileURL(), fm.fileExists(atPath: dataURL.path) {
-                try? fm.removeItem(at: dataURL)
+            // Remove history.bin
+            if let binURL = encryptedDataFileURL(), fm.fileExists(atPath: binURL.path) {
+                try? fm.removeItem(at: binURL)
             }
-            // Remove all images in Images directory
+            // Remove legacy history.json if still present
+            if let jsonURL = legacyDataFileURL(), fm.fileExists(atPath: jsonURL.path) {
+                try? fm.removeItem(at: jsonURL)
+            }
+            // Remove sentinel so subsequent tests start clean
+            if let sentinel = encryptedSentinelURL(), fm.fileExists(atPath: sentinel.path) {
+                try? fm.removeItem(at: sentinel)
+            }
+            // Remove all images in Images directory (.enc and any leftover .png)
             if let imagesDir = imagesDirectory(), fm.fileExists(atPath: imagesDir.path) {
                 if let contents = try? fm.contentsOfDirectory(at: imagesDir, includingPropertiesForKeys: nil, options: []) {
                     for url in contents {
@@ -243,8 +309,16 @@ private extension ClipboardRepository {
         return nil
     }
 
-    func dataFileURL() -> URL? {
+    func encryptedDataFileURL() -> URL? {
+        appSupportDirectory()?.appendingPathComponent("history.bin")
+    }
+
+    func legacyDataFileURL() -> URL? {
         appSupportDirectory()?.appendingPathComponent("history.json")
+    }
+
+    func encryptedSentinelURL() -> URL? {
+        appSupportDirectory()?.appendingPathComponent(".encrypted")
     }
 
     func imagesDirectory() -> URL? {

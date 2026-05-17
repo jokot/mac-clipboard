@@ -9,14 +9,15 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.8.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.8.0)
+- [Download v1.9.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.9.0)
 
-## What's new in 1.8.0
-- Smart content tags: MaClip auto-detects what's in each clip (URL, email, phone, JSON, code, hex color, diff) and shows it as the row's leading icon. Detection runs locally at render time — no new fields, no migration. Hex colors tint the palette icon with the actual color.
-- `tag:` search syntax: filter history by detected kind — `tag:code`, `tag:json`, `tag:email`, etc. Combines with the existing `from:` source filter and free-text tokens, e.g. `tag:url from:Safari`, `tag:json hello`. Unknown values yield an empty result.
-- No more duplicate entries: re-copying content already in history promotes the existing item to the top instead of creating a duplicate.
-- Screenshots while the overlay is up: removed the hard-coded self-guard from the monitor; combined with the existing change-count dedupe, screenshots and other clipboard writes that happen while MaClip is focused are now captured. (Default behavior unchanged: MaClip stays in the seeded exclusion list, so users still need to remove it if they want this.)
-- Internals: version 1.8.0, build 11.
+## What's new in 1.9.0
+- Encryption at rest: clipboard history is now stored encrypted on disk via AES-GCM 256. The `history.json` index becomes `history.bin`, and each cached PNG becomes a `.enc` file in `Images/`. The encryption key lives in your macOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`) and is generated once on first launch.
+- One-time migration: existing 1.8.x users get a transparent upgrade on first 1.9.0 launch — plaintext files are encrypted and removed, a `.encrypted` sentinel is written.
+- Defense against backup leaks: even if `~/Library/Application Support/MaClip/` is copied off the device via Time Machine, AirDrop, or forensic recovery, the data is unreadable without the local Keychain entry.
+- Failure mode: if the Keychain entry is missing or the file is tampered with, MaClip starts with empty history and shows a one-time caption in the About window — the app keeps working, but past clips are unrecoverable on that device.
+- No user-facing toggle, no behavior change. Always on.
+- Internals: version 1.9.0, build 12.
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
