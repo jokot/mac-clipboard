@@ -136,8 +136,10 @@ final class ClipboardListViewModel: ObservableObject {
             // Write both URL object and plain string for broad compatibility
             _ = pasteboard.writeObjects([url as NSURL])
             pasteboard.setString(url.absoluteString, forType: .string)
-        case .file:
-            break // Task 3 replaces with real write
+        case .file(let urls):
+            let nsURLs = urls.map { $0 as NSURL }
+            pasteboard.declareTypes([.fileURL], owner: nil)
+            pasteboard.writeObjects(nsURLs)
         }
     }
 

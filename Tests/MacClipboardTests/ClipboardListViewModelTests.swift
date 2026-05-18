@@ -65,6 +65,24 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_setPasteboardForFileWritesURLs() {
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let url = URL(fileURLWithPath: "/tmp/maclip-paste-test.txt")
+        try? Data().write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let item = ClipboardItem(date: Date(), content: .file([url]))
+        vm.setPasteboard(to: item)
+
+        let pasted = NSPasteboard.general.readObjects(forClasses: [NSURL.self],
+                                                      options: [.urlReadingFileURLsOnly: true]) as? [URL]
+        XCTAssertEqual(pasted?.first?.path, url.path)
+    }
+
+    @MainActor
     func test_setPasteboard_callsIgnoreCurrentChangeCountOnce() {
         let repo = MockRepo()
         let monitor = MockMonitor()
