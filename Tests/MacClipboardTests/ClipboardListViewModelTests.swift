@@ -402,6 +402,29 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_filterTagFile() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .file([URL(fileURLWithPath: "/tmp/a.txt")])))
+        monitor.emit(ClipboardItem(date: Date(), content: .text("hello world")))
+
+        vm.searchText = "tag:file"
+        await MainActor.run {
+            XCTAssertEqual(vm.filteredItems.count, 1)
+            if case .file = vm.filteredItems.first?.content {
+                // OK
+            } else {
+                XCTFail("expected file content")
+            }
+        }
+    }
+
+    @MainActor
     func test_filterTagWithFromCombined() async {
         AppSettings.shared.maxItems = 10
         AppSettings.shared.autoCleanEnabled = false

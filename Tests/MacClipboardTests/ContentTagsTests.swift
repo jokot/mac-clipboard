@@ -119,4 +119,12 @@ final class ContentTagsTests: XCTestCase {
         let item = ClipboardItem(date: Date(), content: .text("hello"))
         XCTAssertNil(ContentTagDetector.primaryTag(for: item))
     }
+
+    @MainActor
+    func test_fileClipHasFileTag() {
+        let url = URL(fileURLWithPath: "/tmp/x.txt")
+        let item = ClipboardItem(date: Date(), content: .file([url]))
+        let tags = ContentTagDetector.tags(for: item)
+        XCTAssertEqual(tags, [.file])
+    }
 }

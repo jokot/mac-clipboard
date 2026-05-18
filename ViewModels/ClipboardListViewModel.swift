@@ -213,7 +213,8 @@ final class ClipboardListViewModel: ObservableObject {
                 case .text(let t): haystack = t.lowercased()
                 case .url(let u):  haystack = u.absoluteString.lowercased()
                 case .image:       haystack = ""
-                case .file:        haystack = "" // Task 4 replaces with joined paths
+                case .file(let urls):
+                    haystack = urls.map { $0.path.lowercased() }.joined(separator: " ")
                 }
                 for token in textFilters where !haystack.contains(token) {
                     return false
