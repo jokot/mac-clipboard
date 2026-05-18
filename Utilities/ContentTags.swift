@@ -63,6 +63,8 @@ enum ContentTagDetector {
             return []
         case .text(let text):
             return detectTextTags(text)
+        case .file:
+            return []
         }
     }
 

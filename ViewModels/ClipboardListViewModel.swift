@@ -136,6 +136,8 @@ final class ClipboardListViewModel: ObservableObject {
             // Write both URL object and plain string for broad compatibility
             _ = pasteboard.writeObjects([url as NSURL])
             pasteboard.setString(url.absoluteString, forType: .string)
+        case .file:
+            break // Task 3 replaces with real write
         }
     }
 
@@ -209,6 +211,7 @@ final class ClipboardListViewModel: ObservableObject {
                 case .text(let t): haystack = t.lowercased()
                 case .url(let u):  haystack = u.absoluteString.lowercased()
                 case .image:       haystack = ""
+                case .file:        haystack = "" // Task 4 replaces with joined paths
                 }
                 for token in textFilters where !haystack.contains(token) {
                     return false
@@ -302,6 +305,8 @@ final class ClipboardListViewModel: ObservableObject {
             case .url(let u):
                 return u.absoluteString == id || u.absoluteString == text
             case .image:
+                return false
+            case .file:
                 return false
             }
         }

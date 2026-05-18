@@ -129,6 +129,40 @@ final class ClipboardItemRepositoryTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: appSupport.appendingPathComponent(".encrypted").path))
     }
 
+    func test_fileClipRoundTrips() throws {
+        let url1 = URL(fileURLWithPath: "/tmp/maclip-test-1.txt")
+        let url2 = URL(fileURLWithPath: "/tmp/maclip-test-2.txt")
+        try Data().write(to: url1)
+        try Data().write(to: url2)
+        defer {
+            try? FileManager.default.removeItem(at: url1)
+            try? FileManager.default.removeItem(at: url2)
+        }
+
+        let item = ClipboardItem(
+            id: UUID(),
+            date: Date(),
+            content: .file([url1, url2]),
+            sourceBundleID: "com.apple.finder",
+            isConcealed: false,
+            concealedExpiresAt: nil,
+            isOCRResult: false
+        )
+
+        let repo = ClipboardRepository()
+        repo.saveToDisk(items: [item])
+        let loaded = repo.loadFromDisk()
+        defer { repo.clearAllFiles() }
+
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded[0].sourceBundleID, "com.apple.finder")
+        if case .file(let urls) = loaded[0].content {
+            XCTAssertEqual(urls.map(\.path), [url1.path, url2.path])
+        } else {
+            XCTFail("expected .file content, got \(loaded[0].content)")
+        }
+    }
+
     func test_legacyJSONDecodesWithDefaults() throws {
         let legacyJSON = """
         [

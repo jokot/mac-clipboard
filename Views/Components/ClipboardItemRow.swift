@@ -75,6 +75,8 @@ struct ClipboardItemRow: View {
                            isHovered: isHovered,
                            fullItem: item,
                            onRemove: onRemove)
+        case .file:
+            EmptyView() // Task 5 replaces with FileItemContent
         }
     }
 }
