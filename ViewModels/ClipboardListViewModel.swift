@@ -158,6 +158,29 @@ final class ClipboardListViewModel: ObservableObject {
         _ = promoteOrInsertResult(text: string, sourceBundleID: sourceBundleID, isOCRResult: false)
     }
 
+    /// Replaces the `content` of an existing clip in-place while preserving identity
+    /// (id, date, sourceBundleID, isConcealed, concealedExpiresAt, isOCRResult).
+    /// Persists the updated list and clears the tag-detection cache.
+    /// Returns the updated item, or `nil` if no item with the matching id was found.
+    @discardableResult
+    func replaceContent(of item: ClipboardItem, with newContent: ClipboardItemContent) -> ClipboardItem? {
+        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return nil }
+        let existing = items[idx]
+        let updated = ClipboardItem(
+            id: existing.id,
+            date: existing.date,
+            content: newContent,
+            sourceBundleID: existing.sourceBundleID,
+            isConcealed: existing.isConcealed,
+            concealedExpiresAt: existing.concealedExpiresAt,
+            isOCRResult: existing.isOCRResult
+        )
+        items[idx] = updated
+        repository.saveToDiskAsync(items: items)
+        ContentTagDetector.clearCache()
+        return updated
+    }
+
     /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).
     /// Returns the plaintext PNG `Data` suitable for `NSImage(data:)`, or `nil` on failure.
     func imageData(at url: URL) -> Data? {
