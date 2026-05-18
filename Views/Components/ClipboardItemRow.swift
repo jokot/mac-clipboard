@@ -12,6 +12,9 @@ struct ClipboardItemRow: View {
     /// Decrypts image bytes from an `Images/*.enc` URL. Required for `.file` image
     /// sources after history encryption (1.9.0); without it, the preview stays blank.
     var loadImageData: ((URL) -> Data?)? = nil
+    var onOpenFile: ((ClipboardItem) -> Void)? = nil
+    var onRevealInFinder: ((ClipboardItem) -> Void)? = nil
+    var onCopyPath: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
 
@@ -75,8 +78,20 @@ struct ClipboardItemRow: View {
                            isHovered: isHovered,
                            fullItem: item,
                            onRemove: onRemove)
-        case .file:
-            EmptyView() // Task 5 replaces with FileItemContent
+        case .file(let urls):
+            FileItemContent(
+                urls: urls,
+                date: item.date,
+                bundleID: item.sourceBundleID,
+                isConcealed: item.isConcealed,
+                concealedExpiresAt: item.concealedExpiresAt,
+                isOCRResult: item.isOCRResult,
+                isHovered: isHovered,
+                onRemove: onRemove,
+                onOpen: { onOpenFile?(item) },
+                onRevealInFinder: { onRevealInFinder?(item) },
+                onCopyPath: { onCopyPath?(item) }
+            )
         }
     }
 }
@@ -469,5 +484,108 @@ private struct RevealButton: View {
                 .help("Reveal for 5 seconds")
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct FileLeadingIcon: View {
+    let url: URL?
+    var body: some View {
+        Group {
+            if let url = url {
+                if FileManager.default.fileExists(atPath: url.path) {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                        .resizable()
+                        .frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: "questionmark.folder")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                        .help("File missing")
+                }
+            } else {
+                Image(systemName: "doc")
+                    .font(.title3)
+                    .foregroundColor(.accentColor)
+            }
+        }
+    }
+}
+
+private struct FileItemContent: View {
+    let urls: [URL]
+    let date: Date
+    let bundleID: String?
+    let isConcealed: Bool
+    let concealedExpiresAt: Date?
+    let isOCRResult: Bool
+    let isHovered: Bool
+    let onRemove: () -> Void
+    let onOpen: () -> Void
+    let onRevealInFinder: () -> Void
+    let onCopyPath: () -> Void
+
+    @State private var revealedUntil: Date? = nil
+
+    private var isCurrentlyRevealed: Bool {
+        guard let revealedUntil else { return false }
+        return revealedUntil > Date()
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            FileLeadingIcon(url: urls.first)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 6) {
+                let primaryName = urls.first?.lastPathComponent ?? "(unknown)"
+                let suffix = urls.count > 1 ? " +\(urls.count - 1) more" : ""
+                let display = (isConcealed && !isCurrentlyRevealed)
+                    ? String(repeating: "•", count: min(8, max(1, primaryName.count)))
+                    : primaryName + suffix
+                Text(display)
+                    .font(.body)
+                    .lineLimit(2)
+                HStack(spacing: 8) {
+                    if let parent = urls.first?.deletingLastPathComponent().lastPathComponent {
+                        Text(parent)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    Text(date, style: .time)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if isConcealed {
+                        ConcealedBadge(expiresAt: concealedExpiresAt)
+                    }
+                }
+            }
+            Spacer()
+            if isConcealed && isHovered {
+                RevealButton {
+                    revealedUntil = Date().addingTimeInterval(5)
+                    Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+                        Task { @MainActor in revealedUntil = nil }
+                    }
+                }
+            }
+            if isOCRResult {
+                OCRBadge()
+            }
+            SourceIconBadge(bundleID: bundleID)
+            if isHovered {
+                pillButton(label: "Delete", systemImage: "trash", color: .red,
+                           outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
+            }
+        }
+        .padding(.trailing, 10)
+        .contextMenu {
+            Button("Open") { onOpen() }
+            Button("Reveal in Finder") { onRevealInFinder() }
+            Divider()
+            Button("Copy Path") { onCopyPath() }
+        }
+        .help(urls.prefix(10).map(\.path).joined(separator: "\n")
+              + (urls.count > 10 ? "\n(\(urls.count - 10) more)" : ""))
     }
 }
