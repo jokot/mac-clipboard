@@ -77,6 +77,10 @@ struct ClipboardItemRow: View {
                     }
             }
         }
+        .onChange(of: item.id) { _ in
+            isEditing = false
+            editError = nil
+        }
     }
 
     // MARK: - Edit helpers
@@ -117,8 +121,11 @@ struct ClipboardItemRow: View {
             onEdit?(item, .url(u))
             isEditing = false
         case .file:
-            let lines = editText.split(separator: "\n", omittingEmptySubsequences: true)
-            let urls = lines.map { URL(fileURLWithPath: String($0).trimmingCharacters(in: .whitespacesAndNewlines)) }
+            let urls = editText
+                .split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .map { URL(fileURLWithPath: $0) }
             guard !urls.isEmpty else {
                 editError = "Need at least one path"
                 return
@@ -621,16 +628,13 @@ private struct EditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ScrollView {
-                TextEditor(text: $text)
-                    .font(.body)
-                    .frame(minHeight: 80)
-            }
-            .frame(maxHeight: 240)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-            )
+            TextEditor(text: $text)
+                .font(.body)
+                .frame(minHeight: 80, maxHeight: 240)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
             if let error = error {
                 Text(error)
                     .font(.caption)
