@@ -143,6 +143,13 @@ final class ClipboardListViewModel: ObservableObject {
         }
     }
 
+    func copyToPasteboardAsText(_ string: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(string, forType: .string)
+        monitor.ignoreCurrentChangeCount()
+    }
+
     /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).
     /// Returns the plaintext PNG `Data` suitable for `NSImage(data:)`, or `nil` on failure.
     func imageData(at url: URL) -> Data? {

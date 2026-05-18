@@ -311,9 +311,7 @@ struct ContentView: View {
     private func copyFilePath(_ item: ClipboardItem) {
         guard case .file(let urls) = item.content else { return }
         let joined = urls.map(\.path).joined(separator: "\n")
-        let pb = NSPasteboard.general
-        pb.clearContents()
-        pb.setString(joined, forType: .string)
+        viewModel.copyToPasteboardAsText(joined)
     }
 
     private func confirmExclude(bundleID: String) {

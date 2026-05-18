@@ -33,6 +33,14 @@ struct ClipboardItemRow: View {
                     .stroke(Color.secondary.opacity((isHovered || isSelected) ? 0.35 : 0.1), lineWidth: 1)
             )
             .contextMenu {
+                // Content-specific actions first
+                if case .file = item.content {
+                    Button("Open") { onOpenFile?(item) }
+                    Button("Reveal in Finder") { onRevealInFinder?(item) }
+                    Button("Copy Path") { onCopyPath?(item) }
+                    Divider()
+                }
+                // Common action: exclude source app
                 if let bundleID = item.sourceBundleID, let onExcludeApp {
                     let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
                     Button("Exclude \"\(name)\" from history") { onExcludeApp(bundleID) }
@@ -489,10 +497,12 @@ private struct RevealButton: View {
 
 private struct FileLeadingIcon: View {
     let url: URL?
+    @State private var exists: Bool = false
+
     var body: some View {
         Group {
             if let url = url {
-                if FileManager.default.fileExists(atPath: url.path) {
+                if exists {
                     Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
                         .resizable()
                         .frame(width: 28, height: 28)
@@ -500,14 +510,27 @@ private struct FileLeadingIcon: View {
                     Image(systemName: "questionmark.folder")
                         .font(.title3)
                         .foregroundColor(.secondary)
+                        .frame(width: 28, height: 28)
                         .help("File missing")
                 }
             } else {
                 Image(systemName: "doc")
                     .font(.title3)
                     .foregroundColor(.accentColor)
+                    .frame(width: 28, height: 28)
             }
         }
+        .onAppear {
+            recheck()
+        }
+        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+            recheck()
+        }
+    }
+
+    private func recheck() {
+        guard let url else { exists = false; return }
+        exists = FileManager.default.fileExists(atPath: url.path)
     }
 }
 
@@ -579,12 +602,6 @@ private struct FileItemContent: View {
             }
         }
         .padding(.trailing, 10)
-        .contextMenu {
-            Button("Open") { onOpen() }
-            Button("Reveal in Finder") { onRevealInFinder() }
-            Divider()
-            Button("Copy Path") { onCopyPath() }
-        }
         .help(urls.prefix(10).map(\.path).joined(separator: "\n")
               + (urls.count > 10 ? "\n(\(urls.count - 10) more)" : ""))
     }
