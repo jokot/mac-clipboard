@@ -9,15 +9,15 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.9.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.9.0)
+- [Download v1.10.0](https://github.com/jokot/mac-clipboard/releases/tag/v1.10.0)
 
-## What's new in 1.9.0
-- Encryption at rest: clipboard history is now stored encrypted on disk via AES-GCM 256. The `history.json` index becomes `history.bin`, and each cached PNG becomes a `.enc` file in `Images/`. The encryption key lives in your macOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`) and is generated once on first launch.
-- One-time migration: existing 1.8.x users get a transparent upgrade on first 1.9.0 launch — plaintext files are encrypted and removed, a `.encrypted` sentinel is written.
-- Defense against backup leaks: even if `~/Library/Application Support/MaClip/` is copied off the device via Time Machine, AirDrop, or forensic recovery, the data is unreadable without the local Keychain entry.
-- Failure mode: if the Keychain entry is missing or the file is tampered with, MaClip starts with empty history and shows a one-time caption in the About window — the app keeps working, but past clips are unrecoverable on that device.
-- No user-facing toggle, no behavior change. Always on.
-- Internals: version 1.9.0, build 12.
+## What's new in 1.10.0
+- File and folder clips: ⌘C on files or folders in Finder (or anywhere that writes file URLs to the pasteboard) is now captured as a new clip kind. The clip stores URLs only — no file contents are copied. Multi-selection becomes one clip showing `FirstFile +N more`.
+- Row UI for file clips shows the file's actual icon (via `NSWorkspace.icon(forFile:)`) plus its name and parent directory. Stale clips (file deleted after capture) automatically swap to a `?` ghost icon.
+- Right-click a file clip → unified menu with `Open`, `Reveal in Finder`, `Copy Path`, then the existing `Exclude "<App>"`. Same menu shape on all clip types now.
+- Copy Path writes the file paths as text to the pasteboard and adds a new text clip with the original file clip's source attribution (typically Finder), instead of attributing it to whichever app happens to be frontmost.
+- New `tag:file` search filter; free-text search also matches file paths.
+- Internals: version 1.10.0, build 13.
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)

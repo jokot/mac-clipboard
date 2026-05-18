@@ -65,6 +65,16 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
             ? (timeout == -1 ? Date.distantFuture : Date().addingTimeInterval(timeout))
             : nil
 
+        if let urls = readFileURLs(from: pb), !urls.isEmpty {
+            subject.send(ClipboardItem(
+                date: Date(), content: .file(urls),
+                sourceBundleID: sourceBundleID,
+                isConcealed: isConcealed,
+                concealedExpiresAt: expiry
+            ))
+            return
+        }
+
         // Read content (image > URL > text) — same priority as before.
         if let image = readImage(from: pb) {
             let imgContent = ImageContent(source: .memory(image),
@@ -114,6 +124,13 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
             if let str = item.string(forType: .string) { return str }
         }
         return nil
+    }
+
+    private func readFileURLs(from pb: NSPasteboard) -> [URL]? {
+        let opts: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        guard let objects = pb.readObjects(forClasses: [NSURL.self], options: opts) as? [URL],
+              !objects.isEmpty else { return nil }
+        return objects
     }
 
     private func readURL(from pasteboard: NSPasteboard) -> URL? {

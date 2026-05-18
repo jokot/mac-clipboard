@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 
 enum ContentTag: String, CaseIterable {
-    case url, email, phone, json, code, color, diff
+    case url, email, phone, json, code, color, diff, file
 
     var symbolName: String {
         switch self {
@@ -13,6 +13,7 @@ enum ContentTag: String, CaseIterable {
         case .code:  return "chevron.left.forwardslash.chevron.right"
         case .color: return "paintpalette"
         case .diff:  return "plus.slash.minus"
+        case .file:  return "doc.on.doc"
         }
     }
 
@@ -25,6 +26,7 @@ enum ContentTag: String, CaseIterable {
         case .code:  return "Code"
         case .color: return "Color"
         case .diff:  return "Diff"
+        case .file:  return "File"
         }
     }
 }
@@ -48,7 +50,7 @@ enum ContentTagDetector {
     /// Priority order favors specificity: url > email > phone > color > json > diff > code.
     static func primaryTag(for item: ClipboardItem) -> ContentTag? {
         let tags = tags(for: item)
-        let priority: [ContentTag] = [.url, .email, .phone, .color, .json, .diff, .code]
+        let priority: [ContentTag] = [.url, .email, .phone, .color, .json, .diff, .code, .file]
         for tag in priority where tags.contains(tag) {
             return tag
         }
@@ -63,6 +65,8 @@ enum ContentTagDetector {
             return []
         case .text(let text):
             return detectTextTags(text)
+        case .file:
+            return [.file]
         }
     }
 

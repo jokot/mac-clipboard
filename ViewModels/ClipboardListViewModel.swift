@@ -136,7 +136,26 @@ final class ClipboardListViewModel: ObservableObject {
             // Write both URL object and plain string for broad compatibility
             _ = pasteboard.writeObjects([url as NSURL])
             pasteboard.setString(url.absoluteString, forType: .string)
+        case .file(let urls):
+            let nsURLs = urls.map { $0 as NSURL }
+            pasteboard.declareTypes([.fileURL], owner: nil)
+            pasteboard.writeObjects(nsURLs)
         }
+    }
+
+    func copyToPasteboardAsText(_ string: String) {
+        copyToPasteboardAsText(string, sourceBundleID: nil)
+    }
+
+    /// Writes `string` to the pasteboard and inserts a corresponding text clip at the top
+    /// of history with `sourceBundleID` attribution. Skips monitor re-capture.
+    /// Promotes existing equal-content clips instead of duplicating.
+    func copyToPasteboardAsText(_ string: String, sourceBundleID: String?) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(string, forType: .string)
+        monitor.ignoreCurrentChangeCount()
+        _ = promoteOrInsertResult(text: string, sourceBundleID: sourceBundleID, isOCRResult: false)
     }
 
     /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).
@@ -209,6 +228,8 @@ final class ClipboardListViewModel: ObservableObject {
                 case .text(let t): haystack = t.lowercased()
                 case .url(let u):  haystack = u.absoluteString.lowercased()
                 case .image:       haystack = ""
+                case .file(let urls):
+                    haystack = urls.map { $0.path.lowercased() }.joined(separator: " ")
                 }
                 for token in textFilters where !haystack.contains(token) {
                     return false
@@ -302,6 +323,8 @@ final class ClipboardListViewModel: ObservableObject {
             case .url(let u):
                 return u.absoluteString == id || u.absoluteString == text
             case .image:
+                return false
+            case .file:
                 return false
             }
         }

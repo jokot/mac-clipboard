@@ -240,7 +240,10 @@ struct ContentView: View {
                             onExcludeApp: { bundleID in
                                 confirmExclude(bundleID: bundleID)
                             },
-                            loadImageData: { url in viewModel.imageData(at: url) }
+                            loadImageData: { url in viewModel.imageData(at: url) },
+                            onOpenFile: { item in openFile(item) },
+                            onRevealInFinder: { item in revealInFinder(item) },
+                            onCopyPath: { item in copyFilePath(item) }
                         )
                         .id(item.id)
                         Divider()
@@ -291,6 +294,24 @@ struct ContentView: View {
         let items = viewModel.filteredItems
         guard items.indices.contains(selectedIndex) else { return }
         onSelect(items[selectedIndex])
+    }
+
+    private func openFile(_ item: ClipboardItem) {
+        guard case .file(let urls) = item.content else { return }
+        for url in urls {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func revealInFinder(_ item: ClipboardItem) {
+        guard case .file(let urls) = item.content else { return }
+        NSWorkspace.shared.activateFileViewerSelecting(urls)
+    }
+
+    private func copyFilePath(_ item: ClipboardItem) {
+        guard case .file(let urls) = item.content else { return }
+        let joined = urls.map(\.path).joined(separator: "\n")
+        viewModel.copyToPasteboardAsText(joined, sourceBundleID: item.sourceBundleID)
     }
 
     private func confirmExclude(bundleID: String) {

@@ -24,6 +24,7 @@ enum ClipboardItemContent {
     case text(String)
     case image(ImageContent)
     case url(URL)
+    case file([URL])
 }
 
 struct ClipboardItem: Identifiable {
@@ -71,6 +72,8 @@ extension ClipboardItem: Equatable {
             }
         case let (.url(a), .url(b)):
             return a.absoluteString == b.absoluteString
+        case let (.file(a), .file(b)):
+            return a == b
         default:
             return false
         }

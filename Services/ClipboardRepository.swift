@@ -14,7 +14,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
     private struct PersistRecord: Codable {
         let id: UUID
         let date: Date
-        let type: String // "text", "image", or "url"
+        let type: String // "text", "image", "url", or "file"
         let text: String?
         let imageFilename: String?
         let url: String?
@@ -26,6 +26,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let isConcealed: Bool?
         let concealedExpiresAt: Date?
         let isOCRResult: Bool?
+        // Added in 1.10.0; optional so legacy JSON without this key still decodes.
+        let filePaths: [String]?
     }
 
     // Serialize all disk operations to avoid race conditions and out-of-order writes
@@ -86,6 +88,17 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                 if let s = rec.url, let u = URL(string: s) {
                     loaded.append(ClipboardItem(
                         id: rec.id, date: rec.date, content: .url(u),
+                        sourceBundleID: rec.sourceBundleID,
+                        isConcealed: isConcealed,
+                        concealedExpiresAt: rec.concealedExpiresAt,
+                        isOCRResult: rec.isOCRResult ?? false
+                    ))
+                }
+            case "file":
+                if let paths = rec.filePaths {
+                    let urls = paths.map { URL(fileURLWithPath: $0) }
+                    loaded.append(ClipboardItem(
+                        id: rec.id, date: rec.date, content: .file(urls),
                         sourceBundleID: rec.sourceBundleID,
                         isConcealed: isConcealed,
                         concealedExpiresAt: rec.concealedExpiresAt,
@@ -188,7 +201,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     sourceBundleID: item.sourceBundleID,
                     isConcealed: item.isConcealed,
                     concealedExpiresAt: item.concealedExpiresAt,
-                    isOCRResult: item.isOCRResult
+                    isOCRResult: item.isOCRResult,
+                    filePaths: nil
                 ))
             case .image(let imgContent):
                 guard let imagesDir else { continue }
@@ -203,7 +217,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         sourceBundleID: item.sourceBundleID,
                         isConcealed: item.isConcealed,
                         concealedExpiresAt: item.concealedExpiresAt,
-                        isOCRResult: item.isOCRResult
+                        isOCRResult: item.isOCRResult,
+                        filePaths: nil
                     ))
                 case .memory(let image):
                     let name = item.id.uuidString + ".enc"
@@ -227,7 +242,8 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                             sourceBundleID: item.sourceBundleID,
                             isConcealed: item.isConcealed,
                             concealedExpiresAt: item.concealedExpiresAt,
-                            isOCRResult: item.isOCRResult
+                            isOCRResult: item.isOCRResult,
+                            filePaths: nil
                         ))
                     }
                 }
@@ -239,7 +255,19 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     sourceBundleID: item.sourceBundleID,
                     isConcealed: item.isConcealed,
                     concealedExpiresAt: item.concealedExpiresAt,
-                    isOCRResult: item.isOCRResult
+                    isOCRResult: item.isOCRResult,
+                    filePaths: nil
+                ))
+            case .file(let urls):
+                records.append(PersistRecord(
+                    id: item.id, date: item.date, type: "file",
+                    text: nil, imageFilename: nil, url: nil,
+                    cachedText: nil, cachedId: nil, cachedBarcode: nil,
+                    sourceBundleID: item.sourceBundleID,
+                    isConcealed: item.isConcealed,
+                    concealedExpiresAt: item.concealedExpiresAt,
+                    isOCRResult: item.isOCRResult,
+                    filePaths: urls.map(\.path)
                 ))
             }
         }
