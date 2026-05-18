@@ -144,10 +144,18 @@ final class ClipboardListViewModel: ObservableObject {
     }
 
     func copyToPasteboardAsText(_ string: String) {
+        copyToPasteboardAsText(string, sourceBundleID: nil)
+    }
+
+    /// Writes `string` to the pasteboard and inserts a corresponding text clip at the top
+    /// of history with `sourceBundleID` attribution. Skips monitor re-capture.
+    /// Promotes existing equal-content clips instead of duplicating.
+    func copyToPasteboardAsText(_ string: String, sourceBundleID: String?) {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(string, forType: .string)
         monitor.ignoreCurrentChangeCount()
+        _ = promoteOrInsertResult(text: string, sourceBundleID: sourceBundleID, isOCRResult: false)
     }
 
     /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).

@@ -311,7 +311,7 @@ struct ContentView: View {
     private func copyFilePath(_ item: ClipboardItem) {
         guard case .file(let urls) = item.content else { return }
         let joined = urls.map(\.path).joined(separator: "\n")
-        viewModel.copyToPasteboardAsText(joined)
+        viewModel.copyToPasteboardAsText(joined, sourceBundleID: item.sourceBundleID)
     }
 
     private func confirmExclude(bundleID: String) {
