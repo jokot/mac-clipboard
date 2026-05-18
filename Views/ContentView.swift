@@ -243,7 +243,10 @@ struct ContentView: View {
                             loadImageData: { url in viewModel.imageData(at: url) },
                             onOpenFile: { item in openFile(item) },
                             onRevealInFinder: { item in revealInFinder(item) },
-                            onCopyPath: { item in copyFilePath(item) }
+                            onCopyPath: { item in copyFilePath(item) },
+                            onEdit: { item, newContent in
+                                viewModel.replaceContent(of: item, with: newContent)
+                            }
                         )
                         .id(item.id)
                         Divider()
