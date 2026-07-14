@@ -81,6 +81,10 @@ struct ClipboardItemRow: View {
             isEditing = false
             editError = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
+            isEditing = false
+            editError = nil
+        }
     }
 
     // MARK: - Edit helpers
@@ -114,7 +118,9 @@ struct ClipboardItemRow: View {
             isEditing = false
         case .url:
             let trimmed = editText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let u = URL(string: trimmed) else {
+            guard let u = URL(string: trimmed),
+                  let scheme = u.scheme, !scheme.isEmpty,
+                  let host = u.host, !host.isEmpty else {
                 editError = "Not a valid URL"
                 return
             }
@@ -609,6 +615,9 @@ private struct FileLeadingIcon: View {
         .onAppear {
             recheck()
         }
+        .onChange(of: url) { _ in
+            recheck()
+        }
         .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
             recheck()
         }
@@ -625,6 +634,7 @@ private struct EditorView: View {
     @Binding var error: String?
     let onCancel: () -> Void
     let onSave: () -> Void
+    @State private var keyMonitor: Any?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -640,14 +650,61 @@ private struct EditorView: View {
                     .font(.caption)
                     .foregroundColor(.red)
             }
-            HStack {
+            HStack(spacing: 8) {
                 Spacer()
                 Button("Cancel", action: onCancel)
+                    .buttonStyle(.bordered)
                     .keyboardShortcut(.cancelAction)
-                Button("Save", action: onSave)
+                Button("Save ⌘↩", action: onSave)
+                    .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
         }
+        // ponytail: local key monitor beats OverlayWindow.escMonitor (newest-first)
+        // so Esc cancels edit instead of closing overlay; Cmd+Return commits save
+        // even though TextEditor swallows plain Return.
+        .onAppear {
+            disableSmartSubstitutions()
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                if event.keyCode == 53 { // Escape
+                    onCancel()
+                    return nil
+                }
+                if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Cmd+Return
+                    onSave()
+                    return nil
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let m = keyMonitor {
+                NSEvent.removeMonitor(m)
+                keyMonitor = nil
+            }
+        }
+    }
+
+    // ponytail: walk key window for the NSTextView SwiftUI attached and turn off
+    // smart quotes/dashes so JSON edits survive round-trip. Deferred to next tick
+    // because TextEditor's NSTextView isn't in the tree at .onAppear yet.
+    private func disableSmartSubstitutions() {
+        DispatchQueue.main.async {
+            guard let root = NSApp.keyWindow?.contentView else { return }
+            for tv in Self.findTextViews(in: root) {
+                tv.isAutomaticQuoteSubstitutionEnabled = false
+                tv.isAutomaticDashSubstitutionEnabled = false
+                tv.isAutomaticTextReplacementEnabled = false
+                tv.smartInsertDeleteEnabled = false
+            }
+        }
+    }
+
+    private static func findTextViews(in view: NSView) -> [NSTextView] {
+        var result: [NSTextView] = []
+        if let tv = view as? NSTextView { result.append(tv) }
+        for sub in view.subviews { result.append(contentsOf: findTextViews(in: sub)) }
+        return result
     }
 }
 
