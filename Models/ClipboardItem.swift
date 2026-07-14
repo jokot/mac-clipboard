@@ -54,10 +54,14 @@ struct ClipboardItem: Identifiable {
 }
 
 extension ClipboardItem: Equatable {
+    // ponytail: strict equality (id AND content) so SwiftUI view diffing sees edits.
+    // Content-only dedup (new capture matches existing clip) uses matchesContent(_:).
     static func == (lhs: ClipboardItem, rhs: ClipboardItem) -> Bool {
-        if lhs.id == rhs.id { return true }
-        
-        switch (lhs.content, rhs.content) {
+        return lhs.id == rhs.id && lhs.matchesContent(rhs)
+    }
+
+    func matchesContent(_ other: ClipboardItem) -> Bool {
+        switch (self.content, other.content) {
         case let (.text(a), .text(b)):
             return a == b
         case let (.image(a), .image(b)):
@@ -65,7 +69,6 @@ extension ClipboardItem: Equatable {
             case let (.file(urlA), .file(urlB)):
                 return urlA == urlB
             case let (.memory(imgA), .memory(imgB)):
-                // Fallback to object identity to avoid expensive data comparison
                 return imgA === imgB
             default:
                 return false

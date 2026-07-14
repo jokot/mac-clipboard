@@ -511,6 +511,57 @@ final class ClipboardListViewModelTests: XCTestCase {
             }
         }
     }
+
+    @MainActor
+    func test_replaceContentPreservesIdentity() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let original = ClipboardItem(
+            date: Date(),
+            content: .text("original"),
+            sourceBundleID: "com.apple.TextEdit",
+            isConcealed: false,
+            concealedExpiresAt: nil,
+            isOCRResult: false
+        )
+        monitor.emit(original)
+
+        await MainActor.run {
+            let inserted = vm.items[0]
+            let updated = vm.replaceContent(of: inserted, with: .text("edited"))
+            XCTAssertNotNil(updated)
+            XCTAssertEqual(updated?.id, inserted.id)
+            XCTAssertEqual(updated?.date, inserted.date)
+            XCTAssertEqual(updated?.sourceBundleID, "com.apple.TextEdit")
+            if case .text(let t) = updated?.content {
+                XCTAssertEqual(t, "edited")
+            } else { XCTFail("expected text content") }
+        }
+    }
+
+    @MainActor
+    func test_replaceContentSavesToRepository() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("a")))
+
+        await MainActor.run {
+            repo.saveAsyncCount = 0
+            let inserted = vm.items[0]
+            vm.replaceContent(of: inserted, with: .text("b"))
+            XCTAssertGreaterThan(repo.saveAsyncCount, 0)
+        }
+    }
 }
 
 // MARK: - Mocks

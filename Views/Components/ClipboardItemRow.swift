@@ -15,40 +15,132 @@ struct ClipboardItemRow: View {
     var onOpenFile: ((ClipboardItem) -> Void)? = nil
     var onRevealInFinder: ((ClipboardItem) -> Void)? = nil
     var onCopyPath: ((ClipboardItem) -> Void)? = nil
+    var onEdit: ((ClipboardItem, ClipboardItemContent) -> Void)? = nil
 
     @State private var isHovered: Bool = false
+    @State private var isEditing: Bool = false
+    @State private var editText: String = ""
+    @State private var editError: String? = nil
 
     var body: some View {
-        content
-            .contentShape(Rectangle())
-            .onTapGesture { onSelect(item) }
-            .onHover { isHovered = $0 }
-            .padding(6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill((isHovered || isSelected) ? Color.accentColor.opacity(0.12) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.secondary.opacity((isHovered || isSelected) ? 0.35 : 0.1), lineWidth: 1)
-            )
-            .contextMenu {
-                // Content-specific actions first
-                if case .file = item.content {
-                    Button("Open") { onOpenFile?(item) }
-                    Button("Reveal in Finder") { onRevealInFinder?(item) }
-                    Button("Copy Path") { onCopyPath?(item) }
-                    Divider()
-                }
-                // Common action: exclude source app
-                if let bundleID = item.sourceBundleID, let onExcludeApp {
-                    let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
-                    Button("Exclude \"\(name)\" from history") { onExcludeApp(bundleID) }
-                } else {
-                    Text("Source unknown for this clip")
-                        .foregroundColor(.secondary)
-                }
+        Group {
+            if isEditing {
+                EditorView(
+                    text: $editText,
+                    error: $editError,
+                    onCancel: { isEditing = false },
+                    onSave: { commitEdit() }
+                )
+                .padding(6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
+                )
+            } else {
+                content
+                    .contentShape(Rectangle())
+                    .onTapGesture { onSelect(item) }
+                    .onHover { isHovered = $0 }
+                    .padding(6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill((isHovered || isSelected) ? Color.accentColor.opacity(0.12) : Color.clear)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.secondary.opacity((isHovered || isSelected) ? 0.35 : 0.1), lineWidth: 1)
+                    )
+                    .contextMenu {
+                        // Content-specific actions first
+                        if case .file = item.content {
+                            Button("Open") { onOpenFile?(item) }
+                            Button("Reveal in Finder") { onRevealInFinder?(item) }
+                            Button("Copy Path") { onCopyPath?(item) }
+                            Divider()
+                        }
+                        if canEdit(item.content) {
+                            Button("Edit…") { enterEditMode() }
+                            Divider()
+                        }
+                        // Common action: exclude source app
+                        if let bundleID = item.sourceBundleID, let onExcludeApp {
+                            let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+                            Button("Exclude \"\(name)\" from history") { onExcludeApp(bundleID) }
+                        } else {
+                            Text("Source unknown for this clip")
+                                .foregroundColor(.secondary)
+                        }
+                    }
             }
+        }
+        .onChange(of: item.id) { _ in
+            isEditing = false
+            editError = nil
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
+            isEditing = false
+            editError = nil
+        }
+    }
+
+    // MARK: - Edit helpers
+
+    private func canEdit(_ content: ClipboardItemContent) -> Bool {
+        switch content {
+        case .text, .url, .file: return true
+        case .image:             return false
+        }
+    }
+
+    private func enterEditMode() {
+        editText = currentContentAsText(item.content)
+        editError = nil
+        isEditing = true
+    }
+
+    private func currentContentAsText(_ content: ClipboardItemContent) -> String {
+        switch content {
+        case .text(let s):  return s
+        case .url(let u):   return u.absoluteString
+        case .file(let us): return us.map(\.path).joined(separator: "\n")
+        case .image:        return ""
+        }
+    }
+
+    private func commitEdit() {
+        switch item.content {
+        case .text:
+            onEdit?(item, .text(editText))
+            isEditing = false
+        case .url:
+            let trimmed = editText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let u = URL(string: trimmed),
+                  let scheme = u.scheme, !scheme.isEmpty,
+                  let host = u.host, !host.isEmpty else {
+                editError = "Not a valid URL"
+                return
+            }
+            onEdit?(item, .url(u))
+            isEditing = false
+        case .file:
+            let urls = editText
+                .split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .map { URL(fileURLWithPath: $0) }
+            guard !urls.isEmpty else {
+                editError = "Need at least one path"
+                return
+            }
+            onEdit?(item, .file(urls))
+            isEditing = false
+        case .image:
+            isEditing = false
+        }
     }
 
     @ViewBuilder
@@ -523,6 +615,9 @@ private struct FileLeadingIcon: View {
         .onAppear {
             recheck()
         }
+        .onChange(of: url) { _ in
+            recheck()
+        }
         .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
             recheck()
         }
@@ -531,6 +626,85 @@ private struct FileLeadingIcon: View {
     private func recheck() {
         guard let url else { exists = false; return }
         exists = FileManager.default.fileExists(atPath: url.path)
+    }
+}
+
+private struct EditorView: View {
+    @Binding var text: String
+    @Binding var error: String?
+    let onCancel: () -> Void
+    let onSave: () -> Void
+    @State private var keyMonitor: Any?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextEditor(text: $text)
+                .font(.body)
+                .frame(minHeight: 80, maxHeight: 240)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+            if let error = error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+            HStack(spacing: 8) {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.cancelAction)
+                Button("Save ⌘↩", action: onSave)
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        // ponytail: local key monitor beats OverlayWindow.escMonitor (newest-first)
+        // so Esc cancels edit instead of closing overlay; Cmd+Return commits save
+        // even though TextEditor swallows plain Return.
+        .onAppear {
+            disableSmartSubstitutions()
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                if event.keyCode == 53 { // Escape
+                    onCancel()
+                    return nil
+                }
+                if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Cmd+Return
+                    onSave()
+                    return nil
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let m = keyMonitor {
+                NSEvent.removeMonitor(m)
+                keyMonitor = nil
+            }
+        }
+    }
+
+    // ponytail: walk key window for the NSTextView SwiftUI attached and turn off
+    // smart quotes/dashes so JSON edits survive round-trip. Deferred to next tick
+    // because TextEditor's NSTextView isn't in the tree at .onAppear yet.
+    private func disableSmartSubstitutions() {
+        DispatchQueue.main.async {
+            guard let root = NSApp.keyWindow?.contentView else { return }
+            for tv in Self.findTextViews(in: root) {
+                tv.isAutomaticQuoteSubstitutionEnabled = false
+                tv.isAutomaticDashSubstitutionEnabled = false
+                tv.isAutomaticTextReplacementEnabled = false
+                tv.smartInsertDeleteEnabled = false
+            }
+        }
+    }
+
+    private static func findTextViews(in view: NSView) -> [NSTextView] {
+        var result: [NSTextView] = []
+        if let tv = view as? NSTextView { result.append(tv) }
+        for sub in view.subviews { result.append(contentsOf: findTextViews(in: sub)) }
+        return result
     }
 }
 
