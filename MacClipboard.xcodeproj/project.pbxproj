@@ -29,6 +29,7 @@
 		7F3572A26C94675BE9BEC70F /* AppMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18F8150D9761A140088F983 /* AppMetadataTests.swift */; };
 		831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19935DAD7985C6E587966A20 /* OverlayWindow.swift */; };
 		87011F9E077DDB68590A1E5D /* TextPreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */; };
+		87B4CB11C721254CA6BC0DEA /* EditLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0A2CBE284BC96A3E2EF8E1 /* EditLayer.swift */; };
 		9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */; };
 		A4C23EAC12FAF4990FA8D75F /* HotkeyUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */; };
 		ADA397C03763610821625BEA /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FAC45A87AF3BC309EC56D4D /* ClipboardMonitor.swift */; };
@@ -101,6 +102,7 @@
 		F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentTagsTests.swift; sourceTree = "<group>"; };
 		F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViewModel.swift; sourceTree = "<group>"; };
 		FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViewModelTests.swift; sourceTree = "<group>"; };
+		FF0A2CBE284BC96A3E2EF8E1 /* EditLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditLayer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -120,6 +122,7 @@
 				18A5E1B92A0543BA5D33AD02 /* InfoView.swift */,
 				DA06703AB7DD76075D2895A4 /* SettingsView.swift */,
 				473FC732AE3E36340AFAE493 /* Components */,
+				B4B0E2C223DCF3E7E36B8A7F /* ImageEditor */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -153,6 +156,14 @@
 				7C7A4B0011505130B1F0E7EA /* MacClipboardTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B4B0E2C223DCF3E7E36B8A7F /* ImageEditor */ = {
+			isa = PBXGroup;
+			children = (
+				FF0A2CBE284BC96A3E2EF8E1 /* EditLayer.swift */,
+			);
+			path = ImageEditor;
 			sourceTree = "<group>";
 		};
 		BDAF052DF3FCD06F22B3CE2D /* Utilities */ = {
@@ -339,6 +350,7 @@
 				1E1D00340048E2DFA2FB166D /* ContentTags.swift in Sources */,
 				B6E3A6C5EE7070AABCCAC0DC /* ContentView.swift in Sources */,
 				1D6DE4479371170E637893FB /* ESCKeyCatcher.swift in Sources */,
+				87B4CB11C721254CA6BC0DEA /* EditLayer.swift in Sources */,
 				B7D4E2B42C30142CC9A044ED /* FirstMouseHostingView.swift in Sources */,
 				4CB64154952712185733A483 /* HistoryCrypto.swift in Sources */,
 				7D307A167F9C9108005E211D /* HotKeyService.swift in Sources */,
