@@ -53,6 +53,20 @@ final class AppSettings: ObservableObject {
     @Published var autoDismissOverlayTimeout: TimeInterval {
         didSet { UserDefaults.standard.set(autoDismissOverlayTimeout, forKey: Keys.autoDismissOverlayTimeout) }
     }
+    @Published var overlayWidth: Double {
+        didSet {
+            let clamped = max(480, overlayWidth)
+            if clamped != overlayWidth { overlayWidth = clamped; return }
+            UserDefaults.standard.set(overlayWidth, forKey: Keys.overlayWidth)
+        }
+    }
+    @Published var overlayHeight: Double {
+        didSet {
+            let clamped = max(480, overlayHeight)
+            if clamped != overlayHeight { overlayHeight = clamped; return }
+            UserDefaults.standard.set(overlayHeight, forKey: Keys.overlayHeight)
+        }
+    }
 
     private struct Keys {
         static let hotkeyKeyCode = "settings.hotkey.keycode"
@@ -67,6 +81,8 @@ final class AppSettings: ObservableObject {
         static let concealedClearTimeout = "settings.concealedClearTimeout"
         static let autoDismissOverlayEnabled = "settings.autoDismissOverlay.enabled"
         static let autoDismissOverlayTimeout = "settings.autoDismissOverlay.timeout"
+        static let overlayWidth = "settings.overlay.width"
+        static let overlayHeight = "settings.overlay.height"
     }
 
     static let defaultSeedExclusions: [String] = [
@@ -133,6 +149,8 @@ final class AppSettings: ObservableObject {
         let initialMoveTopOnClick = defaults.object(forKey: Keys.moveTopOnClick) as? Bool ?? true
         let initialAutoDismissEnabled = defaults.object(forKey: Keys.autoDismissOverlayEnabled) as? Bool ?? true
         let initialAutoDismissTimeout = (defaults.object(forKey: Keys.autoDismissOverlayTimeout) as? Double) ?? 20
+        let initialOverlayWidth = (defaults.object(forKey: Keys.overlayWidth) as? Double) ?? 520
+        let initialOverlayHeight = (defaults.object(forKey: Keys.overlayHeight) as? Double) ?? 600
 
         self.hotkeyKeyCode = initialKeyCode
         self.hotkeyModifiers = initialModifiers
@@ -146,6 +164,8 @@ final class AppSettings: ObservableObject {
         self.moveTopOnClick = initialMoveTopOnClick
         self.autoDismissOverlayEnabled = initialAutoDismissEnabled
         self.autoDismissOverlayTimeout = initialAutoDismissTimeout
+        self.overlayWidth = initialOverlayWidth
+        self.overlayHeight = initialOverlayHeight
     }
 }
 

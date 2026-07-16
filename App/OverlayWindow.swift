@@ -11,6 +11,7 @@ final class OverlayWindowController: NSObject {
     private var backgroundView: NSVisualEffectView?
     private var idleTimer: Timer?
     private var idleMonitor: Any?
+    private var resizeObserver: Any?
     private var lastActivity: Date = Date()
 
     // Track the previously active app to restore focus and paste into it
@@ -54,7 +55,7 @@ final class OverlayWindowController: NSObject {
         
         guard let window else { return }
         if let screen = NSScreen.main {
-            let size = CGSize(width: 520, height: 600)
+            let size = CGSize(width: AppSettings.shared.overlayWidth, height: AppSettings.shared.overlayHeight)
             let origin = CGPoint(
                 x: screen.visibleFrame.midX - size.width / 2,
                 y: screen.visibleFrame.midY - size.height / 2
@@ -64,6 +65,17 @@ final class OverlayWindowController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         NotificationCenter.default.post(name: .overlayDidShow, object: nil)
+
+        if resizeObserver == nil {
+            resizeObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didResizeNotification,
+                object: window, queue: .main
+            ) { [weak self] _ in
+                guard let self, let w = self.window else { return }
+                AppSettings.shared.overlayWidth = w.frame.width
+                AppSettings.shared.overlayHeight = w.frame.height
+            }
+        }
 
         if escMonitor == nil {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
@@ -90,8 +102,12 @@ final class OverlayWindowController: NSObject {
             NSEvent.removeMonitor(escMonitor)
             self.escMonitor = nil
         }
+        if let resizeObserver {
+            NotificationCenter.default.removeObserver(resizeObserver)
+            self.resizeObserver = nil
+        }
         onCloseRequested?()
-        
+
         // If a selection triggered hide, auto-paste into the previously active app
         if autoPastePending {
             autoPastePending = false
@@ -138,12 +154,15 @@ final class OverlayWindowController: NSObject {
         .background(ESCKeyCatcher())
 
         let hosting = FirstMouseHostingView(rootView: content)
+        let w = AppSettings.shared.overlayWidth
+        let h = AppSettings.shared.overlayHeight
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 600),
-            styleMask: [.titled, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: w, height: h),
+            styleMask: [.titled, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
         )
+        window.minSize = NSSize(width: 480, height: 480)
         window.acceptsMouseMovedEvents = true
         window.title = "Clipboard"
         window.titleVisibility = .hidden
@@ -170,7 +189,7 @@ final class OverlayWindowController: NSObject {
         ])
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = false
 
         self.window = window
         self.backgroundView = vev
