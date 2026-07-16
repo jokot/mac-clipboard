@@ -123,8 +123,12 @@ final class OverlayWindowController: NSObject {
             NSEvent.removeMonitor(escMonitor)
             self.escMonitor = nil
         }
+        if let resizeObserver {
+            NotificationCenter.default.removeObserver(resizeObserver)
+            self.resizeObserver = nil
+        }
         onCloseRequested?()
-        
+
         // Then handle focus switch and paste in background
         if autoPastePending {
             autoPastePending = false
@@ -278,6 +282,10 @@ private extension OverlayWindowController {
         if let escMonitor {
             NSEvent.removeMonitor(escMonitor)
             self.escMonitor = nil
+        }
+        if let resizeObserver {
+            NotificationCenter.default.removeObserver(resizeObserver)
+            self.resizeObserver = nil
         }
         onCloseRequested?()
         // Only refocus the previous app, do not paste
