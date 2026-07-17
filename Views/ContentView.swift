@@ -11,12 +11,20 @@ struct ContentView: View {
     @State private var selectedIndex: Int = 0
     @FocusState private var isSearchFocused: Bool
     @State private var extractionAlert: ExtractionAlert?
+    @State private var editingImage: EditingImageTarget?
+    @State private var editingImageAlert: String?
 
     private let ocrService: OCRServiceProtocol = OCRService()
 
     struct ExtractionAlert: Identifiable {
         let id = UUID()
         let message: String
+    }
+
+    struct EditingImageTarget: Identifiable {
+        let id: UUID
+        let item: ClipboardItem
+        let image: NSImage
     }
 
     init(viewModel: ClipboardListViewModel,
@@ -56,6 +64,51 @@ struct ContentView: View {
         .alert(item: $extractionAlert) { alert in
             Alert(title: Text("No Result"), message: Text(alert.message), dismissButton: .default(Text("OK")))
         }
+        .sheet(item: $editingImage) { target in
+            ImageEditorSheet(
+                item: target.item,
+                baseImage: target.image,
+                onCommit: { pngData, mode in
+                    switch mode {
+                    case .inPlace:
+                        viewModel.saveEditedImage(replacing: target.item, pngData: pngData)
+                    case .asNew:
+                        viewModel.insertImage(pngData: pngData, sourceBundleID: target.item.sourceBundleID)
+                    }
+                    editingImage = nil
+                },
+                onCancel: { editingImage = nil }
+            )
+        }
+        .alert("Cannot edit image", isPresented: Binding(
+            get: { editingImageAlert != nil },
+            set: { if !$0 { editingImageAlert = nil } }
+        )) {
+            Button("OK") { editingImageAlert = nil }
+        } message: {
+            Text(editingImageAlert ?? "")
+        }
+    }
+
+    private func openImageEditor(for item: ClipboardItem) {
+        guard case .image(let imgContent) = item.content else { return }
+        var img: NSImage?
+        switch imgContent.source {
+        case .memory(let m):
+            img = m
+        case .file(let url):
+            if let data = viewModel.imageData(at: url) { img = NSImage(data: data) }
+        }
+        guard let image = img else {
+            editingImageAlert = "Could not load image."
+            return
+        }
+        let dim = max(image.size.width, image.size.height)
+        guard dim <= 4096 else {
+            editingImageAlert = "Image too large to edit in v1.11.0 (max 4096 px)."
+            return
+        }
+        editingImage = EditingImageTarget(id: item.id, item: item, image: image)
     }
 
     private var header: some View {
@@ -246,6 +299,9 @@ struct ContentView: View {
                             onCopyPath: { item in copyFilePath(item) },
                             onEdit: { item, newContent in
                                 viewModel.replaceContent(of: item, with: newContent)
+                            },
+                            onEditImage: { item in
+                                openImageEditor(for: item)
                             }
                         )
                         .id(item.id)
