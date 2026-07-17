@@ -16,6 +16,7 @@ struct ClipboardItemRow: View {
     var onRevealInFinder: ((ClipboardItem) -> Void)? = nil
     var onCopyPath: ((ClipboardItem) -> Void)? = nil
     var onEdit: ((ClipboardItem, ClipboardItemContent) -> Void)? = nil
+    var onEditImage: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
     @State private var isEditing: Bool = false
@@ -64,6 +65,10 @@ struct ClipboardItemRow: View {
                         }
                         if canEdit(item.content) {
                             Button("Edit…") { enterEditMode() }
+                            Divider()
+                        }
+                        if case .image = item.content, let onEditImage {
+                            Button("Edit…") { onEditImage(item) }
                             Divider()
                         }
                         // Common action: exclude source app
