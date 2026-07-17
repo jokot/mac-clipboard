@@ -181,6 +181,36 @@ final class ClipboardListViewModel: ObservableObject {
         return updated
     }
 
+    func insertImage(pngData: Data, sourceBundleID: String?) {
+        guard let url = repository.saveImage(pngData: pngData) else { return }
+        let imgContent = ImageContent(source: .file(url), cachedText: nil, cachedId: nil, cachedBarcode: nil)
+        let item = ClipboardItem(
+            date: Date(),
+            content: .image(imgContent),
+            sourceBundleID: sourceBundleID,
+            isConcealed: false,
+            concealedExpiresAt: nil,
+            isOCRResult: false
+        )
+        items.insert(item, at: 0)
+        applyMaxItems(AppSettings.shared.maxItems)
+        repository.saveToDiskAsync(items: items)
+        ContentTagDetector.clearCache()
+    }
+
+    func saveEditedImage(replacing item: ClipboardItem, pngData: Data) {
+        guard let url = repository.saveImage(pngData: pngData) else { return }
+        let newImg = ImageContent(source: .file(url), cachedText: nil, cachedId: nil, cachedBarcode: nil)
+        let oldContent = item.content
+        _ = replaceContent(of: item, with: .image(newImg))
+        // Clean up prior encrypted file if it was file-backed and different.
+        if case .image(let old) = oldContent,
+           case .file(let oldURL) = old.source,
+           oldURL != url {
+            repository.deleteImage(at: oldURL)
+        }
+    }
+
     /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).
     /// Returns the plaintext PNG `Data` suitable for `NSImage(data:)`, or `nil` on failure.
     func imageData(at url: URL) -> Data? {

@@ -562,6 +562,53 @@ final class ClipboardListViewModelTests: XCTestCase {
             XCTAssertGreaterThan(repo.saveAsyncCount, 0)
         }
     }
+
+    @MainActor
+    func test_insertImageAddsAtTop() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text("existing")))
+
+        await MainActor.run {
+            let png = Data([0x89, 0x50, 0x4E, 0x47])
+            vm.insertImage(pngData: png, sourceBundleID: "com.apple.Preview")
+            XCTAssertEqual(vm.items.count, 2)
+            if case .image = vm.items[0].content {} else { XCTFail("first item should be image") }
+            XCTAssertEqual(vm.items[0].sourceBundleID, "com.apple.Preview")
+            XCTAssertGreaterThan(repo.imageSaveCount, 0)
+        }
+    }
+
+    @MainActor
+    func test_saveEditedImagePreservesIdentity() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let img = NSImage(size: NSSize(width: 4, height: 4))
+        let original = ClipboardItem(
+            date: Date(),
+            content: .image(ImageContent(source: .memory(img), cachedText: nil, cachedId: nil, cachedBarcode: nil)),
+            sourceBundleID: "com.apple.Preview"
+        )
+        monitor.emit(original)
+
+        await MainActor.run {
+            let existing = vm.items[0]
+            vm.saveEditedImage(replacing: existing, pngData: Data([0x89, 0x50]))
+            XCTAssertEqual(vm.items.count, 1)
+            XCTAssertEqual(vm.items[0].id, existing.id)
+            if case .image = vm.items[0].content {} else { XCTFail("should still be image") }
+        }
+    }
 }
 
 // MARK: - Mocks
