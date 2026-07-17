@@ -568,20 +568,35 @@ final class ClipboardListViewModelTests: XCTestCase {
 private final class MockRepo: ClipboardRepositoryProtocol {
     var savedItems: [ClipboardItem] = []
     var saveAsyncCount = 0
+    var imageSaveCount = 0
+    var deletedImageURLs: [URL] = []
 
     func loadFromDisk() -> [ClipboardItem] { savedItems }
     func saveToDisk(items: [ClipboardItem]) { savedItems = items }
     func saveToDiskAsync(items: [ClipboardItem]) { savedItems = items; saveAsyncCount += 1 }
     func clearAllFiles() { savedItems.removeAll() }
     func saveImage(_ image: NSImage) -> URL? {
+        imageSaveCount += 1
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("MockRepo-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let fileURL = dir.appendingPathComponent(UUID().uuidString + ".png")
         try? Data().write(to: fileURL)
         return fileURL
     }
+    func saveImage(pngData: Data) -> URL? {
+        imageSaveCount += 1
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("MockRepo-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let fileURL = dir.appendingPathComponent(UUID().uuidString + ".png")
+        try? pngData.write(to: fileURL)
+        return fileURL
+    }
     func readImageData(at encURL: URL) -> Data? {
         return try? Data(contentsOf: encURL)
+    }
+    func deleteImage(at encURL: URL) {
+        deletedImageURLs.append(encURL)
+        try? FileManager.default.removeItem(at: encURL)
     }
 }
 
