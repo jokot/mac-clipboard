@@ -19,6 +19,7 @@
 		232718A01D9DEB7A1DCD2305 /* ImageEditorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E9FF33AF5F9B8A12F4B06BD /* ImageEditorViewModelTests.swift */; };
 		267E94E7370774D745DC3C2C /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = EF7344C6550C102B4815F469 /* AppIcon.icns */; };
 		2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */; };
+		2D59A4DD6FB5FB360D3D61E3 /* ImageEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */; };
 		4CB64154952712185733A483 /* HistoryCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */; };
 		571B862018FC471035814617 /* URLUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */; };
 		59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F4194F31C555F3F3166BDA /* OCRService.swift */; };
@@ -86,6 +87,7 @@
 		668DB323E10EDCA899DDC163 /* AppFocusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFocusService.swift; sourceTree = "<group>"; };
 		69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItemRepositoryTests.swift; sourceTree = "<group>"; };
 		6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLUtils.swift; sourceTree = "<group>"; };
+		701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorSheet.swift; sourceTree = "<group>"; };
 		72305A678DEF1D5E247BFC8C /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		72AD13AA20CF1337FECA2753 /* ESCKeyCatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESCKeyCatcher.swift; sourceTree = "<group>"; };
 		7422559F8C0D95AA23979A71 /* MacClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -173,6 +175,7 @@
 			children = (
 				9C7D258BC605842AEBA68655 /* CanvasView.swift */,
 				FF0A2CBE284BC96A3E2EF8E1 /* EditLayer.swift */,
+				701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */,
 				AFD1F11CCE8A7517D18F5F1B /* ImageEditorViewModel.swift */,
 			);
 			path = ImageEditor;
@@ -375,6 +378,7 @@
 				E0C61B17E9A3D544890A8A61 /* HotkeyCapturingView.swift in Sources */,
 				A4C23EAC12FAF4990FA8D75F /* HotkeyUtils.swift in Sources */,
 				8DC31CE13FBE4595FABB6FAF /* ImageCompositor.swift in Sources */,
+				2D59A4DD6FB5FB360D3D61E3 /* ImageEditorSheet.swift in Sources */,
 				FE4C3A88DBF2AB6887376649 /* ImageEditorViewModel.swift in Sources */,
 				E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */,
 				112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */,
