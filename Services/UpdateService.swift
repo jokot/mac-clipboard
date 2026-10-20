@@ -5,7 +5,7 @@ final class UpdateService {
     @available(*, deprecated, message: "Use Notification.Name.updateServiceLastCheckedDidChange instead")
     static let lastCheckedDidChange = Notification.Name("UpdateServiceLastCheckedDidChange")
     
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults = AppEnvironment.defaults
     private let lastCheckedKey = "LastUpdateCheck"
     private var autoCheckTimer: Timer?
     

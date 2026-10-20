@@ -348,8 +348,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
 private extension ClipboardRepository {
     func appSupportDirectory() -> URL? {
         let fm = FileManager.default
-        if let url = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            let appDir = url.appendingPathComponent("MaClip", isDirectory: true)
+        if let appDir = AppEnvironment.appSupportDirectory {
             if !fm.fileExists(atPath: appDir.path) {
                 try? fm.createDirectory(at: appDir, withIntermediateDirectories: true)
             }

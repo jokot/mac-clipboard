@@ -3,6 +3,12 @@ import XCTest
 
 final class ClipboardItemRepositoryTests: XCTestCase {
 
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        // These tests delete history and images. Never let them reach real user data.
+        try XCTSkipUnless(AppEnvironment.isRunningTests, "test storage isolation is not active")
+    }
+
     func test_textItemRoundTripPreservesNewFields() throws {
         let bundleID = "com.apple.TextEdit"
         let expiry = Date(timeIntervalSinceNow: 60)
@@ -74,10 +80,7 @@ final class ClipboardItemRepositoryTests: XCTestCase {
 
         // On-disk file should be history.bin, NOT history.json, and inspecting it must NOT
         // reveal plaintext.
-        let appSupport = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first!
-            .appendingPathComponent("MaClip", isDirectory: true)
+        let appSupport = AppEnvironment.appSupportDirectory!
         let binURL = appSupport.appendingPathComponent("history.bin")
         let jsonURL = appSupport.appendingPathComponent("history.json")
         XCTAssertTrue(FileManager.default.fileExists(atPath: binURL.path))
@@ -88,10 +91,7 @@ final class ClipboardItemRepositoryTests: XCTestCase {
     }
 
     func test_legacyJSONMigratesToEncryptedAtFirstLoad() throws {
-        let appSupport = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first!
-            .appendingPathComponent("MaClip", isDirectory: true)
+        let appSupport = AppEnvironment.appSupportDirectory!
         try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
 
         try? FileManager.default.removeItem(at: appSupport.appendingPathComponent("history.bin"))
@@ -180,9 +180,7 @@ final class ClipboardItemRepositoryTests: XCTestCase {
         ]
         """.data(using: .utf8)!
 
-        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first!
-            .appendingPathComponent("MaClip", isDirectory: true)
+        let url = AppEnvironment.appSupportDirectory!
             .appendingPathComponent("history.json")
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                                  withIntermediateDirectories: true)

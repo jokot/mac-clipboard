@@ -35,6 +35,7 @@
 		8DC31CE13FBE4595FABB6FAF /* ImageCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33EFD2074486FADCBD667A8D /* ImageCompositor.swift */; };
 		9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */; };
 		A4C23EAC12FAF4990FA8D75F /* HotkeyUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */; };
+		A7586B841721698A814887CE /* AppEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */; };
 		ADA397C03763610821625BEA /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FAC45A87AF3BC309EC56D4D /* ClipboardMonitor.swift */; };
 		B3DAF98ABBDBE882FFEC7E39 /* ClipboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */; };
 		B6E3A6C5EE7070AABCCAC0DC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95F666DE6781E514FE7F9921 /* ContentView.swift */; };
@@ -51,6 +52,7 @@
 		E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A5E1B92A0543BA5D33AD02 /* InfoView.swift */; };
 		F4C53B0274A8E0982EF17495 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72305A678DEF1D5E247BFC8C /* AppSettings.swift */; };
 		F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */; };
+		FE0F7B7C5343F48E133EBC95 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E9632926ED59CE6C55930B8 /* AppEnvironment.swift */; };
 		FE4C3A88DBF2AB6887376649 /* ImageEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFD1F11CCE8A7517D18F5F1B /* ImageEditorViewModel.swift */; };
 		FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */; };
 /* End PBXBuildFile section */
@@ -75,6 +77,7 @@
 		2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardApp.swift; sourceTree = "<group>"; };
 		233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardRepository.swift; sourceTree = "<group>"; };
 		2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteUtility.swift; sourceTree = "<group>"; };
+		2E9632926ED59CE6C55930B8 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		33EFD2074486FADCBD667A8D /* ImageCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompositor.swift; sourceTree = "<group>"; };
 		4E7F2BCE8886027192AD2307 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardListViewModelTests.swift; sourceTree = "<group>"; };
@@ -101,6 +104,7 @@
 		AFD1F11CCE8A7517D18F5F1B /* ImageEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorViewModel.swift; sourceTree = "<group>"; };
 		B18F8150D9761A140088F983 /* AppMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadataTests.swift; sourceTree = "<group>"; };
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
+		C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironmentTests.swift; sourceTree = "<group>"; };
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtils.swift; sourceTree = "<group>"; };
 		C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCryptoTests.swift; sourceTree = "<group>"; };
@@ -184,6 +188,7 @@
 		BDAF052DF3FCD06F22B3CE2D /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				2E9632926ED59CE6C55930B8 /* AppEnvironment.swift */,
 				D561C754CE8B3377968813CC /* AppMetadata.swift */,
 				1A83A199875AAD6DA273591F /* ContentTags.swift */,
 				1D2888C02F1F29FE5B864D3A /* FirstMouseHostingView.swift */,
@@ -200,6 +205,7 @@
 		C5E842DCA154264153D18330 /* MacClipboardTests */ = {
 			isa = PBXGroup;
 			children = (
+				C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */,
 				B18F8150D9761A140088F983 /* AppMetadataTests.swift */,
 				E827E59109586E92EF348B3C /* AppSettingsTests.swift */,
 				69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */,
@@ -301,9 +307,10 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = AC81F43C3A613E2E27EB9C80 /* Build configuration list for PBXProject "MacClipboard" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -313,6 +320,7 @@
 			mainGroup = D38D07288B5CFDDEFE31A61B;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			productRefGroup = B4AF048FC6B61137512CED93 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -338,6 +346,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7586B841721698A814887CE /* AppEnvironmentTests.swift in Sources */,
 				7F3572A26C94675BE9BEC70F /* AppMetadataTests.swift in Sources */,
 				7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */,
 				F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */,
@@ -357,6 +366,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE0F7B7C5343F48E133EBC95 /* AppEnvironment.swift in Sources */,
 				22EC2CF891DA3B0121A16B69 /* AppFocusService.swift in Sources */,
 				19742895E7A968E617947BA6 /* AppIconView.swift in Sources */,
 				7D36C39CD905DCAE569715DC /* AppMetadata.swift in Sources */,
