@@ -1,0 +1,110 @@
+# Release flow:
+# 1. A merge to main runs release-please. It opens or updates the release PR
+#    ("chore(main): release x.y.z") with CHANGELOG.md and the new version.
+#    sync-build then sets the build number and the Xcode project on that PR.
+# 2. A merge of the release PR makes release-please create the tag and the
+#    GitHub release. release-build attaches MacClip-<version>.dmg and .sha256.
+# PRs to main run pr-build, which uploads the DMG as a workflow artifact.
+name: release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      version: ${{ steps.rp.outputs.version }}
+      pr: ${{ steps.rp.outputs.pr }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  sync-build:
+    needs: release-please
+    if: needs.release-please.outputs.pr != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
+      - name: Set build number and sync the Xcode project
+        run: |
+          # The manifest on main holds the last released version. On the
+          # release branch, release-please has already changed it.
+          last_tag="v$(git show origin/main:.release-please-manifest.json | jq -r '."."')"
+          scripts/release/sync-version.sh "$last_tag"
+          if git diff --quiet; then
+            echo "Build number is already correct."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): set build number"
+          git push origin "HEAD:$BRANCH"
+
+  release-build:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: macos-15
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      VERSION: ${{ needs.release-please.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Build DMG
+        run: scripts/release/build-dmg.sh "$VERSION"
+      - name: Attach DMG to the release
+        run: |
+          gh release upload "$TAG" \
+            "dist/MacClip-$VERSION.dmg" "dist/MacClip-$VERSION.dmg.sha256" --clobber
+
+  pr-build:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read version
+        id: version
+        run: |
+          v="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION:[[:space:]]*([0-9][0-9.]*).*/\1/p' project.yml | head -1)"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Build DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/release/build-dmg.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MacClip-dmg
+          path: dist/MacClip-*
+          retention-days: 7
+          if-no-files-found: error
