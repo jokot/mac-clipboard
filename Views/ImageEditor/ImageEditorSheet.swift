@@ -88,13 +88,16 @@ struct ImageEditorSheet: View {
 
             // ponytail: fixedSize + layoutPriority so the packed left cluster
             // can't squeeze the action buttons to ellipsis / zero width.
+            // While text is typed, Return and Esc belong to the text field.
+            let typing = vm.textDraft != nil
+            let canSave = vm.state.isDirty || vm.hasPendingText
             HStack(spacing: 8) {
-                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
-                Button("Save as new") { commit(.asNew) }.disabled(!vm.state.isDirty)
+                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction, enabled: !typing)
+                Button("Save as new") { commit(.asNew) }.disabled(!canSave)
                 Button("Save") { commit(.inPlace) }
                     .buttonStyle(.borderedProminent)
-                    .disabled(!vm.state.isDirty)
-                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSave)
+                    .keyboardShortcut(.defaultAction, enabled: !typing)
             }
             .fixedSize()
             .layoutPriority(1)
@@ -114,6 +117,7 @@ struct ImageEditorSheet: View {
     }
 
     private func commit(_ mode: SaveMode) {
+        vm.commitText(color: stroke.color, fontSize: fontSize)
         guard let data = ImageCompositor.compose(vm.state) else { return }
         onCommit(data, mode)
     }
@@ -132,5 +136,12 @@ struct ImageEditorSheet: View {
             }
             return event
         }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func keyboardShortcut(_ shortcut: KeyboardShortcut, enabled: Bool) -> some View {
+        if enabled { keyboardShortcut(shortcut) } else { self }
     }
 }

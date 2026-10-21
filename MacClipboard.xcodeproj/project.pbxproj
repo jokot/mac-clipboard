@@ -21,6 +21,7 @@
 		2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */; };
 		2D59A4DD6FB5FB360D3D61E3 /* ImageEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */; };
 		4CB64154952712185733A483 /* HistoryCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */; };
+		547F5F36DFED0664C5620D45 /* CanvasGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F92F8B7254620E41576506 /* CanvasGeometryTests.swift */; };
 		571B862018FC471035814617 /* URLUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */; };
 		59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F4194F31C555F3F3166BDA /* OCRService.swift */; };
 		7170F47F267388BAF4517709 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7F2BCE8886027192AD2307 /* Notifications.swift */; };
@@ -69,6 +70,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		01F92F8B7254620E41576506 /* CanvasGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasGeometryTests.swift; sourceTree = "<group>"; };
 		03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompositorTests.swift; sourceTree = "<group>"; };
 		18A5E1B92A0543BA5D33AD02 /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
 		19935DAD7985C6E587966A20 /* OverlayWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayWindow.swift; sourceTree = "<group>"; };
@@ -211,6 +213,7 @@
 				C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */,
 				B18F8150D9761A140088F983 /* AppMetadataTests.swift */,
 				E827E59109586E92EF348B3C /* AppSettingsTests.swift */,
+				01F92F8B7254620E41576506 /* CanvasGeometryTests.swift */,
 				69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */,
 				524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */,
 				F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */,
@@ -352,6 +355,7 @@
 				A7586B841721698A814887CE /* AppEnvironmentTests.swift in Sources */,
 				7F3572A26C94675BE9BEC70F /* AppMetadataTests.swift in Sources */,
 				7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */,
+				547F5F36DFED0664C5620D45 /* CanvasGeometryTests.swift in Sources */,
 				F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */,
 				FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */,
 				E30B468F5CA2FC0F21CC9586 /* ContentTagsTests.swift in Sources */,
