@@ -7,11 +7,11 @@ struct ContentView: View {
     @ObservedObject var viewModel: ClipboardListViewModel
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
+    var onEditImage: (ClipboardItem, NSImage) -> Void = { _, _ in }
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
     @FocusState private var isSearchFocused: Bool
     @State private var extractionAlert: ExtractionAlert?
-    @State private var editingImage: EditingImageTarget?
     @State private var editingImageAlert: String?
 
     private let ocrService: OCRServiceProtocol = OCRService()
@@ -21,18 +21,14 @@ struct ContentView: View {
         let message: String
     }
 
-    struct EditingImageTarget: Identifiable {
-        let id: UUID
-        let item: ClipboardItem
-        let image: NSImage
-    }
-
     init(viewModel: ClipboardListViewModel,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
-         onOpenSettings: @escaping () -> Void = {}) {
+         onOpenSettings: @escaping () -> Void = {},
+         onEditImage: @escaping (ClipboardItem, NSImage) -> Void = { _, _ in }) {
         self.viewModel = viewModel
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
+        self.onEditImage = onEditImage
     }
 
     var body: some View {
@@ -64,22 +60,6 @@ struct ContentView: View {
         .alert(item: $extractionAlert) { alert in
             Alert(title: Text("No Result"), message: Text(alert.message), dismissButton: .default(Text("OK")))
         }
-        .sheet(item: $editingImage) { target in
-            ImageEditorSheet(
-                item: target.item,
-                baseImage: target.image,
-                onCommit: { pngData, mode in
-                    switch mode {
-                    case .inPlace:
-                        viewModel.saveEditedImage(replacing: target.item, pngData: pngData)
-                    case .asNew:
-                        viewModel.insertImage(pngData: pngData, sourceBundleID: target.item.sourceBundleID)
-                    }
-                    editingImage = nil
-                },
-                onCancel: { editingImage = nil }
-            )
-        }
         .alert("Cannot edit image", isPresented: Binding(
             get: { editingImageAlert != nil },
             set: { if !$0 { editingImageAlert = nil } }
@@ -108,7 +88,7 @@ struct ContentView: View {
             editingImageAlert = "Image too large to edit in v1.11.0 (max 4096 px)."
             return
         }
-        editingImage = EditingImageTarget(id: item.id, item: item, image: image)
+        onEditImage(item, image)
     }
 
     private var header: some View {

@@ -11,6 +11,7 @@ final class OverlayWindowController: NSObject {
     private var backgroundView: NSVisualEffectView?
     private var idleTimer: Timer?
     private var idleMonitor: Any?
+    private let imageEditor = ImageEditorWindowController()
     private var lastActivity: Date = Date()
 
     // Track the previously active app to restore focus and paste into it
@@ -134,6 +135,8 @@ final class OverlayWindowController: NSObject {
             }
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
+        }, onEditImage: { [weak self] item, image in
+            self?.openImageEditor(item: item, image: image)
         })
         .background(ESCKeyCatcher())
 
@@ -177,6 +180,27 @@ final class OverlayWindowController: NSObject {
         applyTheme()
     }
 
+
+    // The editor gets its own window. Hide the overlay while it is open, then
+    // return focus to the previous app on close. Otherwise MaClip stays
+    // frontmost and the next screenshot is dropped by the self-exclusion rule.
+    private func openImageEditor(item: ClipboardItem, image: NSImage) {
+        hideForImageEditor()
+        imageEditor.show(item: item, image: image, viewModel: viewModel) { [weak self] in
+            guard let self, !self.isVisible else { return }
+            self.reactivatePreviousAppOnly()
+        }
+    }
+
+    private func hideForImageEditor() {
+        stopIdleTracking()
+        window?.orderOut(nil)
+        if let escMonitor {
+            NSEvent.removeMonitor(escMonitor)
+            self.escMonitor = nil
+        }
+        onCloseRequested?()
+    }
 
     @objc private func closeRequested() {
         hideImmediatelyRefocusOnly()

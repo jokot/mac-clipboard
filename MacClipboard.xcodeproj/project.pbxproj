@@ -44,6 +44,7 @@
 		B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */; };
 		C127FE0E57A35CA8C307010D /* ImageCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */; };
 		C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815338FAF7D3A98423D0E86C /* ClipboardItem.swift */; };
+		CC082A9CFED49E1BD9FBF5C3 /* ImageEditorWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */; };
 		D350C3F63B3D0E46C6DEFEA6 /* URLUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */; };
 		E0C61B17E9A3D544890A8A61 /* HotkeyCapturingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64179F24FF8AFF7D440BC24 /* HotkeyCapturingView.swift */; };
 		E101AE6EFE5EF8A09F57725E /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C7D258BC605842AEBA68655 /* CanvasView.swift */; };
@@ -96,6 +97,7 @@
 		7422559F8C0D95AA23979A71 /* MacClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7C7A4B0011505130B1F0E7EA /* MacClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		815338FAF7D3A98423D0E86C /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
+		8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorWindowController.swift; sourceTree = "<group>"; };
 		95F666DE6781E514FE7F9921 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9C7D258BC605842AEBA68655 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
 		A4235CBBB175E9BB87DE8791 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
@@ -181,6 +183,7 @@
 				FF0A2CBE284BC96A3E2EF8E1 /* EditLayer.swift */,
 				701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */,
 				AFD1F11CCE8A7517D18F5F1B /* ImageEditorViewModel.swift */,
+				8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */,
 			);
 			path = ImageEditor;
 			sourceTree = "<group>";
@@ -390,6 +393,7 @@
 				8DC31CE13FBE4595FABB6FAF /* ImageCompositor.swift in Sources */,
 				2D59A4DD6FB5FB360D3D61E3 /* ImageEditorSheet.swift in Sources */,
 				FE4C3A88DBF2AB6887376649 /* ImageEditorViewModel.swift in Sources */,
+				CC082A9CFED49E1BD9FBF5C3 /* ImageEditorWindowController.swift in Sources */,
 				E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */,
 				112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */,
 				7170F47F267388BAF4517709 /* Notifications.swift in Sources */,

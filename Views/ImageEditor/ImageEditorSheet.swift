@@ -36,7 +36,7 @@ struct ImageEditorSheet: View {
             Divider()
             CanvasView(viewModel: vm, tool: $tool, stroke: $stroke, fontSize: $fontSize)
         }
-        .frame(minWidth: 800, minHeight: 600)
+        .frame(minWidth: 940, minHeight: 600)
         .onAppear { installKeyMonitor() }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
@@ -84,14 +84,20 @@ struct ImageEditorSheet: View {
                 .disabled(!vm.canRedo)
                 .keyboardShortcut("z", modifiers: [.command, .shift])
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
-            Button("Save as new") { commit(.asNew) }.disabled(!vm.state.isDirty)
-            Button("Save") { commit(.inPlace) }
-                .buttonStyle(.borderedProminent)
-                .disabled(!vm.state.isDirty)
-                .keyboardShortcut(.defaultAction)
+            // ponytail: fixedSize + layoutPriority so the packed left cluster
+            // can't squeeze the action buttons to ellipsis / zero width.
+            HStack(spacing: 8) {
+                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
+                Button("Save as new") { commit(.asNew) }.disabled(!vm.state.isDirty)
+                Button("Save") { commit(.inPlace) }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!vm.state.isDirty)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .fixedSize()
+            .layoutPriority(1)
         }
     }
 
@@ -114,6 +120,10 @@ struct ImageEditorSheet: View {
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Local monitors see keys for every MaClip window. Only take 1-8 in
+            // the editor, and not while the text tool's field is being typed in.
+            guard event.window?.identifier == ImageEditorWindowController.windowIdentifier,
+                  !(event.window?.firstResponder is NSTextView) else { return event }
             if event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
                let chars = event.charactersIgnoringModifiers,
                let n = Int(chars), (1...8).contains(n) {
