@@ -6,7 +6,8 @@ struct ImageEditorSheet: View {
 
     let item: ClipboardItem
     let baseImage: NSImage
-    let onCommit: (Data, SaveMode) -> Void
+    /// Returns false when the image could not be saved. The editor then stays open.
+    let onCommit: (Data, SaveMode) -> Bool
     let onCancel: () -> Void
 
     @StateObject private var vm: ImageEditorViewModel
@@ -14,12 +15,13 @@ struct ImageEditorSheet: View {
     @State private var stroke = StrokeStyle(color: .red, width: 4)
     @State private var fontSize: CGFloat = 24
     @State private var keyMonitor: Any?
+    @State private var saveFailed = false
 
     private static let colorPresets: [Color] =
         [.red, .orange, .yellow, .green, .blue, .purple, .black, .white]
 
     init(item: ClipboardItem, baseImage: NSImage,
-         onCommit: @escaping (Data, SaveMode) -> Void,
+         onCommit: @escaping (Data, SaveMode) -> Bool,
          onCancel: @escaping () -> Void) {
         self.item = item
         self.baseImage = baseImage
@@ -37,6 +39,11 @@ struct ImageEditorSheet: View {
             CanvasView(viewModel: vm, tool: $tool, stroke: $stroke, fontSize: $fontSize)
         }
         .frame(minWidth: 940, minHeight: 600)
+        .alert("Could not save image", isPresented: $saveFailed) {
+            Button("OK") {}
+        } message: {
+            Text("MaClip could not write the edited image. Make sure that the disk has free space, then try again. Your edits are still open.")
+        }
         .onAppear { installKeyMonitor() }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
@@ -118,8 +125,10 @@ struct ImageEditorSheet: View {
 
     private func commit(_ mode: SaveMode) {
         vm.commitText(color: stroke.color, fontSize: fontSize)
-        guard let data = ImageCompositor.compose(vm.state) else { return }
-        onCommit(data, mode)
+        guard let data = ImageCompositor.compose(vm.state), onCommit(data, mode) else {
+            saveFailed = true
+            return
+        }
     }
 
     private func installKeyMonitor() {
@@ -128,6 +137,10 @@ struct ImageEditorSheet: View {
             // the editor, and not while the text tool's field is being typed in.
             guard event.window?.identifier == ImageEditorWindowController.windowIdentifier,
                   !(event.window?.firstResponder is NSTextView) else { return event }
+            if event.keyCode == 53, vm.isDrawing {  // Esc mid-drag cancels only the shape
+                vm.cancelDrawing()
+                return nil
+            }
             if event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
                let chars = event.charactersIgnoringModifiers,
                let n = Int(chars), (1...8).contains(n) {

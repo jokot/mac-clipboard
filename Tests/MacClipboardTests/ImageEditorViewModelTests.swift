@@ -53,6 +53,36 @@ final class ImageEditorViewModelTests: XCTestCase {
         XCTAssertEqual(undos, 20)
     }
 
+    // MARK: - Drawing drag (QA #9)
+
+    func test_finishedDragCommits() {
+        let vm = ImageEditorViewModel(base: makeBase())
+        vm.beginDrawing()
+        XCTAssertTrue(vm.isDrawing)
+        XCTAssertTrue(vm.endDrawing())
+        XCTAssertFalse(vm.isDrawing)
+    }
+
+    func test_cancelledDragDoesNotCommit() {
+        let vm = ImageEditorViewModel(base: makeBase())
+        vm.beginDrawing()
+        vm.cancelDrawing()
+        XCTAssertTrue(vm.drawingCancelled)
+        vm.beginDrawing()  // more drag events after Esc keep the cancel
+        XCTAssertTrue(vm.drawingCancelled)
+        XCTAssertFalse(vm.endDrawing())
+        XCTAssertFalse(vm.isDrawing)
+        XCTAssertFalse(vm.drawingCancelled)
+    }
+
+    func test_cancelWithoutDragDoesNothing() {
+        let vm = ImageEditorViewModel(base: makeBase())
+        vm.cancelDrawing()
+        XCTAssertFalse(vm.drawingCancelled)
+        vm.beginDrawing()
+        XCTAssertTrue(vm.endDrawing())
+    }
+
     // MARK: - Text draft (QA #11)
 
     func test_commitTextAppendsLayer() {

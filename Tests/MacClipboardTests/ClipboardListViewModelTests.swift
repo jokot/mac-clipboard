@@ -576,7 +576,8 @@ final class ClipboardListViewModelTests: XCTestCase {
 
         await MainActor.run {
             let png = Data([0x89, 0x50, 0x4E, 0x47])
-            vm.insertImage(pngData: png, sourceBundleID: "com.apple.Preview")
+            let source = ClipboardItem(date: Date(), content: .text("src"), sourceBundleID: "com.apple.Preview")
+            XCTAssertTrue(vm.insertImage(pngData: png, from: source))
             XCTAssertEqual(vm.items.count, 2)
             if case .image = vm.items[0].content {} else { XCTFail("first item should be image") }
             XCTAssertEqual(vm.items[0].sourceBundleID, "com.apple.Preview")
@@ -607,6 +608,79 @@ final class ClipboardListViewModelTests: XCTestCase {
             XCTAssertEqual(vm.items.count, 1)
             XCTAssertEqual(vm.items[0].id, existing.id)
             if case .image = vm.items[0].content {} else { XCTFail("should still be image") }
+        }
+    }
+
+    // Save as new from a concealed clip makes a concealed clip with the same expiry.
+    @MainActor
+    func test_insertImageCopiesConcealedFlags() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let vm = ClipboardListViewModel(repository: MockRepo(), monitor: MockMonitor())
+        let expiry = Date(timeIntervalSinceNow: 300)
+        let source = ClipboardItem(date: Date(), content: .text("secret"), sourceBundleID: "com.apple.Preview",
+                                   isConcealed: true, concealedExpiresAt: expiry)
+
+        await MainActor.run {
+            XCTAssertTrue(vm.insertImage(pngData: Data([0x89, 0x50]), from: source))
+            XCTAssertTrue(vm.items[0].isConcealed)
+            XCTAssertEqual(vm.items[0].concealedExpiresAt, expiry)
+            XCTAssertEqual(vm.items[0].sourceBundleID, "com.apple.Preview")
+            XCTAssertNotEqual(vm.items[0].id, source.id)
+        }
+    }
+
+    // QA #16: a failed write reports failure and changes nothing.
+    @MainActor
+    func test_insertImageReportsWriteFailure() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        repo.failImageSaves = true
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        await MainActor.run {
+            let source = ClipboardItem(date: Date(), content: .text("src"))
+            XCTAssertFalse(vm.insertImage(pngData: Data([0x89, 0x50]), from: source))
+            XCTAssertTrue(vm.items.isEmpty)
+        }
+    }
+
+    @MainActor
+    func test_saveEditedImageReportsWriteFailure() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+        monitor.emit(ClipboardItem(
+            date: Date(),
+            content: .image(ImageContent(source: .memory(NSImage(size: NSSize(width: 4, height: 4))),
+                                         cachedText: nil, cachedId: nil, cachedBarcode: nil))
+        ))
+
+        await MainActor.run {
+            let before = vm.items[0]
+            repo.failImageSaves = true
+            XCTAssertFalse(vm.saveEditedImage(replacing: before, pngData: Data([0x89, 0x50])))
+            XCTAssertTrue(vm.items[0].matchesContent(before), "clip must keep its old image")
+            XCTAssertTrue(repo.deletedImageURLs.isEmpty)
+        }
+    }
+
+    // The clip can leave the list while the editor is open (deleted, or pushed out by the limit).
+    @MainActor
+    func test_saveEditedImageForMissingClipFailsAndDeletesNewFile() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+        let gone = ClipboardItem(date: Date(), content: .text("removed"))
+
+        await MainActor.run {
+            XCTAssertFalse(vm.saveEditedImage(replacing: gone, pngData: Data([0x89, 0x50])))
+            XCTAssertEqual(repo.deletedImageURLs.count, 1, "the new file must not be left behind")
+            XCTAssertTrue(vm.items.isEmpty)
         }
     }
 
@@ -677,6 +751,7 @@ private final class MockRepo: ClipboardRepositoryProtocol {
     var saveAsyncCount = 0
     var imageSaveCount = 0
     var deletedImageURLs: [URL] = []
+    var failImageSaves = false
 
     func loadFromDisk() -> [ClipboardItem] { savedItems }
     func saveToDisk(items: [ClipboardItem]) { savedItems = items }
@@ -691,6 +766,7 @@ private final class MockRepo: ClipboardRepositoryProtocol {
         return fileURL
     }
     func saveImage(pngData: Data) -> URL? {
+        if failImageSaves { return nil }
         imageSaveCount += 1
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("MockRepo-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

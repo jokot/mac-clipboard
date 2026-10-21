@@ -64,12 +64,18 @@ struct CanvasView: View {
             }
         }
         .onChange(of: tool) { _ in commitTextDraft() }
+        // Esc during a drag: remove the half-drawn shape now, not at mouse-up.
+        .onChange(of: viewModel.drawingCancelled) { cancelled in if cancelled { clearDrafts() } }
     }
 
     private func dragGesture(geometry g: CanvasGeometry, imageSize: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 let p = g.toBase(value.location)
+                if tool != .text {
+                    viewModel.beginDrawing()
+                    if viewModel.drawingCancelled { return }
+                }
                 switch tool {
                 case .pen:
                     if draftPenPoints.isEmpty { draftPenPoints = [p] }
@@ -83,6 +89,8 @@ struct CanvasView: View {
             }
             .onEnded { value in
                 let p = g.toBase(value.location)
+                defer { clearDrafts() }
+                if tool != .text && !viewModel.endDrawing() { return }
                 switch tool {
                 case .crop:
                     if let start = draftStart {
@@ -115,10 +123,13 @@ struct CanvasView: View {
                 case .text:
                     viewModel.beginText(at: p, color: stroke.color, fontSize: fontSize)
                 }
-                draftStart = nil
-                draftCurrent = nil
-                draftPenPoints = []
             }
+    }
+
+    private func clearDrafts() {
+        draftStart = nil
+        draftCurrent = nil
+        draftPenPoints = []
     }
 
     private func commitTextDraft() {

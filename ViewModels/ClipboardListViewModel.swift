@@ -181,34 +181,46 @@ final class ClipboardListViewModel: ObservableObject {
         return updated
     }
 
-    func insertImage(pngData: Data, sourceBundleID: String?) {
-        guard let url = repository.saveImage(pngData: pngData) else { return }
+    /// Save as new: adds a clip with a new id and date. It keeps the source app and the
+    /// concealed flag and expiry of `source`, so an edited copy of a secret stays secret.
+    /// Returns false when the image cannot be written.
+    @discardableResult
+    func insertImage(pngData: Data, from source: ClipboardItem) -> Bool {
+        guard let url = repository.saveImage(pngData: pngData) else { return false }
         let imgContent = ImageContent(source: .file(url), cachedText: nil, cachedId: nil, cachedBarcode: nil)
         let item = ClipboardItem(
             date: Date(),
             content: .image(imgContent),
-            sourceBundleID: sourceBundleID,
-            isConcealed: false,
-            concealedExpiresAt: nil,
+            sourceBundleID: source.sourceBundleID,
+            isConcealed: source.isConcealed,
+            concealedExpiresAt: source.concealedExpiresAt,
             isOCRResult: false
         )
         items.insert(item, at: 0)
         applyMaxItems(AppSettings.shared.maxItems)
         repository.saveToDiskAsync(items: items)
         ContentTagDetector.clearCache()
+        return true
     }
 
-    func saveEditedImage(replacing item: ClipboardItem, pngData: Data) {
-        guard let url = repository.saveImage(pngData: pngData) else { return }
+    /// Save in place. Returns false when the image cannot be written, or when the clip
+    /// left the list while the editor was open.
+    @discardableResult
+    func saveEditedImage(replacing item: ClipboardItem, pngData: Data) -> Bool {
+        guard let url = repository.saveImage(pngData: pngData) else { return false }
         let newImg = ImageContent(source: .file(url), cachedText: nil, cachedId: nil, cachedBarcode: nil)
         let oldContent = item.content
-        _ = replaceContent(of: item, with: .image(newImg))
+        guard replaceContent(of: item, with: .image(newImg)) != nil else {
+            repository.deleteImage(at: url)
+            return false
+        }
         // Clean up prior encrypted file if it was file-backed and different.
         if case .image(let old) = oldContent,
            case .file(let oldURL) = old.source,
            oldURL != url {
             repository.deleteImage(at: oldURL)
         }
+        return true
     }
 
     /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).

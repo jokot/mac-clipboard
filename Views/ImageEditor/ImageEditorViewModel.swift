@@ -34,6 +34,30 @@ final class ImageEditorViewModel: ObservableObject {
         state = next
     }
 
+    // MARK: - Drawing drag
+
+    /// A drag with a drawing tool is in progress. Esc cancels the drag
+    /// instead of closing the editor (QA #9).
+    @Published private(set) var isDrawing = false
+    @Published private(set) var drawingCancelled = false
+
+    func beginDrawing() {
+        guard !isDrawing else { return }
+        isDrawing = true
+        drawingCancelled = false
+    }
+
+    func cancelDrawing() {
+        guard isDrawing else { return }
+        drawingCancelled = true
+    }
+
+    /// Ends the drag. Returns true when the shape should be committed.
+    func endDrawing() -> Bool {
+        defer { isDrawing = false; drawingCancelled = false }
+        return !drawingCancelled
+    }
+
     // MARK: - Text draft
 
     struct TextDraft: Equatable {

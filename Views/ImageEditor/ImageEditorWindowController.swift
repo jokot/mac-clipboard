@@ -26,13 +26,13 @@ final class ImageEditorWindowController: NSObject, NSWindowDelegate {
             item: item,
             baseImage: image,
             onCommit: { [weak self] pngData, mode in
+                let saved: Bool
                 switch mode {
-                case .inPlace:
-                    viewModel.saveEditedImage(replacing: item, pngData: pngData)
-                case .asNew:
-                    viewModel.insertImage(pngData: pngData, sourceBundleID: item.sourceBundleID)
+                case .inPlace: saved = viewModel.saveEditedImage(replacing: item, pngData: pngData)
+                case .asNew:   saved = viewModel.insertImage(pngData: pngData, from: item)
                 }
-                self?.window?.close()
+                if saved { self?.window?.close() }
+                return saved
             },
             onCancel: { [weak self] in self?.window?.close() }
         )
@@ -46,6 +46,8 @@ final class ImageEditorWindowController: NSObject, NSWindowDelegate {
         window.identifier = Self.windowIdentifier
         window.title = "Edit Image"
         window.isReleasedWhenClosed = false
+        // Like Settings: MaClip has no Dock icon, so a window behind other apps is hard to find.
+        window.level = .floating
         window.contentViewController = NSHostingController(rootView: editor)
         window.contentMinSize = NSSize(width: 940, height: 600)
         window.setContentSize(NSSize(width: 1020, height: 720))
