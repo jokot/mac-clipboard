@@ -138,6 +138,13 @@ final class AppSettingsTests: XCTestCase {
         AppEnvironment.defaults.removeObject(forKey: concealedTimeoutKey)
     }
 
+    func test_maxItemsDefaultIs50() {
+        AppEnvironment.defaults.removeObject(forKey: "settings.maxItems")
+        XCTAssertEqual(AppSettings.defaultMaxItems, 50)
+        XCTAssertEqual(AppSettings.initialMaxItems(stored: 0), 50)
+        XCTAssertEqual(AppSettings.initialMaxItems(stored: 10), 10)
+    }
+
     func test_defaultsAreTrueWhenKeysAbsent() {
         // Mirrors AppSettings.init's read pattern.
         let pasteDefault = AppEnvironment.defaults.object(forKey: pasteKey) as? Bool ?? true

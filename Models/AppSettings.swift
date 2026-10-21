@@ -79,6 +79,13 @@ final class AppSettings: ObservableObject {
         "com.jokot.MacClipboard",
     ]
 
+    static let defaultMaxItems = 50
+
+    /// `stored` is 0 when the key is absent (`UserDefaults.integer`).
+    static func initialMaxItems(stored: Int) -> Int {
+        stored > 0 ? stored : defaultMaxItems
+    }
+
     static func makeInitialExcludedBundleIDs() -> [String] {
         let defaults = AppEnvironment.defaults
         let fm = FileManager.default
@@ -120,8 +127,7 @@ final class AppSettings: ObservableObject {
         var initialModifiers = UInt32(defaults.integer(forKey: Keys.hotkeyModifiers))
         if initialModifiers == 0 { initialModifiers = defaultModifiers }
         let initialTheme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? AppTheme.system.rawValue) ?? .system
-        let storedMax = defaults.integer(forKey: Keys.maxItems)
-        let initialMax = storedMax > 0 ? storedMax : 100
+        let initialMax = AppSettings.initialMaxItems(stored: defaults.integer(forKey: Keys.maxItems))
         let initialAutoClean = defaults.object(forKey: Keys.autoCleanEnabled) as? Bool ?? false
         let initialExcluded = AppSettings.makeInitialExcludedBundleIDs()
         let initialSkipConcealed = defaults.object(forKey: Keys.skipConcealedItems) as? Bool ?? false
