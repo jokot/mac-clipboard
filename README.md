@@ -11,6 +11,17 @@ A simple macOS clipboard history app built with SwiftUI.
 
 - [Download v1.10.1](https://github.com/jokot/mac-clipboard/releases/tag/v1.10.1)
 
+## What's new in 1.11.0
+- Edit image clips: right-click an image clip → **Edit…** to open the image editor in its own window.
+- Tools: crop, rotate 90° left or right, arrow, rectangle, oval, single-line text, freehand pen, and redact (opaque black box).
+- Pick one of 8 colors from the toolbar or with keys 1–8. Set the stroke width from 1 to 12 pt.
+- Undo with ⌘Z and redo with ⌘⇧Z, up to 20 steps. Esc during a drag cancels only that shape.
+- **Save** replaces the image in the clip and keeps its id and date. **Save as new** adds a new clip at the top and keeps the original. Both keep the concealed setting of the clip.
+- The overlay hides while the editor is open. When the editor closes, focus goes back to the app you used before.
+- Images larger than 4096 px on one side cannot be edited in this version.
+- The default history limit is now 50 clips. A limit that you set before does not change.
+- Internals: version 1.11.0, build 15.
+
 ## What's new in 1.10.1
 - Edit a clip in place: right-click any text, URL, or file clip → **Edit…** to open an inline editor. Cancel (Esc) discards, Save (⌘↩) commits. The clip keeps its id, date, source app, concealed/OCR flags — only the content changes, and the leading tag icon re-detects (e.g. plain text → JSON swaps to `curlybraces`).
 - Image clips are intentionally not editable in v1.10.1.

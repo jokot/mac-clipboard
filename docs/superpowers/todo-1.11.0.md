@@ -19,6 +19,8 @@ Committed on 2026-10-21. Each commit builds with its tests.
 - [x] `a21fff1 fix(editor): show crop and rotation in the canvas, fix the text tool`
 - [x] `0ffd8bc test: cover image edit save paths from the 1.11.0 QA list`
 - [x] `4a2d067 chore(settings): set the default history limit to 50`
+- [x] `69aa049 docs: add 1.11.0 todo with QA results and open decisions`
+- [x] `2436839 fix(editor): handle save failure, Esc mid-drag, concealed copies`
 
 ## 2. Manual QA
 
@@ -59,9 +61,9 @@ Scripted UI run on 2026-10-21: every row passes, after the fixes in 2.4. Unit te
 
 ### 2.3 Changed or removed scenarios
 
-- **#9** (Esc during a pen stroke): no code handles this case. Esc closes the editor and discards all edits. Decide if this is acceptable.
+- **#9** (Esc during a pen stroke): Esc cancels only the stroke (`2436839`).
 - **#14** (overlay hides during an edit): no longer possible. The overlay hides when the editor opens.
-- **#16** (disk full): not testable by hand. A failed save does nothing and shows no alert.
+- **#16** (disk full): tested with a read-only Images folder. The alert shows and the editor stays open (`2436839`).
 - **#21–24** (overlay resize): removed with the resizable overlay.
 
 ### 2.4 Bugs found in the scripted run (2026-10-21)
@@ -83,20 +85,20 @@ Fixed on 2026-10-21 in `a21fff1`:
 - A copy made while MaClip is frontmost is dropped. In the test run this happened when a copy came less than 1 s after a clip was selected. See section 5.
 - Selecting a clip moves it to the top (`moveTopOnClick`). Row numbers change after each selection.
 
-## 3. Open decisions
+## 3. Decisions (closed on 2026-10-21)
 
-- [ ] **Save as new on a concealed clip:** `insertImage` always sets `isConcealed: false`, so the new clip is not concealed. Keep or change?
-- [ ] **Editor window level:** the window is a normal window. It goes behind other apps. MaClip has no Dock icon to bring it back. Make it floating, like the Settings window?
-- [ ] **#9 Esc during a pen stroke:** keep "Esc closes the editor", or make Esc cancel only the current stroke?
-- [ ] **#16 save failure:** add an alert when `saveImage` returns `nil`?
-- [ ] **Unused settings:** delete `settings.overlay.width` and `settings.overlay.height` from the user defaults? Command: `defaults delete com.jokot.MacClipboard settings.overlay.width` (same for `.height`).
+- [x] **Save as new on a concealed clip:** the new clip copies `isConcealed` and `concealedExpiresAt`. Test: `test_insertImageCopiesConcealedFlags`.
+- [x] **Editor window level:** floating, like Settings. Checked in the app: window layer 3.
+- [x] **#9 Esc during a pen stroke:** Esc cancels only the shape in progress. Esc at other times closes the editor. Checked in the app.
+- [x] **#16 save failure:** alert "Could not save image". The editor stays open with its edits. Checked in the app with a read-only Images folder. Return closes the alert. A retry after the fix saved the edit.
+- [x] **Unused settings:** `settings.overlay.width` and `settings.overlay.height` deleted from the user defaults on the dev machine.
 
 ## 4. Doc updates before the PR
 
-- [ ] Spec: remove the resizable overlay from scope and from the architecture table.
-- [ ] Spec: change "sheet over overlay" to "separate window". Update QA rows 1, 4, 9, 14 and 21–24.
-- [ ] Plan: tick the done tasks. Add a note that Task 1 was reverted.
-- [ ] README: add the image editor to the feature list.
+- [x] Spec: remove the resizable overlay from scope and from the architecture table.
+- [x] Spec: change "sheet over overlay" to "separate window". Update QA rows 1, 4, 9, 14 and 21–24.
+- [x] Plan: tick the done tasks. Add a note that Task 1 was reverted.
+- [x] README: add the image editor to the feature list.
 
 ## 5. Known issues not caused by 1.11.0
 
