@@ -105,3 +105,14 @@ Fixed on 2026-10-21 in `a21fff1`:
 - `URLUtilsTests`: 2 tests fail. A bare domain gets `http://`, but the tests expect `https://`. The code did not change on this branch.
 - On 2026-10-19 at about 10:35, a full test run deleted the local clipboard history and reset some settings. The cause was missing test isolation. Commit `737b087` fixes this. The lost clips cannot be recovered without a backup from before that time.
 - Screenshots taken while the overlay is open are dropped, because MaClip excludes itself (Settings → Privacy). This existed before 1.11.0. To capture them, remove MaClip from the excluded apps.
+
+## 6. Release automation (2026-10-22)
+
+Plan: `docs/superpowers/plans/2026-10-22-release-workflow.md`.
+
+- [x] release-please config, manifest (`1.10.1`) and `CHANGELOG.md`. A dry run proposes 1.11.0.
+- [x] `scripts/release/sync-version.sh` (5 tests) and `scripts/release/build-dmg.sh` (2 tests).
+- [x] `.github/workflows/release.yml`. The PR build passed on GitHub (run 39695871291). The artifact checksum is OK.
+- [x] README "What's new" sections moved to `CHANGELOG.md`. Release steps are in `CONTRIBUTING.md`.
+- [ ] Repository setting "Allow GitHub Actions to create and approve pull requests" (needs the owner's OK).
+- [ ] After PR #13 merges: check that the release PR `chore(main): release 1.11.0` opens, then merge it and check the release page.

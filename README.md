@@ -9,33 +9,8 @@ A simple macOS clipboard history app built with SwiftUI.
 
 ## Download
 
-- [Download v1.10.1](https://github.com/jokot/mac-clipboard/releases/tag/v1.10.1)
-
-## What's new in 1.11.0
-- Edit image clips: right-click an image clip → **Edit…** to open the image editor in its own window.
-- Tools: crop, rotate 90° left or right, arrow, rectangle, oval, single-line text, freehand pen, and redact (opaque black box).
-- Pick one of 8 colors from the toolbar or with keys 1–8. Set the stroke width from 1 to 12 pt.
-- Undo with ⌘Z and redo with ⌘⇧Z, up to 20 steps. Esc during a drag cancels only that shape.
-- **Save** replaces the image in the clip and keeps its id and date. **Save as new** adds a new clip at the top and keeps the original. Both keep the concealed setting of the clip.
-- The overlay hides while the editor is open. When the editor closes, focus goes back to the app you used before.
-- Images larger than 4096 px on one side cannot be edited in this version.
-- The default history limit is now 50 clips. A limit that you set before does not change.
-- Internals: version 1.11.0, build 15.
-
-## What's new in 1.10.1
-- Edit a clip in place: right-click any text, URL, or file clip → **Edit…** to open an inline editor. Cancel (Esc) discards, Save (⌘↩) commits. The clip keeps its id, date, source app, concealed/OCR flags — only the content changes, and the leading tag icon re-detects (e.g. plain text → JSON swaps to `curlybraces`).
-- Image clips are intentionally not editable in v1.10.1.
-- Validation: URL edits require a scheme + host; file edits reject an empty list. Errors show inline in red without leaving edit mode.
-- Smart quotes / dashes / auto-replacement are disabled inside the editor so JSON and code edits round-trip unchanged.
-- Internals: version 1.10.1, build 14. `ClipboardItem` equality is now strict (id + content) so SwiftUI view diffing reflects edits; content-only dedup for new captures uses a separate `matchesContent(_:)` helper.
-
-## What's new in 1.10.0
-- File and folder clips: ⌘C on files or folders in Finder (or anywhere that writes file URLs to the pasteboard) is now captured as a new clip kind. The clip stores URLs only — no file contents are copied. Multi-selection becomes one clip showing `FirstFile +N more`.
-- Row UI for file clips shows the file's actual icon (via `NSWorkspace.icon(forFile:)`) plus its name and parent directory. Stale clips (file deleted after capture) automatically swap to a `?` ghost icon.
-- Right-click a file clip → unified menu with `Open`, `Reveal in Finder`, `Copy Path`, then the existing `Exclude "<App>"`. Same menu shape on all clip types now.
-- Copy Path writes the file paths as text to the pasteboard and adds a new text clip with the original file clip's source attribution (typically Finder), instead of attributing it to whichever app happens to be frontmost.
-- New `tag:file` search filter; free-text search also matches file paths.
-- Internals: version 1.10.0, build 13.
+- [Download the latest release](https://github.com/jokot/mac-clipboard/releases/latest)
+- [Changelog](CHANGELOG.md)
 
 ## Preview
 ![macclip-screenshot.png](https://github.com/user-attachments/assets/4044711e-39c0-4d71-9eea-989855fc919c)
@@ -146,42 +121,29 @@ Each clipboard entry (`ClipboardItem`) contains:
 - The app is not sandboxed and is intended for personal use/development. For Mac App Store distribution, additional work is required.
 
 ## Packaging (DMG + checksum)
-To package a DMG and generate a SHA256 checksum for sharing (e.g., on GitHub Releases):
+
+CI builds the release DMG. See "Releases" in [CONTRIBUTING.md](CONTRIBUTING.md). Every PR to `main` also builds a DMG and attaches it to the workflow run as the `MacClip-dmg` artifact.
+
+To build the same DMG on your Mac:
 
 ```bash
-# 1) Build Release into ./build
-xcodebuild -scheme MacClipboard -project MacClipboard.xcodeproj -configuration Release BUILD_DIR=$(pwd)/build clean build
-
-# 2) Package DMG with create-dmg + checksum (opens/mounts briefly)
-brew list create-dmg >/dev/null 2>&1 || brew install create-dmg
-VERSION=$(defaults read "$(pwd)/build/Release/MaClip.app/Contents/Info" CFBundleShortVersionString)
-rm -f dist/MacClip-${VERSION}.dmg dist/MacClip-${VERSION}.dmg.sha256
-create-dmg --volname "MaClip" --volicon "App/AppIcon.icns" \
-  --window-pos 200 120 --window-size 540 360 --icon-size 96 --text-size 12 \
-  --icon "MaClip.app" 140 150 --app-drop-link 400 150 --format UDZO \
-  "dist/MacClip-${VERSION}.dmg" "build/Release/MaClip.app"
-shasum -a 256 "dist/MacClip-${VERSION}.dmg" > "dist/MacClip-${VERSION}.dmg.sha256"
+scripts/release/build-dmg.sh 1.11.0
 ```
+
+The script builds the Release configuration into `build/` with an ad-hoc signature. It stops when the version you give does not match `MARKETING_VERSION` in `project.yml`. It writes `dist/MacClip-<version>.dmg` and `dist/MacClip-<version>.dmg.sha256`. It installs `create-dmg` with Homebrew when it is missing.
 
 ### Packaging notes
-- The DMG window will open briefly during creation; this is expected. The `--app-drop-link` adds the standard Applications shortcut for drag‑to‑install.
-- Bump the app version before building so `VERSION` updates.
-- Unsigned binaries may trigger Gatekeeper on other Macs. For wide distribution, sign and notarize.
+- The DMG window opens for a short time during the build. This is expected. The `--app-drop-link` option adds the Applications shortcut for drag-to-install.
+- The app is not signed with a Developer ID, so Gatekeeper can block it on other Macs. For wide distribution, sign and notarize the app.
 
 ### Verify checksum
-Once you have a DMG and its `.sha256` file:
+Put the `.dmg` and the `.sha256` file in the same folder, then run:
 
 ```bash
-# Verify the DMG against the stored checksum
-shasum -a 256 -c dist/MacClip-*.dmg.sha256
-
-# Recompute and print the hash
-shasum -a 256 dist/MacClip-*.dmg
-
-# Show the stored hash
-cat dist/MacClip-*.dmg.sha256
+shasum -a 256 -c MacClip-*.dmg.sha256
 ```
 
+The output ends with `OK` when the file is correct.
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on fixing bugs and proposing new features.
