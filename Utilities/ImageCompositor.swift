@@ -35,14 +35,23 @@ enum ImageCompositor {
         NSColor.clear.setFill()
         NSRect(origin: .zero, size: outSize).fill()
 
+        // ponytail: CanvasView records crop + layer geometry in SwiftUI space
+        // (top-left origin, y down). Flip the bitmap context to match, or every
+        // edit lands mirrored vertically in the saved PNG.
         let cg = ctx.cgContext
+        cg.translateBy(x: 0, y: outSize.height)
+        cg.scaleBy(x: 1, y: -1)
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: true)
+
         cg.translateBy(x: outSize.width / 2, y: outSize.height / 2)
-        cg.rotate(by: CGFloat(state.rotationQuarterTurns) * -.pi / 2)
+        // y-down space: a positive angle turns clockwise.
+        cg.rotate(by: CGFloat(state.rotationQuarterTurns) * .pi / 2)
         cg.translateBy(x: -cropSource.width / 2, y: -cropSource.height / 2)
         cg.translateBy(x: -cropSource.origin.x, y: -cropSource.origin.y)
 
-        base.draw(at: .zero, from: NSRect(origin: .zero, size: baseSize),
-                  operation: .sourceOver, fraction: 1.0)
+        base.draw(in: NSRect(origin: .zero, size: baseSize), from: .zero,
+                  operation: .sourceOver, fraction: 1.0,
+                  respectFlipped: true, hints: nil)
 
         for layer in state.layers {
             draw(layer: layer)
