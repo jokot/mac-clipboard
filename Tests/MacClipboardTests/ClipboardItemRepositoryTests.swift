@@ -129,6 +129,39 @@ final class ClipboardItemRepositoryTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: appSupport.appendingPathComponent(".encrypted").path))
     }
 
+    // QA #17: an edited image survives a quit and relaunch (new repository instance).
+    func test_editedImagePersistsAcrossReload() throws {
+        let rep = try XCTUnwrap(NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 3, pixelsHigh: 2, bitsPerSample: 8,
+            samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 32))
+        let png = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+
+        let writer = ClipboardRepository()
+        defer { writer.clearAllFiles() }
+        let url = try XCTUnwrap(writer.saveImage(pngData: png))
+        let id = UUID()
+        writer.saveToDisk(items: [ClipboardItem(
+            id: id, date: Date(),
+            content: .image(ImageContent(source: .file(url), cachedText: nil, cachedId: nil, cachedBarcode: nil))
+        )])
+
+        XCTAssertNotEqual(try Data(contentsOf: url), png, "image must be encrypted on disk")
+
+        let reader = ClipboardRepository()
+        let loaded = reader.loadFromDisk()
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded[0].id, id)
+        guard case .image(let img) = loaded[0].content, case .file(let loadedURL) = img.source else {
+            return XCTFail("expected file-backed image")
+        }
+        let data = try XCTUnwrap(reader.readImageData(at: loadedURL))
+        XCTAssertEqual(data, png)
+        let decoded = try XCTUnwrap(NSBitmapImageRep(data: data))
+        XCTAssertEqual(decoded.pixelsWide, 3)
+        XCTAssertEqual(decoded.pixelsHigh, 2)
+    }
+
     func test_fileClipRoundTrips() throws {
         let url1 = URL(fileURLWithPath: "/tmp/maclip-test-1.txt")
         let url2 = URL(fileURLWithPath: "/tmp/maclip-test-2.txt")

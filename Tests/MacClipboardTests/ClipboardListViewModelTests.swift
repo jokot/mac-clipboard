@@ -609,6 +609,66 @@ final class ClipboardListViewModelTests: XCTestCase {
             if case .image = vm.items[0].content {} else { XCTFail("should still be image") }
         }
     }
+
+    // QA #12: Save keeps a concealed clip concealed, with the same expiry.
+    @MainActor
+    func test_saveEditedImageKeepsConcealedFlags() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        let expiry = Date(timeIntervalSinceNow: 300)
+        monitor.emit(ClipboardItem(
+            date: Date(),
+            content: .image(ImageContent(source: .memory(NSImage(size: NSSize(width: 4, height: 4))),
+                                         cachedText: nil, cachedId: nil, cachedBarcode: nil)),
+            isConcealed: true,
+            concealedExpiresAt: expiry
+        ))
+
+        await MainActor.run {
+            vm.saveEditedImage(replacing: vm.items[0], pngData: Data([0x89, 0x50]))
+            XCTAssertTrue(vm.items[0].isConcealed)
+            XCTAssertEqual(vm.items[0].concealedExpiresAt, expiry)
+        }
+    }
+
+    // Save in place points the clip at a new file and deletes the old one.
+    @MainActor
+    func test_saveEditedImageReplacesAndDeletesOldFile() async {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+        monitor.emit(ClipboardItem(
+            date: Date(),
+            content: .image(ImageContent(source: .memory(NSImage(size: NSSize(width: 4, height: 4))),
+                                         cachedText: nil, cachedId: nil, cachedBarcode: nil))
+        ))
+
+        await MainActor.run {
+            guard case .image(let before) = vm.items[0].content,
+                  case .file(let oldURL) = before.source else {
+                return XCTFail("capture should store the image as a file")
+            }
+            let edited = Data([0x89, 0x50, 0x4E, 0x47, 0x01])
+            vm.saveEditedImage(replacing: vm.items[0], pngData: edited)
+
+            guard case .image(let after) = vm.items[0].content,
+                  case .file(let newURL) = after.source else {
+                return XCTFail("edited clip should be file-backed")
+            }
+            XCTAssertNotEqual(newURL, oldURL)
+            XCTAssertEqual(repo.readImageData(at: newURL), edited)
+            XCTAssertEqual(repo.deletedImageURLs, [oldURL])
+            XCTAssertEqual(repo.savedItems.first?.id, vm.items[0].id, "edit must be persisted")
+        }
+    }
 }
 
 // MARK: - Mocks
