@@ -24,9 +24,15 @@ command -v create-dmg >/dev/null || brew install create-dmg
 mkdir -p dist
 rm -f "$dmg" "$dmg.sha256"
 
+# The background shows the install and "Open Anyway" steps. Its layout
+# matches these positions. Make it again with:
+#   swift scripts/release/make-dmg-background.swift <dir>
+#   tiffutil -cathidpicheck <dir>/dmg-background.png <dir>/dmg-background@2x.png \
+#     -out assets/dmg-background.tiff
 layout=(--volname "MaClip" --volicon "App/AppIcon.icns"
-    --window-pos 200 120 --window-size 540 360 --icon-size 96 --text-size 12
-    --icon "MaClip.app" 140 150 --app-drop-link 400 150 --format UDZO)
+    --background "assets/dmg-background.tiff"
+    --window-pos 200 120 --window-size 600 500 --icon-size 96 --text-size 12
+    --icon "MaClip.app" 150 140 --app-drop-link 450 140 --format UDZO)
 
 # The Finder layout step uses AppleScript. On a CI runner it can fail or time
 # out, so try once more without it (--skip-jenkins) before giving up.

@@ -36,7 +36,9 @@ test_builds_dmg() {
     (cd dist && shasum -a 256 -c "MacClip-$VERSION.dmg.sha256") | grep -q ': OK$' || { echo "  checksum"; return 1; }
     mnt="$(mktemp -d)"
     hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "dist/MacClip-$VERSION.dmg" >/dev/null || return 1
-    if [ -d "$mnt/MaClip.app" ] && [ -L "$mnt/Applications" ] && codesign -v "$mnt/MaClip.app" 2>/dev/null; then
+    # The window background shows the install and "Open Anyway" steps.
+    if [ -d "$mnt/MaClip.app" ] && [ -L "$mnt/Applications" ] && codesign -v "$mnt/MaClip.app" 2>/dev/null &&
+        [ -s "$mnt/.background/dmg-background.tiff" ]; then
         ok=1
     else
         echo "  contents: $(ls "$mnt" | tr '\n' ' ')"
