@@ -114,5 +114,36 @@ Plan: `docs/superpowers/plans/2026-10-22-release-workflow.md`.
 - [x] `scripts/release/sync-version.sh` (5 tests) and `scripts/release/build-dmg.sh` (2 tests).
 - [x] `.github/workflows/release.yml`. The PR build passed on GitHub (run 39695871291). The artifact checksum is OK.
 - [x] README "What's new" sections moved to `CHANGELOG.md`. Release steps are in `CONTRIBUTING.md`.
-- [ ] Repository setting "Allow GitHub Actions to create and approve pull requests" (needs the owner's OK).
-- [ ] After PR #13 merges: check that the release PR `chore(main): release 1.11.0` opens, then merge it and check the release page.
+- [x] Repository setting "Allow GitHub Actions to create and approve pull requests" is on (set by the owner on 2026-10-22).
+- [ ] After PR #13 merges: check that the release PR `chore(main): release 1.11.0` opens.
+- [ ] Before you merge the release PR, replace the 1.11.0 notes. The notes made from commits list the reverted resizable overlay as a feature, list a test-only fix, and leave out the new history limit. Do both edits:
+  - Replace the 1.11.0 part of the release PR body (between the `---` lines) with the text below. release-please makes the GitHub release notes from the PR body.
+  - Replace the 1.11.0 section of `CHANGELOG.md` on the branch `release-please--branches--main` with the same text, then push.
+  - Do not merge another PR to `main` between these edits and the release merge. A new merge makes release-please write the notes again.
+- [ ] Merge the release PR. Check the release page: tag `v1.11.0`, the notes below, `MacClip-1.11.0.dmg` and `MacClip-1.11.0.dmg.sha256`.
+
+### Release notes for 1.11.0 (paste into the release PR)
+
+```markdown
+## [1.11.0](https://github.com/jokot/mac-clipboard/compare/v1.10.1...v1.11.0)
+
+### Features
+
+* **editor:** edit image clips. Right-click an image clip and choose **Edit…**. The editor opens in its own window.
+* **editor:** crop, rotate 90° left or right, arrow, rectangle, oval, single-line text, freehand pen, and redact (opaque black box).
+* **editor:** 8 color presets (toolbar or keys 1–8) and a stroke width from 1 to 12 pt.
+* **editor:** undo with ⌘Z and redo with ⌘⇧Z, up to 20 steps. Esc during a drag cancels only that shape.
+* **editor:** **Save** replaces the image and keeps the clip id and date. **Save as new** adds a new clip at the top. Both keep the concealed setting.
+* **editor:** the overlay hides while the editor is open. On close, focus goes back to the previous app.
+* **settings:** the default history limit is now 50 clips. A limit that you set before does not change.
+
+### Bug Fixes
+
+* **editor:** a failed save shows "Could not save image" and keeps the editor open with your edits.
+* **row:** the clip preview updates immediately after an edit.
+
+### Known limits
+
+* Images larger than 4096 px on one side cannot be edited in this version.
+* The app has an ad-hoc signature only. Gatekeeper can block it on first open.
+```

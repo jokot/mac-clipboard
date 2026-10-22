@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # release-please sets the "autorelease: pending/tagged" labels on its PR.
+      issues: write
       pull-requests: write
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
