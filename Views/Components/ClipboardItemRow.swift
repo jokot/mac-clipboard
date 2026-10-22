@@ -16,6 +16,7 @@ struct ClipboardItemRow: View {
     var onRevealInFinder: ((ClipboardItem) -> Void)? = nil
     var onCopyPath: ((ClipboardItem) -> Void)? = nil
     var onEdit: ((ClipboardItem, ClipboardItemContent) -> Void)? = nil
+    var onEditImage: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
     @State private var isEditing: Bool = false
@@ -64,6 +65,10 @@ struct ClipboardItemRow: View {
                         }
                         if canEdit(item.content) {
                             Button("Edit…") { enterEditMode() }
+                            Divider()
+                        }
+                        if case .image = item.content, let onEditImage {
+                            Button("Edit…") { onEditImage(item) }
                             Divider()
                         }
                         // Common action: exclude source app
@@ -280,6 +285,10 @@ private struct ImageItemContent: View {
     var loadImageData: ((URL) -> Data?)? = nil
 
     @State private var loadedImage: NSImage? = nil
+    // ponytail: rows are keyed by index and keep @State across content changes,
+    // so remember which file the cache came from. An edit (new .enc URL) or a
+    // shifted row then reloads instead of showing the previous image.
+    @State private var loadedURL: URL? = nil
     @State private var revealedUntil: Date? = nil
 
     private var isCurrentlyRevealed: Bool {
@@ -374,6 +383,7 @@ private struct ImageItemContent: View {
                         if case .file(let url) = imgContent.source {
                             if let data = loadImageData?(url), let img = NSImage(data: data) {
                                 self.loadedImage = img
+                                self.loadedURL = url
                             }
                         }
                     }
@@ -383,10 +393,12 @@ private struct ImageItemContent: View {
     
     // Use memory image if available, otherwise use loaded image
     private var effectiveImage: NSImage? {
-        if case .memory(let img) = imgContent.source {
+        switch imgContent.source {
+        case .memory(let img):
             return img
+        case .file(let url):
+            return loadedURL == url ? loadedImage : nil
         }
-        return loadedImage
     }
 }
 

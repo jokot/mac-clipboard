@@ -7,7 +7,9 @@ protocol ClipboardRepositoryProtocol {
     func saveToDiskAsync(items: [ClipboardItem])
     func clearAllFiles()
     func saveImage(_ image: NSImage) -> URL?
+    func saveImage(pngData: Data) -> URL?
     func readImageData(at encURL: URL) -> Data?
+    func deleteImage(at encURL: URL)
 }
 
 final class ClipboardRepository: ClipboardRepositoryProtocol {
@@ -128,10 +130,29 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         }
     }
 
+    // Overload: persist an already-encoded PNG (e.g. from ImageCompositor after edit).
+    func saveImage(pngData: Data) -> URL? {
+        guard let imagesDir = imagesDirectory(),
+              let ciphertext = try? HistoryCrypto.seal(pngData) else { return nil }
+        let filename = UUID().uuidString + ".enc"
+        let fileURL = imagesDir.appendingPathComponent(filename)
+        do {
+            try ciphertext.write(to: fileURL, options: .atomic)
+            return fileURL
+        } catch {
+            NSLog("[MaClip] saveImage(pngData:) failed: \(error)")
+            return nil
+        }
+    }
+
     func readImageData(at encURL: URL) -> Data? {
         guard let ciphertext = try? Data(contentsOf: encURL),
               let plaintext = try? HistoryCrypto.open(ciphertext) else { return nil }
         return plaintext
+    }
+
+    func deleteImage(at encURL: URL) {
+        try? FileManager.default.removeItem(at: encURL)
     }
 
     // MARK: - Migration
@@ -327,8 +348,7 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
 private extension ClipboardRepository {
     func appSupportDirectory() -> URL? {
         let fm = FileManager.default
-        if let url = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            let appDir = url.appendingPathComponent("MaClip", isDirectory: true)
+        if let appDir = AppEnvironment.appSupportDirectory {
             if !fm.fileExists(atPath: appDir.path) {
                 try? fm.createDirectory(at: appDir, withIntermediateDirectories: true)
             }

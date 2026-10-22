@@ -14,44 +14,44 @@ final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
     @Published var hotkeyKeyCode: UInt32 {
-        didSet { UserDefaults.standard.set(hotkeyKeyCode, forKey: Keys.hotkeyKeyCode) }
+        didSet { AppEnvironment.defaults.set(hotkeyKeyCode, forKey: Keys.hotkeyKeyCode) }
     }
     @Published var hotkeyModifiers: UInt32 {
-        didSet { UserDefaults.standard.set(hotkeyModifiers, forKey: Keys.hotkeyModifiers) }
+        didSet { AppEnvironment.defaults.set(hotkeyModifiers, forKey: Keys.hotkeyModifiers) }
     }
     @Published var theme: AppTheme {
-        didSet { UserDefaults.standard.set(theme.rawValue, forKey: Keys.theme) }
+        didSet { AppEnvironment.defaults.set(theme.rawValue, forKey: Keys.theme) }
     }
     @Published var maxItems: Int {
-        didSet { UserDefaults.standard.set(maxItems, forKey: Keys.maxItems) }
+        didSet { AppEnvironment.defaults.set(maxItems, forKey: Keys.maxItems) }
     }
     @Published var autoCleanEnabled: Bool {
-        didSet { UserDefaults.standard.set(autoCleanEnabled, forKey: Keys.autoCleanEnabled) }
+        didSet { AppEnvironment.defaults.set(autoCleanEnabled, forKey: Keys.autoCleanEnabled) }
     }
     @Published var excludedBundleIDs: [String] {
         didSet {
             if let data = try? JSONEncoder().encode(excludedBundleIDs) {
-                UserDefaults.standard.set(data, forKey: Keys.excludedBundleIDs)
+                AppEnvironment.defaults.set(data, forKey: Keys.excludedBundleIDs)
             }
         }
     }
     @Published var skipConcealedItems: Bool {
-        didSet { UserDefaults.standard.set(skipConcealedItems, forKey: Keys.skipConcealedItems) }
+        didSet { AppEnvironment.defaults.set(skipConcealedItems, forKey: Keys.skipConcealedItems) }
     }
     @Published var concealedClearTimeout: TimeInterval {
-        didSet { UserDefaults.standard.set(concealedClearTimeout, forKey: Keys.concealedClearTimeout) }
+        didSet { AppEnvironment.defaults.set(concealedClearTimeout, forKey: Keys.concealedClearTimeout) }
     }
     @Published var pasteOnClick: Bool {
-        didSet { UserDefaults.standard.set(pasteOnClick, forKey: Keys.pasteOnClick) }
+        didSet { AppEnvironment.defaults.set(pasteOnClick, forKey: Keys.pasteOnClick) }
     }
     @Published var moveTopOnClick: Bool {
-        didSet { UserDefaults.standard.set(moveTopOnClick, forKey: Keys.moveTopOnClick) }
+        didSet { AppEnvironment.defaults.set(moveTopOnClick, forKey: Keys.moveTopOnClick) }
     }
     @Published var autoDismissOverlayEnabled: Bool {
-        didSet { UserDefaults.standard.set(autoDismissOverlayEnabled, forKey: Keys.autoDismissOverlayEnabled) }
+        didSet { AppEnvironment.defaults.set(autoDismissOverlayEnabled, forKey: Keys.autoDismissOverlayEnabled) }
     }
     @Published var autoDismissOverlayTimeout: TimeInterval {
-        didSet { UserDefaults.standard.set(autoDismissOverlayTimeout, forKey: Keys.autoDismissOverlayTimeout) }
+        didSet { AppEnvironment.defaults.set(autoDismissOverlayTimeout, forKey: Keys.autoDismissOverlayTimeout) }
     }
 
     private struct Keys {
@@ -79,13 +79,17 @@ final class AppSettings: ObservableObject {
         "com.jokot.MacClipboard",
     ]
 
+    static let defaultMaxItems = 50
+
+    /// `stored` is 0 when the key is absent (`UserDefaults.integer`).
+    static func initialMaxItems(stored: Int) -> Int {
+        stored > 0 ? stored : defaultMaxItems
+    }
+
     static func makeInitialExcludedBundleIDs() -> [String] {
-        let defaults = UserDefaults.standard
+        let defaults = AppEnvironment.defaults
         let fm = FileManager.default
-        let sentinelURL = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first?
-            .appendingPathComponent("MaClip", isDirectory: true)
-            .appendingPathComponent(".seeded")
+        let sentinelURL = AppEnvironment.appSupportDirectory?.appendingPathComponent(".seeded")
 
         let sentinelExists = sentinelURL.map { fm.fileExists(atPath: $0.path) } ?? false
 
@@ -114,7 +118,7 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
-        let defaults = UserDefaults.standard
+        let defaults = AppEnvironment.defaults
         let defaultKeyCode: UInt32 = UInt32(kVK_ANSI_V)
         let defaultModifiers: UInt32 = UInt32(controlKey | cmdKey)
 
@@ -123,8 +127,7 @@ final class AppSettings: ObservableObject {
         var initialModifiers = UInt32(defaults.integer(forKey: Keys.hotkeyModifiers))
         if initialModifiers == 0 { initialModifiers = defaultModifiers }
         let initialTheme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? AppTheme.system.rawValue) ?? .system
-        let storedMax = defaults.integer(forKey: Keys.maxItems)
-        let initialMax = storedMax > 0 ? storedMax : 100
+        let initialMax = AppSettings.initialMaxItems(stored: defaults.integer(forKey: Keys.maxItems))
         let initialAutoClean = defaults.object(forKey: Keys.autoCleanEnabled) as? Bool ?? false
         let initialExcluded = AppSettings.makeInitialExcludedBundleIDs()
         let initialSkipConcealed = defaults.object(forKey: Keys.skipConcealedItems) as? Bool ?? false
