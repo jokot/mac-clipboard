@@ -116,13 +116,12 @@ Plan: `docs/superpowers/plans/2026-10-22-release-workflow.md`.
 - [x] README "What's new" sections moved to `CHANGELOG.md`. Release steps are in `CONTRIBUTING.md`.
 - [x] Repository setting "Allow GitHub Actions to create and approve pull requests" is on (set by the owner on 2026-10-22).
 - [ ] After PR #13 merges: check that the release PR `chore(main): release 1.11.0` opens.
-- [ ] Before you merge the release PR, replace the 1.11.0 notes. The notes made from commits list the reverted resizable overlay as a feature, list a test-only fix, and leave out the new history limit. Do both edits:
-  - Replace the 1.11.0 part of the release PR body (between the `---` lines) with the text below. release-please makes the GitHub release notes from the PR body.
-  - Replace the 1.11.0 section of `CHANGELOG.md` on the branch `release-please--branches--main` with the same text, then push.
-  - Do not merge another PR to `main` between these edits and the release merge. A new merge makes release-please write the notes again.
+- [ ] Before you merge the release PR, replace the 1.11.0 section of `CHANGELOG.md` on the branch `release-please--branches--main` with the text below, then push. The notes made from commits list the reverted resizable overlay as a feature, list a test-only fix, and leave out the new history limit. The release job copies this section into the GitHub release.
+  - Do not merge another PR to `main` between this edit and the release merge. A new merge makes release-please write the section again.
 - [ ] Merge the release PR. Check the release page: tag `v1.11.0`, the notes below, `MacClip-1.11.0.dmg` and `MacClip-1.11.0.dmg.sha256`.
+- [x] A release is public only after the DMG is built and attached (`publish.sh`, 8 tests). A failed step leaves at most a hidden draft.
 
-### Release notes for 1.11.0 (paste into the release PR)
+### Release notes for 1.11.0 (paste into CHANGELOG.md on the release PR)
 
 ```markdown
 ## [1.11.0](https://github.com/jokot/mac-clipboard/compare/v1.10.1...v1.11.0)

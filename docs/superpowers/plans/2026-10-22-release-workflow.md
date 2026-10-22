@@ -19,7 +19,8 @@
 5. The next version comes from conventional commit types: `feat` → minor, `fix` → patch, `!` or `BREAKING CHANGE` → major. The open release PR collects all merges until it merges. *(Claude's call. User did not object.)*
 6. The build stays unsigned (ad-hoc signature), as today. No Apple Developer secrets. *(Claude's call.)*
 7. The first release after PR #13 merges is 1.11.0, not 1.12.0. *(Claude's call.)*
-8. The old "What's new" text moves into `CHANGELOG.md` as history for 1.10.0 and 1.10.1. The hand-written 1.11.0 section is deleted. release-please writes 1.11.0 from the commits. *(Claude's call.)*
+8. *(Amended 2026-10-22, user.)* A release must not be public until every step works. release-please only manages the release PR (`skip-github-release: true`). The `release` job builds the DMG, then `scripts/release/publish.sh` creates a hidden draft, attaches both files, and publishes it. The tag is created only when the draft is published. Release notes come from the version section of `CHANGELOG.md`.
+9. The old "What's new" text moves into `CHANGELOG.md` as history for 1.10.0 and 1.10.1. The hand-written 1.11.0 section is deleted. release-please writes 1.11.0 from the commits. *(Claude's call.)*
 
 ## Global Constraints
 

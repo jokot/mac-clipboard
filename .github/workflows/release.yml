@@ -2,9 +2,16 @@
 # 1. A merge to main runs release-please. It opens or updates the release PR
 #    ("chore(main): release x.y.z") with CHANGELOG.md and the new version.
 #    sync-build then sets the build number and the Xcode project on that PR.
-# 2. A merge of the release PR makes release-please create the tag and the
-#    GitHub release. release-build attaches MacClip-<version>.dmg and .sha256.
+# 2. A merge of the release PR leaves it labeled "autorelease: pending".
+#    find-release sees that PR. release builds the DMG from the merge commit,
+#    then publish.sh makes a hidden draft, attaches both files, and publishes
+#    it. Only the publish creates the tag. If any step fails, nothing is
+#    public, and a re-run of the failed job continues.
 # PRs to main run pr-build, which uploads the DMG as a workflow artifact.
+#
+# Push runs share one concurrency group, so they run one at a time. GitHub
+# keeps one waiting run per group: a third merge cancels the waiting run.
+# That is harmless, because each run reads the current state of main.
 name: release
 
 on:
@@ -21,18 +28,78 @@ permissions:
   contents: read
 
 jobs:
-  release-please:
+  find-release:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      pr: ${{ steps.find.outputs.pr }}
+      sha: ${{ steps.find.outputs.sha }}
+      version: ${{ steps.find.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: find
+        name: Find a merged release PR that waits for its release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr_json="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --base main \
+            --label "autorelease: pending" --json number,mergeCommit \
+            --jq 'sort_by(.number) | first // empty')"
+          if [ -z "$pr_json" ]; then
+            echo "No merged release PR waits for a release."
+            exit 0
+          fi
+          pr="$(jq -r '.number' <<<"$pr_json")"
+          sha="$(jq -r '.mergeCommit.oid' <<<"$pr_json")"
+          version="$(git show "$sha:.release-please-manifest.json" | jq -r '."."')"
+          echo "Release PR #$pr, commit $sha, version $version"
+          {
+            echo "pr=$pr"
+            echo "sha=$sha"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: find-release
+    if: needs.find-release.outputs.pr != ''
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
       contents: write
-      # release-please sets the "autorelease: pending/tagged" labels on its PR.
+      issues: write
+      pull-requests: write
+    env:
+      PR: ${{ needs.find-release.outputs.pr }}
+      SHA: ${{ needs.find-release.outputs.sha }}
+      VERSION: ${{ needs.find-release.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+      - name: Build DMG
+        run: scripts/release/build-dmg.sh "$VERSION"
+      - name: Publish the release
+        run: scripts/release/publish.sh "$VERSION" "$SHA" "$PR"
+
+  release-please:
+    needs: [find-release, release]
+    # Runs after a release, or when there was nothing to release. After a
+    # failed release, release-please would only log "untagged, merged release
+    # PRs outstanding", so the job is skipped.
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.release.result != 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # release-please sets the "autorelease: pending" label on its PR.
       issues: write
       pull-requests: write
     outputs:
-      release_created: ${{ steps.rp.outputs.release_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
-      version: ${{ steps.rp.outputs.version }}
       pr: ${{ steps.rp.outputs.pr }}
     steps:
       - id: rp
@@ -40,6 +107,8 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          # The release job creates tags and releases, after the DMG is built.
+          skip-github-release: true
 
   sync-build:
     needs: release-please
@@ -69,30 +138,10 @@ jobs:
           git commit -am "chore(release): set build number"
           git push origin "HEAD:$BRANCH"
 
-  release-build:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
-    runs-on: macos-15
-    permissions:
-      contents: write
-    env:
-      TAG: ${{ needs.release-please.outputs.tag_name }}
-      VERSION: ${{ needs.release-please.outputs.version }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TAG }}
-      - name: Build DMG
-        run: scripts/release/build-dmg.sh "$VERSION"
-      - name: Attach DMG to the release
-        run: |
-          gh release upload "$TAG" \
-            "dist/MacClip-$VERSION.dmg" "dist/MacClip-$VERSION.dmg.sha256" --clobber
-
   pr-build:
     if: github.event_name == 'pull_request'
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Read version
