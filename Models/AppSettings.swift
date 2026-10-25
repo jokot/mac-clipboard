@@ -59,6 +59,25 @@ final class AppSettings: ObservableObject {
     @Published var encryptHistory: Bool {
         didSet { AppEnvironment.defaults.set(encryptHistory, forKey: Keys.encryptHistory) }
     }
+    // Shortcuts that paste the text or the QR code from the newest image clip.
+    @Published var extractTextHotkeyEnabled: Bool {
+        didSet { AppEnvironment.defaults.set(extractTextHotkeyEnabled, forKey: Keys.extractTextEnabled) }
+    }
+    @Published var extractTextKeyCode: UInt32 {
+        didSet { AppEnvironment.defaults.set(extractTextKeyCode, forKey: Keys.extractTextKeyCode) }
+    }
+    @Published var extractTextModifiers: UInt32 {
+        didSet { AppEnvironment.defaults.set(extractTextModifiers, forKey: Keys.extractTextModifiers) }
+    }
+    @Published var extractCodeHotkeyEnabled: Bool {
+        didSet { AppEnvironment.defaults.set(extractCodeHotkeyEnabled, forKey: Keys.extractCodeEnabled) }
+    }
+    @Published var extractCodeKeyCode: UInt32 {
+        didSet { AppEnvironment.defaults.set(extractCodeKeyCode, forKey: Keys.extractCodeKeyCode) }
+    }
+    @Published var extractCodeModifiers: UInt32 {
+        didSet { AppEnvironment.defaults.set(extractCodeModifiers, forKey: Keys.extractCodeModifiers) }
+    }
     @Published var encryptedHistoryNoticeDismissed: Bool {
         didSet { AppEnvironment.defaults.set(encryptedHistoryNoticeDismissed, forKey: Keys.encryptedHistoryNoticeDismissed) }
     }
@@ -78,6 +97,12 @@ final class AppSettings: ObservableObject {
         static let autoDismissOverlayTimeout = "settings.autoDismissOverlay.timeout"
         static let encryptHistory = "settings.encryptHistory"
         static let encryptedHistoryNoticeDismissed = "settings.encryptedHistoryNoticeDismissed"
+        static let extractTextEnabled = "settings.extractTextHotkey.enabled"
+        static let extractTextKeyCode = "settings.extractTextHotkey.keycode"
+        static let extractTextModifiers = "settings.extractTextHotkey.modifiers"
+        static let extractCodeEnabled = "settings.extractCodeHotkey.enabled"
+        static let extractCodeKeyCode = "settings.extractCodeHotkey.keycode"
+        static let extractCodeModifiers = "settings.extractCodeHotkey.modifiers"
     }
 
     static let defaultSeedExclusions: [String] = [
@@ -91,6 +116,11 @@ final class AppSettings: ObservableObject {
     ]
 
     static let defaultMaxItems = 50
+
+    /// Control-Option-Command, the overlay modifiers plus Option.
+    static let defaultExtractModifiers = UInt32(controlKey | optionKey | cmdKey)
+    static let defaultExtractTextKeyCode = UInt32(kVK_ANSI_T)
+    static let defaultExtractCodeKeyCode = UInt32(kVK_ANSI_B)
 
     /// `stored` is 0 when the key is absent (`UserDefaults.integer`).
     static func initialMaxItems(stored: Int) -> Int {
@@ -149,6 +179,9 @@ final class AppSettings: ObservableObject {
         let initialAutoDismissTimeout = (defaults.object(forKey: Keys.autoDismissOverlayTimeout) as? Double) ?? 20
         let initialEncryptHistory = defaults.object(forKey: Keys.encryptHistory) as? Bool ?? false
         let initialNoticeDismissed = defaults.object(forKey: Keys.encryptedHistoryNoticeDismissed) as? Bool ?? false
+        func storedUInt32(_ key: String, default value: UInt32) -> UInt32 {
+            (defaults.object(forKey: key) as? NSNumber)?.uint32Value ?? value
+        }
 
         self.hotkeyKeyCode = initialKeyCode
         self.hotkeyModifiers = initialModifiers
@@ -164,6 +197,12 @@ final class AppSettings: ObservableObject {
         self.autoDismissOverlayTimeout = initialAutoDismissTimeout
         self.encryptHistory = initialEncryptHistory
         self.encryptedHistoryNoticeDismissed = initialNoticeDismissed
+        self.extractTextHotkeyEnabled = defaults.object(forKey: Keys.extractTextEnabled) as? Bool ?? true
+        self.extractTextKeyCode = storedUInt32(Keys.extractTextKeyCode, default: Self.defaultExtractTextKeyCode)
+        self.extractTextModifiers = storedUInt32(Keys.extractTextModifiers, default: Self.defaultExtractModifiers)
+        self.extractCodeHotkeyEnabled = defaults.object(forKey: Keys.extractCodeEnabled) as? Bool ?? true
+        self.extractCodeKeyCode = storedUInt32(Keys.extractCodeKeyCode, default: Self.defaultExtractCodeKeyCode)
+        self.extractCodeModifiers = storedUInt32(Keys.extractCodeModifiers, default: Self.defaultExtractModifiers)
     }
 }
 

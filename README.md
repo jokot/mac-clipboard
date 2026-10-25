@@ -35,6 +35,7 @@ https://github.com/user-attachments/assets/55cb6c86-be5d-4175-98f1-ddbddc5ded3d
 - Search the history. Filter with `from:Safari` or `tag:code`.
 - Edit text, link, and file clips. Edit image clips: crop, rotate, arrow, shapes, text, pen, and redact.
 - Extract text (OCR) and barcodes or QR codes from images.
+- Paste the text or the QR code from your last screenshot in any app: <kbd>⌃</kbd> <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>T</kbd> for text, <kbd>⌃</kbd> <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>B</kbd> for a QR code or barcode. You can change the shortcuts in Settings → General.
 - Skip apps that you choose, such as password managers. Hide and auto-clear concealed items.
 - Optional: encrypt the history on disk (Settings → Storage). This feature uses a key in your login Keychain.
 

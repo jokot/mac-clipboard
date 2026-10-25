@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlay: OverlayWindowController!
     private var statusItem: NSStatusItem?
     private let settings = AppSettings.shared
+    private var extractHotkeys: ExtractHotkeys?
 
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -65,6 +66,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         HotKeyService.shared.register(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
+
+        let extractor = ExtractPasteController(
+            viewModel: viewModel, ocr: OCRService(), toast: ExtractToastWindow(),
+            accessibility: AccessibilityAccess.shared,
+            pasteboard: SystemPasteboardSwapper(viewModel: viewModel),
+            sendPaste: { await ExtractPaste.sendPasteAfterKeysUp() })
+        extractHotkeys = ExtractHotkeys(controller: extractor)
 
         setupStatusItem()
         

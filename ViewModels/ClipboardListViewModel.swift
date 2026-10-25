@@ -406,6 +406,17 @@ final class ClipboardListViewModel: ObservableObject {
         repository.saveToDiskAsync(items: items)
     }
 
+    /// The newest image clip, for the extract shortcuts. Text clips can be newer.
+    var latestImageItem: ClipboardItem? {
+        items.first { if case .image = $0.content { return true } else { return false } }
+    }
+
+    /// Call after MaClip writes the pasteboard itself, so the monitor does not save
+    /// that write as a new clip.
+    func ignorePasteboardChange() {
+        monitor.ignoreCurrentChangeCount()
+    }
+
     // Helper: update cached extraction values on an image item
     func updateImageItemCache(_ item: ClipboardItem, cachedText: String?, cachedId: String?, cachedBarcode: String?) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
