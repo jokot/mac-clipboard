@@ -2,13 +2,19 @@
 # 1. A merge to main runs release-please. It opens or updates the release PR
 #    ("chore(main): release x.y.z") with CHANGELOG.md and the new version.
 #    sync-build then sets the build number and the Xcode project on the open
-#    release PR.
+#    release PR. release-pr-build builds the DMG from that commit and shows
+#    the result as the "release-pr-build" check on the release PR.
 # 2. A merge of the release PR leaves it labeled "autorelease: pending".
 #    find-release sees that PR. release builds the DMG from the merge commit,
 #    then publish.sh makes a hidden draft, attaches both files, and publishes
 #    it. Only the publish creates the tag. If any step fails, nothing is
 #    public, and a re-run of the failed job continues.
 # PRs to main run pr-build, which uploads the DMG as a workflow artifact.
+# The release PR changes only the files in paths-ignore, so it does not run
+# pr-build. Each change to the release PR is two pushes (release-please, then
+# sync-build). Each push would start a run, and GitHub asks for an approval
+# of each run that github-actions[bot] starts. The first run would also fail,
+# because the Xcode project still has the old version.
 #
 # Push runs share one concurrency group, so they run one at a time. GitHub
 # keeps one waiting run per group: a third merge cancels the waiting run.
@@ -20,6 +26,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # The release PR changes only these files. A PR that changes only these
+    # files does not run pr-build.
+    paths-ignore:
+      - CHANGELOG.md
+      - .release-please-manifest.json
+      - project.yml
+      - MacClipboard.xcodeproj/project.pbxproj
 
 concurrency:
   group: release-${{ github.ref }}
@@ -118,6 +131,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+    outputs:
+      sha: ${{ steps.sync.outputs.sha }}
     steps:
       # release-please sets its "pr" output only when it creates or changes the
       # release PR. Find the open release PR here, so a run also repairs a PR
@@ -141,7 +156,8 @@ jobs:
         with:
           ref: ${{ steps.find.outputs.branch }}
           fetch-depth: 0
-      - name: Set build number and sync the Xcode project
+      - id: sync
+        name: Set build number and sync the Xcode project
         if: steps.find.outputs.branch != ''
         env:
           BRANCH: ${{ steps.find.outputs.branch }}
@@ -152,12 +168,61 @@ jobs:
           scripts/release/sync-version.sh "$last_tag"
           if git diff --quiet; then
             echo "Build number is already correct."
-            exit 0
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore(release): set build number"
+            git push origin "HEAD:$BRANCH"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore(release): set build number"
-          git push origin "HEAD:$BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  release-pr-build:
+    needs: sync-build
+    if: ${{ !cancelled() && needs.sync-build.outputs.sha != '' }}
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      SHA: ${{ needs.sync-build.outputs.sha }}
+      GH_TOKEN: ${{ github.token }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+      - name: Show the check as pending on the release PR
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending \
+            -f context=release-pr-build -f description="Building the DMG" -f target_url="$RUN_URL"
+      - name: Read version
+        id: version
+        run: |
+          v="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION:[[:space:]]*([0-9][0-9.]*).*/\1/p' project.yml | head -1)"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Build DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/release/build-dmg.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MacClip-dmg-release-pr
+          path: dist/MacClip-*
+          retention-days: 7
+          if-no-files-found: error
+      - name: Show the result on the release PR
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          case "$JOB_STATUS" in
+            success) state=success; text="The DMG builds" ;;
+            failure) state=failure; text="The DMG build failed" ;;
+            *) state=error; text="The DMG build was cancelled" ;;
+          esac
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state="$state" \
+            -f context=release-pr-build -f description="$text" -f target_url="$RUN_URL"
 
   pr-build:
     if: github.event_name == 'pull_request'
