@@ -103,7 +103,7 @@ p { margin: 0; }
 .hero-icon { width: 96px; height: 96px; margin-left: -8px; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .hero-shot { display: flex; justify-content: center; }
-.hero-shot img { max-width: 470px; border-radius: 16px; box-shadow: 0 30px 80px rgba(40, 30, 120, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06); }
+.hero-shot img { width: 100%; max-width: 470px; border-radius: 16px; box-shadow: 0 30px 80px rgba(40, 30, 120, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06); }
 
 /* Key strip */
 .keys {
@@ -133,8 +133,6 @@ p { margin: 0; }
 .checks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
 .checks li { display: flex; gap: 14px; }
 .checks .tick { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; color: var(--accent); }
-.reverse-on-wide > :first-child { order: 2; }
-.reverse-on-wide > :last-child { order: 1; }
 
 /* Install */
 .install { background: var(--dark); color: #f5f5f7; }
@@ -157,10 +155,33 @@ p { margin: 0; }
 .footer-row .grow { flex: 1; }
 .footer-row a { color: var(--text); }
 
+/* Wide screens only: on a phone the text stays above its image. */
+@media (min-width: 721px) {
+  .reverse-on-wide > :first-child { order: 2; }
+  .reverse-on-wide > :last-child { order: 1; }
+}
+
 @media (max-width: 720px) {
-  .hero { padding-top: 48px; }
+  .hero { padding-top: 40px; gap: 40px; }
   .section { padding-top: 64px; padding-bottom: 64px; }
-  .keys { margin-bottom: 48px; }
+  .split { gap: 40px; }
+
+  /* Header: the name at the left, Download at the right. The section links stay in the page. */
+  .nav { flex-wrap: nowrap; justify-content: space-between; }
+  .nav-links { display: none; }
+
+  /* Buttons fill the width, one under the other. */
+  .hero-actions { flex-direction: column; }
+  .hero-actions .button, .install .button { justify-content: center; width: 100%; }
+
+  /* Keys: two even columns. */
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 48px; padding: 18px 20px; }
+
+  /* The command wraps, so all of it shows. */
+  .command code { white-space: normal; overflow-wrap: anywhere; }
+
+  /* Footer: one item on each line. */
+  .footer-row { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
