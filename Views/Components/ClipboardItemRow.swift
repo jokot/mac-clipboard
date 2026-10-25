@@ -21,6 +21,8 @@ struct ClipboardItemRow: View {
     var onEditImage: ((ClipboardItem) -> Void)? = nil
     /// Puts the clip on the pasteboard without pasting it.
     var onCopyOnly: ((ClipboardItem) -> Void)? = nil
+    /// Opens the preview panel for this clip.
+    var onPreview: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
     @State private var isEditing: Bool = false
@@ -65,6 +67,9 @@ struct ClipboardItemRow: View {
             isEditing = false
             editError = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: .overlayEditItem)) { note in
+            if (note.object as? UUID) == item.id, canEdit(item.content) { enterEditMode() }
+        }
     }
 
     // MARK: - Context menu
@@ -73,6 +78,7 @@ struct ClipboardItemRow: View {
     private var contextMenu: some View {
         Button("Paste") { onSelect(item) }
         Button("Copy Only") { onCopyOnly?(item) }
+        if let onPreview { Button("Preview") { onPreview(item) } }
         switch item.content {
         case .url(let url):
             Button("Open Link") { openLink(url) }
@@ -282,8 +288,11 @@ struct ClipboardItemRow: View {
 
     @ViewBuilder
     private var rowActions: some View {
+        if let onPreview {
+            RowActionButton(label: "Preview (space)", systemImage: "eye") { onPreview(item) }
+        }
         if item.isConcealed {
-            RowActionButton(label: "Show for 5 Seconds", systemImage: "eye", action: reveal)
+            RowActionButton(label: "Show for 5 Seconds", systemImage: "lock.open", action: reveal)
         }
         switch item.content {
         case .url(let url):
@@ -302,8 +311,11 @@ struct ClipboardItemRow: View {
     /// Image actions float on the image, so the image keeps its full width.
     private var imageActions: some View {
         HStack(spacing: 0) {
+            if let onPreview {
+                RowActionButton(label: "Preview (space)", systemImage: "eye", tint: .primary) { onPreview(item) }
+            }
             if item.isConcealed {
-                RowActionButton(label: "Show for 5 Seconds", systemImage: "eye", tint: .primary, action: reveal)
+                RowActionButton(label: "Show for 5 Seconds", systemImage: "lock.open", tint: .primary, action: reveal)
             }
             if let onExtractText {
                 RowActionButton(label: "Copy Text from Image", systemImage: "text.viewfinder", tint: .primary) { onExtractText(item) }
@@ -463,8 +475,7 @@ private struct EditorView: View {
                 Button("Cancel", action: onCancel)
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: onSave)
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent)
+                    .buttonStyle(AccentButtonStyle())
                     .keyboardShortcut(.defaultAction)
             }
         }

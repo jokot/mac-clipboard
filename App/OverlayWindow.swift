@@ -12,6 +12,8 @@ final class OverlayWindowController: NSObject {
     private var idleTimer: Timer?
     private var idleMonitor: Any?
     private let imageEditor = ImageEditorWindowController()
+    private var previewPanel: NSPanel?
+    private var previewedItemID: UUID?
     private var lastActivity: Date = Date()
 
     // Track the previously active app to restore focus and paste into it
@@ -85,6 +87,7 @@ final class OverlayWindowController: NSObject {
     }
 
     func hide() {
+        closePreview()
         stopIdleTracking()
         window?.orderOut(nil)
         if let escMonitor {
@@ -101,6 +104,7 @@ final class OverlayWindowController: NSObject {
     }
     
     func hideImmediatelyAndPaste() {
+        closePreview()
         stopIdleTracking()
         // Hide window first for instant visual response
         window?.orderOut(nil)
@@ -148,6 +152,14 @@ final class OverlayWindowController: NSObject {
             self?.openSettings()
         }, onEditImage: { [weak self] item, image in
             self?.openImageEditor(item: item, image: image)
+        }, onPreview: { [weak self] item in
+            self?.showPreview(item)
+        }, onTogglePreview: { [weak self] item in
+            guard let self else { return }
+            if self.previewedItemID != nil { self.closePreview() } else { self.showPreview(item) }
+        }, onSelectionChange: { [weak self] item in
+            guard let self, self.previewedItemID != nil else { return }
+            self.showPreview(item)
         })
         .background(ESCKeyCatcher())
 
@@ -277,6 +289,110 @@ private extension OverlayWindowController {
         window.invalidateShadow()
     }
     
+    // MARK: - Preview
+
+    /// Shows the clip in a panel beside the clip window. The panel is a child window, so it
+    /// moves and hides with the clip window, and the clip window keeps the keyboard.
+    func showPreview(_ item: ClipboardItem) {
+        guard let window else { return }
+        previewedItemID = item.id
+        let view = ClipPreviewView(
+            item: item,
+            loadImageData: { [weak self] url in self?.viewModel.imageData(at: url) },
+            onPaste: { [weak self] in self?.pasteFromPreview(item) },
+            onCopyOnly: { [weak self] in
+                self?.viewModel.setPasteboard(to: item)
+                self?.hideImmediatelyRefocusOnly()
+            },
+            onEdit: { [weak self] in self?.editFromPreview(item) },
+            onClose: { [weak self] in self?.closePreview() }
+        )
+        let panel = previewPanel ?? makePreviewPanel()
+        previewPanel = panel
+        if let effect = panel.contentView as? NSVisualEffectView,
+           let hosting = effect.subviews.first as? FirstMouseHostingView<ClipPreviewView> {
+            hosting.rootView = view
+        } else {
+            let effect = NSVisualEffectView()
+            effect.material = .contentBackground
+            effect.state = .active
+            effect.blendingMode = .withinWindow
+            let hosting = FirstMouseHostingView(rootView: view)
+            hosting.translatesAutoresizingMaskIntoConstraints = false
+            effect.addSubview(hosting)
+            NSLayoutConstraint.activate([
+                hosting.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
+                hosting.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
+                hosting.topAnchor.constraint(equalTo: effect.topAnchor),
+                hosting.bottomAnchor.constraint(equalTo: effect.bottomAnchor)
+            ])
+            panel.contentView = effect
+        }
+        panel.appearance = window.appearance
+        // Beside the clip window, on the right if it fits on the screen, else on the left.
+        let gap: CGFloat = 12
+        let size = NSSize(width: 408, height: window.frame.height)
+        let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
+        var x = window.frame.maxX + gap
+        if x + size.width > screen.maxX { x = window.frame.minX - gap - size.width }
+        panel.setFrame(NSRect(x: x, y: window.frame.minY, width: size.width, height: size.height), display: true)
+        if panel.parent == nil { window.addChildWindow(panel, ordered: .above) }
+        panel.orderFront(nil)
+    }
+
+    func closePreview() {
+        previewedItemID = nil
+        guard let panel = previewPanel else { return }
+        panel.parent?.removeChildWindow(panel)
+        panel.orderOut(nil)
+    }
+
+    private func makePreviewPanel() -> NSPanel {
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 408, height: 600),
+                            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
+                            backing: .buffered, defer: false)
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isMovable = false
+        panel.level = .floating
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        // Only a click in selectable text makes the panel key, so the clip window keeps the keys.
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.standardWindowButton(.closeButton)?.isHidden = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
+        return panel
+    }
+
+    private func pasteFromPreview(_ item: ClipboardItem) {
+        viewModel.setPasteboard(to: item)
+        if AppSettings.shared.moveTopOnClick { viewModel.promote(item) }
+        if AppSettings.shared.pasteOnClick && AccessibilityAccess.shared.isGrantedNow() {
+            autoPastePending = true
+            hideImmediatelyAndPaste()
+        } else {
+            autoPastePending = false
+            hideImmediatelyRefocusOnly()
+        }
+    }
+
+    private func editFromPreview(_ item: ClipboardItem) {
+        closePreview()
+        if case .image(let content) = item.content {
+            var image: NSImage?
+            switch content.source {
+            case .memory(let img): image = img
+            case .file(let url): image = viewModel.imageData(at: url).flatMap(NSImage.init(data:))
+            }
+            if let image { openImageEditor(item: item, image: image) }
+        } else {
+            NotificationCenter.default.post(name: .overlayEditItem, object: item.id)
+        }
+    }
+
     func reactivatePreviousAppAndPaste() {
         guard let app = previousActiveApp else { return }
         AppFocusService.shared.switchToAppAndPaste(app)
@@ -288,6 +404,7 @@ private extension OverlayWindowController {
     }
 
     func hideImmediatelyRefocusOnly() {
+        closePreview()
         stopIdleTracking()
         // Hide window first for instant visual response
         window?.orderOut(nil)

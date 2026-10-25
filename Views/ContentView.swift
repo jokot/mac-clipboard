@@ -9,6 +9,11 @@ struct ContentView: View {
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
     var onEditImage: (ClipboardItem, NSImage) -> Void = { _, _ in }
+    /// Opens the preview for a clip. `onTogglePreview` opens or closes it for the selected clip.
+    var onPreview: (ClipboardItem) -> Void = { _ in }
+    var onTogglePreview: (ClipboardItem) -> Void = { _ in }
+    /// The selected clip changed. An open preview then shows the new clip.
+    var onSelectionChange: (ClipboardItem) -> Void = { _ in }
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
     @FocusState private var isSearchFocused: Bool
@@ -25,11 +30,17 @@ struct ContentView: View {
     init(viewModel: ClipboardListViewModel,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
          onOpenSettings: @escaping () -> Void = {},
-         onEditImage: @escaping (ClipboardItem, NSImage) -> Void = { _, _ in }) {
+         onEditImage: @escaping (ClipboardItem, NSImage) -> Void = { _, _ in },
+         onPreview: @escaping (ClipboardItem) -> Void = { _ in },
+         onTogglePreview: @escaping (ClipboardItem) -> Void = { _ in },
+         onSelectionChange: @escaping (ClipboardItem) -> Void = { _ in }) {
         self.viewModel = viewModel
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
         self.onEditImage = onEditImage
+        self.onPreview = onPreview
+        self.onTogglePreview = onTogglePreview
+        self.onSelectionChange = onSelectionChange
     }
 
     var body: some View {
@@ -97,8 +108,7 @@ struct ContentView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
                     Button("Restore Clips\u{2026}") { onOpenSettings() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Theme.accent)
+                        .buttonStyle(AccentButtonStyle())
                     Button("Not Now") { settings.encryptedHistoryNoticeDismissed = true }
                 }
                 .padding(.top, 4)
@@ -210,6 +220,7 @@ struct ContentView: View {
             if !viewModel.filteredItems.isEmpty {
                 hint("\u{2191}\u{2193}", "Move")
                 hint("\u{21A9}", "Paste")
+                hint("space", "Preview")
             }
             hint("esc", "Close")
             Spacer()
@@ -388,6 +399,10 @@ struct ContentView: View {
                             onCopyOnly: { item in
                                 viewModel.setPasteboard(to: item)
                                 NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+                            },
+                            onPreview: { item in
+                                selectedIndex = index
+                                onPreview(item)
                             }
                         )
                         .id(item.id)
@@ -410,9 +425,15 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionUp)) { _ in moveSelection(-1) }
             .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionDown)) { _ in moveSelection(1) }
             .onReceive(NotificationCenter.default.publisher(for: .overlaySelectCurrentItem)) { _ in selectCurrent() }
+            .onReceive(NotificationCenter.default.publisher(for: .overlayTogglePreview)) { _ in
+                let items = viewModel.filteredItems
+                guard items.indices.contains(selectedIndex) else { return }
+                onTogglePreview(items[selectedIndex])
+            }
             .onChange(of: selectedIndex) { _ in
                 let items = viewModel.filteredItems
                 guard items.indices.contains(selectedIndex) else { return }
+                onSelectionChange(items[selectedIndex])
                 withAnimation(.easeInOut(duration: 0.12)) {
                     proxy.scrollTo(items[selectedIndex].id, anchor: .center)
                 }
