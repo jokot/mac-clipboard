@@ -89,7 +89,7 @@ struct ContentView: View {
         }
         let dim = max(image.size.width, image.size.height)
         guard dim <= 4096 else {
-            editingImageAlert = "Image too large to edit in v1.11.0 (max 4096 px)."
+            editingImageAlert = "This image is too large to edit. The limit is 4096 px on each side."
             return
         }
         onEditImage(item, image)
