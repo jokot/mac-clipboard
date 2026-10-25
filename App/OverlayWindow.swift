@@ -126,7 +126,18 @@ final class OverlayWindowController: NSObject {
                 self.viewModel.promote(item)
             }
 
-            if AppSettings.shared.pasteOnClick {
+            if AppSettings.shared.pasteOnClick && !AccessibilityAccess.shared.isGrantedNow() {
+                // Without access, Command+V does not reach the other app. The clip
+                // is on the pasteboard, so explain the request one time per launch.
+                self.autoPastePending = false
+                let previousApp = self.previousActiveApp
+                self.hideImmediatelyRefocusOnly()
+                if AccessibilityAccess.shared.shouldAskBeforePaste() {
+                    AccessibilityPromptWindowController.shared.show(afterCopy: true) {
+                        previousApp?.activate(options: [.activateIgnoringOtherApps])
+                    }
+                }
+            } else if AppSettings.shared.pasteOnClick {
                 self.autoPastePending = true
                 self.hideImmediatelyAndPaste()
             } else {

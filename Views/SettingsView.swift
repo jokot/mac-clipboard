@@ -304,6 +304,30 @@ private struct EncryptionBox: View {
     }
 }
 
+private struct AccessibilityStatusRow: View {
+    @ObservedObject private var access = AccessibilityAccess.shared
+    private let poll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: access.isGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundColor(access.isGranted ? .green : .orange)
+            Text(access.isGranted ? "Accessibility access: On" : "Accessibility access: Off. MaClip copies the clip, but you must press \u{2318}V.")
+                .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
+            if !access.isGranted {
+                Spacer()
+                Button("Allow\u{2026}") {
+                    AccessibilityPromptWindowController.shared.show(afterCopy: false)
+                }
+                .font(.caption)
+            }
+        }
+        .onAppear { access.refresh() }
+        .onReceive(poll) { _ in access.refresh() }
+    }
+}
+
 // MARK: - Privacy Tab
 
 private struct PrivacyTab: View {
@@ -445,6 +469,8 @@ private struct BehaviorTab: View {
                     Text("Automatically paste to the previous app when selecting an item.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .padding(.leading, 24)
+                    AccessibilityStatusRow()
                         .padding(.leading, 24)
 
                     Toggle("Move item to top on selection", isOn: $settings.moveTopOnClick)
