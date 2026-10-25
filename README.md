@@ -20,7 +20,7 @@ You do this one time for each install. Or, run this command in Terminal instead 
 xattr -dr com.apple.quarantine /Applications/MaClip.app
 ```
 
-On first launch, MaClip asks for Accessibility access. It needs this to paste into the app that you used before.
+MaClip asks for Accessibility access the first time that it pastes a clip for you. It needs this access to press ⌘V in the app that you used before. Without it, MaClip copies the clip, and you press ⌘V. To check the access, open Settings → Behavior.
 
 See [CHANGELOG.md](CHANGELOG.md) for the changes in each version.
 
