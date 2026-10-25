@@ -18,9 +18,14 @@ enum ExtractOutcome: Equatable {
 
 /// A short message near the bottom of the screen. It never takes focus.
 struct ExtractToast {
-    let message: String
+    enum Style: Equatable { case progress, success, warning, error }
+
+    let title: String
+    var detail: String? = nil
     let image: NSImage?
-    let isProgress: Bool
+    let style: Style
+
+    var isProgress: Bool { style == .progress }
 }
 
 @MainActor
@@ -94,8 +99,9 @@ final class ExtractPasteController {
         guard let item = viewModel.latestImageItem,
               case .image(let content) = item.content else {
             NSSound.beep()
-            toast.show(ExtractToast(message: "No image to read. Take a screenshot first (\u{2303}\u{21E7}\u{2318}4).",
-                                    image: nil, isProgress: false))
+            toast.show(ExtractToast(title: "No image to read",
+                                    detail: "Take a screenshot first with \u{2303}\u{21E7}\u{2318}4.",
+                                    image: nil, style: .warning))
             return .noImage
         }
         let image = loadImage(content)
@@ -126,7 +132,9 @@ final class ExtractPasteController {
         let changeCount = pasteboard.write(resultItem)
 
         guard accessibility.isGrantedNow() else {
-            toast.show(ExtractToast(message: "Text copied. Press \u{2318}V.", image: image, isProgress: false))
+            toast.show(ExtractToast(title: kind == .text ? "Text copied" : "Code copied",
+                                    detail: "Press \u{2318}V to paste it.",
+                                    image: image, style: .success))
             if accessibility.shouldAskBeforePaste() { accessibility.showPrompt() }
             return .copiedOnly
         }
@@ -157,8 +165,8 @@ final class ExtractPasteController {
     private func scan(_ kind: ExtractKind, image: NSImage) async -> ScanResult {
         let progress = Task { @MainActor [toast, progressDelay] in
             try await Task.sleep(nanoseconds: UInt64(progressDelay * 1_000_000_000))
-            toast.show(ExtractToast(message: kind == .text ? "Reading text\u{2026}" : "Reading code\u{2026}",
-                                    image: image, isProgress: true))
+            toast.show(ExtractToast(title: kind == .text ? "Reading text\u{2026}" : "Reading code\u{2026}",
+                                    image: image, style: .progress))
             return true
         }
         defer { progress.cancel() }
@@ -190,15 +198,17 @@ final class ExtractPasteController {
 
     private func notFound(_ kind: ExtractKind, image: NSImage?) -> ExtractOutcome {
         NSSound.beep()
-        toast.show(ExtractToast(message: kind == .text ? "No text found in the last image"
-                                                       : "No QR code or barcode found in the last image",
-                                image: image, isProgress: false))
+        toast.show(ExtractToast(title: kind == .text ? "No text found" : "No QR code or barcode found",
+                                detail: "in the last image. Nothing was pasted.",
+                                image: image, style: .warning))
         return .notFound
     }
 
     private func failed(image: NSImage?) -> ExtractOutcome {
         NSSound.beep()
-        toast.show(ExtractToast(message: "MaClip could not read the last image", image: image, isProgress: false))
+        toast.show(ExtractToast(title: "MaClip could not read the image",
+                                detail: "Try again, or open MaClip and use the clip.",
+                                image: image, style: .error))
         return .failed
     }
 

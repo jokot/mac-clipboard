@@ -47,7 +47,9 @@ final class ExtractPasteControllerTests: XCTestCase {
         let outcome = await controller.run(.text)
 
         XCTAssertEqual(outcome, .noImage)
-        XCTAssertEqual(toast.messages, ["No image to read. Take a screenshot first (\u{2303}\u{21E7}\u{2318}4)."])
+        XCTAssertEqual(toast.messages, ["No image to read"])
+        XCTAssertEqual(toast.last?.detail, "Take a screenshot first with \u{2303}\u{21E7}\u{2318}4.")
+        XCTAssertEqual(toast.last?.style, .warning)
         XCTAssertTrue(pasteboard.written.isEmpty)
         XCTAssertEqual(pasteCount, 0)
     }
@@ -75,7 +77,8 @@ final class ExtractPasteControllerTests: XCTestCase {
 
         XCTAssertEqual(outcome, .notFound)
         XCTAssertEqual(ocr.textCalls, 0)
-        XCTAssertEqual(toast.messages, ["No text found in the last image"])
+        XCTAssertEqual(toast.messages, ["No text found"])
+        XCTAssertEqual(toast.last?.detail, "in the last image. Nothing was pasted.")
         XCTAssertTrue(pasteboard.written.isEmpty)
         XCTAssertEqual(pasteCount, 0)
     }
@@ -103,7 +106,7 @@ final class ExtractPasteControllerTests: XCTestCase {
         let outcome = await controller.run(.code)
 
         XCTAssertEqual(outcome, .notFound)
-        XCTAssertEqual(toast.messages, ["No QR code or barcode found in the last image"])
+        XCTAssertEqual(toast.messages, ["No QR code or barcode found"])
         XCTAssertTrue(pasteboard.written.isEmpty)
         guard case .image(let img) = vm.items[0].content else { return XCTFail("expected the image") }
         XCTAssertEqual(img.cachedBarcode, "", "remember that the image has no code")
@@ -119,7 +122,9 @@ final class ExtractPasteControllerTests: XCTestCase {
         XCTAssertEqual(pasteboard.written, ["hello"])
         XCTAssertEqual(pasteCount, 0)
         XCTAssertEqual(pasteboard.restoreCount, 0, "keep the text, so the user can press Command-V")
-        XCTAssertEqual(toast.messages, ["Text copied. Press \u{2318}V."])
+        XCTAssertEqual(toast.messages, ["Text copied"])
+        XCTAssertEqual(toast.last?.detail, "Press \u{2318}V to paste it.")
+        XCTAssertEqual(toast.last?.style, .success)
         XCTAssertEqual(access.promptCount, 1)
     }
 
@@ -144,6 +149,7 @@ final class ExtractPasteControllerTests: XCTestCase {
 
         XCTAssertEqual(outcome, .pasted)
         XCTAssertEqual(toast.messages.first, "Reading text\u{2026}")
+        XCTAssertEqual(toast.first?.style, .progress)
         XCTAssertEqual(toast.hideCount, 1)
     }
 }
@@ -172,9 +178,12 @@ private final class FakeOCR: OCRServiceProtocol {
 
 @MainActor
 private final class FakeToast: ExtractToastPresenting {
-    private(set) var messages: [String] = []
+    private(set) var shown: [ExtractToast] = []
     private(set) var hideCount = 0
-    func show(_ toast: ExtractToast) { messages.append(toast.message) }
+    var messages: [String] { shown.map(\.title) }
+    var first: ExtractToast? { shown.first }
+    var last: ExtractToast? { shown.last }
+    func show(_ toast: ExtractToast) { shown.append(toast) }
     func hide() { hideCount += 1 }
 }
 
