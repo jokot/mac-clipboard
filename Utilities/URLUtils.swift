@@ -24,6 +24,9 @@ enum URLUtils {
                match.range.location == 0, match.range.length == ns.length,
                let url = match.url,
                let scheme = url.scheme?.lowercased(), (scheme == "http" || scheme == "https") {
+                // NSDataDetector adds "http://" to a bare domain such as "example.com".
+                // Use https for a text without a scheme.
+                if !hasHTTPScheme(s) { return URL(string: "https://" + s) ?? url }
                 return url
             }
         }
@@ -32,7 +35,7 @@ enum URLUtils {
             let ns = s as NSString
             let range = NSRange(location: 0, length: ns.length)
             if let m = regex.firstMatch(in: s, options: [], range: range), m.range.location == 0, m.range.length == ns.length {
-                if s.lowercased().hasPrefix("http://") || s.lowercased().hasPrefix("https://") {
+                if hasHTTPScheme(s) {
                     return URL(string: s)
                 } else {
                     return URL(string: "https://" + s)
@@ -40,5 +43,10 @@ enum URLUtils {
             }
         }
         return nil
+    }
+
+    private static func hasHTTPScheme(_ s: String) -> Bool {
+        let lower = s.lowercased()
+        return lower.hasPrefix("http://") || lower.hasPrefix("https://")
     }
 }

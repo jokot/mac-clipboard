@@ -38,6 +38,12 @@ final class URLUtilsTests: XCTestCase {
         XCTAssertEqual(url?.absoluteString, "https://www.example.co.uk/path?q=1#frag")
     }
 
+    // A link that names its scheme keeps it. Only a bare domain gets https.
+    func testExplicitHTTPSchemeIsKept() {
+        XCTAssertEqual(URLUtils.linkURL(from: "http://example.com/a")?.absoluteString, "http://example.com/a")
+        XCTAssertEqual(URLUtils.linkURL(from: "HTTP://example.com")?.scheme?.lowercased(), "http")
+    }
+
     func testRejectsNonHttpSchemes() {
         let input = "ftp://example.com/file"
         let url = URLUtils.linkURL(from: input)
