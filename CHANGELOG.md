@@ -3,6 +3,14 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [1.12.1](https://github.com/jokot/mac-clipboard/compare/v1.12.0...v1.12.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **installer:** keep hidden DMG files away from the install steps ([c93e8e0](https://github.com/jokot/mac-clipboard/commit/c93e8e0f148d860e617c41408994ddaf35cae2cb))
+* **installer:** keep hidden DMG files away from the install steps ([4766ce2](https://github.com/jokot/mac-clipboard/commit/4766ce2576f207607bcd604e9d5b7c373d3e4c70))
+
 ## [1.12.0](https://github.com/jokot/mac-clipboard/compare/v1.11.0...v1.12.0) (2026-10-25)
 
 
