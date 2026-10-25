@@ -89,8 +89,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
-            if let image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: "Clipboard") {
+            // MenuBarIcon.png is made from assets/icon/menubar.svg by scripts/make-icons.sh.
+            if let image = NSImage(named: "MenuBarIcon")
+                ?? NSImage(systemSymbolName: "paperclip", accessibilityDescription: "MaClip") {
                 image.isTemplate = true
+                image.accessibilityDescription = "MaClip"
                 button.image = image
             } else {
                 button.title = "📋"
