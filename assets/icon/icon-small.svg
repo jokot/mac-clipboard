@@ -1,0 +1,24 @@
+<!-- Small sizes (16 and 32 px): fewer loops and a thicker wire, so the clip stays readable. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E7E7EF"/>
+    </linearGradient>
+    <linearGradient id="wire" x1="300" y1="200" x2="720" y2="840" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="0.55" stop-color="#7C5CF5"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <filter id="icon" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.22"/>
+    </filter>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#4B2FB8" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)" filter="url(#icon)"/>
+  <g transform="rotate(40 512 512) translate(0 -18)">
+    <path d="M512 600 V350 A70 70 0 0 1 652 350 V640 A140 140 0 0 1 372 640 V420" fill="none" stroke="url(#wire)" stroke-width="76" stroke-linecap="round" stroke-linejoin="round" filter="url(#drop)"/>
+  </g>
+</svg>

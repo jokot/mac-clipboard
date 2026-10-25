@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E7E7EF"/>
+    </linearGradient>
+    <linearGradient id="wire" x1="300" y1="200" x2="720" y2="840" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="0.55" stop-color="#7C5CF5"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <filter id="icon" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.22"/>
+    </filter>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#4B2FB8" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)" filter="url(#icon)"/>
+  <g transform="rotate(38 512 512)">
+    <path d="M572 330 V628 A52 52 0 0 1 468 628 V300 A96 96 0 0 1 660 300 V680 A148 148 0 0 1 364 680 V400" fill="none" stroke="url(#wire)" stroke-width="66" stroke-linecap="round" stroke-linejoin="round" filter="url(#drop)"/>
+  </g>
+</svg>

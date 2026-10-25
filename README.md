@@ -2,7 +2,7 @@ MaClip
 ================
 
 <p align="center">
-  <img src="assets/maclip-icon.svg" alt="MaClip icon" width="160" height="160" />
+  <img src="assets/icon/icon.svg" alt="MaClip icon" width="160" height="160" />
 </p>
 
 A simple macOS clipboard history app built with SwiftUI.
