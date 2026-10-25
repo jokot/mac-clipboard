@@ -3,6 +3,14 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [1.13.0](https://github.com/jokot/mac-clipboard/compare/v1.12.1...v1.13.0) (2026-10-25)
+
+
+### Features
+
+* **extract:** paste the text or QR code of the last image with a shortcut ([#24](https://github.com/jokot/mac-clipboard/issues/24)) ([c7b089c](https://github.com/jokot/mac-clipboard/commit/c7b089c3311de09b7e318177c7f3f0f18b78638f))
+* **paste:** ask for Accessibility access only when MaClip pastes ([#23](https://github.com/jokot/mac-clipboard/issues/23)) ([d275166](https://github.com/jokot/mac-clipboard/commit/d275166d8f087d1f3eb3310b7d46190e8f88385c))
+
 ## [1.12.1](https://github.com/jokot/mac-clipboard/compare/v1.12.0...v1.12.1) (2026-10-25)
 
 
