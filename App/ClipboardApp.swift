@@ -55,6 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // OverlayWindowController asks the first time that it must paste.
         AccessibilityAccess.shared.refresh()
 
+        // Apply the saved theme to every window. Before, only the clip window used it after a restart.
+        NSApp.appearance = settings.theme.nsAppearance
+
         // Prevent automatic window creation
         NSApp.setActivationPolicy(.prohibited)
 

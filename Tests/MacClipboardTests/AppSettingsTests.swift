@@ -209,3 +209,11 @@ final class AppSettingsTests: XCTestCase {
         AppEnvironment.defaults.removeObject(forKey: concealedTimeoutKey)
     }
 }
+
+final class AppThemeAppearanceTests: XCTestCase {
+    func test_themeMapsToAnAppearance() {
+        XCTAssertNil(AppTheme.system.nsAppearance, "System follows macOS")
+        XCTAssertEqual(AppTheme.light.nsAppearance?.name, .aqua)
+        XCTAssertEqual(AppTheme.dark.nsAppearance?.name, .darkAqua)
+    }
+}

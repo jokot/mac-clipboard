@@ -3,74 +3,70 @@ import AppKit
 import Carbon.HIToolbox
 import UniformTypeIdentifiers
 
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general, shortcuts, storage, privacy
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .shortcuts: return "Shortcuts"
+        case .storage: return "Storage"
+        case .privacy: return "Privacy"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .general: return "gearshape"
+        case .shortcuts: return "keyboard"
+        case .storage: return "internaldrive"
+        case .privacy: return "hand.raised"
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject var viewModel: ClipboardListViewModel
+    @State private var tab: SettingsTab = .general
     @State private var isCapturingHotkey = false
     /// The extract shortcut that waits for new keys, or nil.
     @State private var extractCapture: ExtractKind?
-    @State private var newHotkeyModifiers: UInt32 = 0
-    @State private var newHotkeyKeyCode: UInt32 = 0
-    @State private var isShowingClearConfirm: Bool = false
-    @State private var cleanOlderThanDays: String = "7"
 
     var body: some View {
-        VStack(spacing: 12) {
-            TabView {
-                GeneralTab(
-                    settings: settings,
-                    isCapturingHotkey: $isCapturingHotkey,
-                    extractCapture: $extractCapture,
-                    startCapturingHotkey: startCapturingHotkey,
-                    applyTheme: applyTheme,
-                    hotKeyDescription: hotKeyDescription
-                )
-                .tabItem { Label("General", systemImage: "gearshape") }
-
-                StorageTab(
-                    settings: settings,
-                    viewModel: viewModel,
-                    cleanOlderThanDays: $cleanOlderThanDays
-                )
-                .tabItem { Label("Storage", systemImage: "internaldrive") }
-
-                PrivacyTab(
-                    settings: settings,
-                    viewModel: viewModel,
-                    addApplicationViaPicker: addApplicationViaPicker
-                )
-                .tabItem { Label("Privacy", systemImage: "lock.shield") }
-
-                BehaviorTab(settings: settings)
-                    .tabItem { Label("Behavior", systemImage: "slider.horizontal.3") }
+        VStack(spacing: 0) {
+            tabBar
+            Rectangle().fill(Theme.line).frame(height: 1)
+            ScrollView {
+                Group {
+                    switch tab {
+                    case .general:
+                        GeneralTab(settings: settings, applyTheme: applyTheme)
+                    case .shortcuts:
+                        ShortcutsTab(settings: settings,
+                                     isCapturingHotkey: $isCapturingHotkey,
+                                     extractCapture: $extractCapture,
+                                     hotKeyDescription: hotKeyDescription)
+                    case .storage:
+                        StorageTab(settings: settings, viewModel: viewModel)
+                    case .privacy:
+                        PrivacyTab(settings: settings, viewModel: viewModel,
+                                   addApplicationViaPicker: addApplicationViaPicker)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 20)
             }
-            .tabViewStyle(.automatic)
-            .frame(width: 480, height: 380)
-
-            // Action Buttons - always visible across tabs
-            HStack {
-                Button("Clear All History") {
-                    isShowingClearConfirm = true
-                }
-                .foregroundColor(.red)
-
-                Spacer()
-
-                Button("About MaClip") {
-                    InfoWindow.show()
-                }
-                .buttonStyle(.plain)
-                .font(.footnote)
-                .foregroundColor(.secondary)
-
-                Button("Close") {
-                    NSApp.keyWindow?.close()
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
         }
-        .frame(width: 480)
+        .frame(width: 640, height: 600)
+        .onAppear { setWindowTitle() }
+        .onChange(of: tab) { _ in
+            isCapturingHotkey = false
+            extractCapture = nil
+            setWindowTitle()
+        }
         .background(HotkeyCapturingView(isCapturing: Binding(
             get: { isCapturingHotkey || extractCapture != nil },
             set: { if !$0 { isCapturingHotkey = false; extractCapture = nil } }
@@ -88,34 +84,52 @@ struct SettingsView: View {
                 updateHotkey(keyCode: keyCode, modifiers: modifiers)
             }
         })
-        .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) { viewModel.clearHistory() }
-        } message: {
-            Text("This will remove all clipboard items from the list.")
+    }
+
+    /// Icon tabs under the title bar, like the System Settings windows of other Mac apps.
+    private var tabBar: some View {
+        HStack(spacing: 4) {
+            ForEach(SettingsTab.allCases) { item in
+                Button(action: { tab = item }) {
+                    VStack(spacing: 3) {
+                        Image(systemName: item.symbol)
+                            .font(.system(size: 17))
+                            .foregroundColor(tab == item ? Theme.accent : .secondary)
+                            .frame(height: 20)
+                        Text(item.title)
+                            .font(.system(size: 11))
+                            .foregroundColor(tab == item ? .primary : .secondary)
+                    }
+                    .frame(width: 76, height: 48)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(tab == item ? Theme.tileFill : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(item.title)
+                .accessibilityAddTraits(tab == item ? .isSelected : [])
+            }
         }
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func setWindowTitle() {
+        SettingsWindowController.shared.window?.title = tab.title
     }
 
     private var hotKeyDescription: String {
         HotkeyUtils.description(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
     }
 
-    private func startCapturingHotkey() {
-        extractCapture = nil
-        isCapturingHotkey = true
-    }
-
     private func updateHotkey(keyCode: UInt32, modifiers: UInt32) {
-        // Unregister old hotkey
         HotKeyService.shared.unregister()
-
-        // Update settings
         settings.hotkeyKeyCode = keyCode
         settings.hotkeyModifiers = modifiers
-
-        // Register new hotkey
         HotKeyService.shared.register(keyCode: keyCode, modifiers: modifiers)
-
         isCapturingHotkey = false
     }
 
@@ -162,188 +176,253 @@ struct SettingsView: View {
     }
 
     private func applyTheme(_ theme: AppTheme) {
-        switch theme {
-        case .light:
-            NSApp.appearance = NSAppearance(named: .aqua)
-        case .dark:
-            NSApp.appearance = NSAppearance(named: .darkAqua)
-        case .system:
-            NSApp.appearance = nil
-        }
+        NSApp.appearance = theme.nsAppearance
     }
 }
 
-// MARK: - General Tab
+// MARK: - General
 
 private struct GeneralTab: View {
     @ObservedObject var settings: AppSettings
-    @Binding var isCapturingHotkey: Bool
-    @Binding var extractCapture: ExtractKind?
-    let startCapturingHotkey: () -> Void
     let applyTheme: (AppTheme) -> Void
-    let hotKeyDescription: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            GroupBox("Hotkey") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Current: \(hotKeyDescription)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    Button(isCapturingHotkey ? "Press new hotkey..." : "Change Hotkey") {
-                        startCapturingHotkey()
-                    }
-                    .foregroundColor(isCapturingHotkey ? .orange : .blue)
-
-                    Text("Press the hotkey to show the clipboard overlay.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            GroupBox("Paste From the Last Image") {
-                VStack(alignment: .leading, spacing: 8) {
-                    extractRow("Paste text", kind: .text, enabled: $settings.extractTextHotkeyEnabled,
-                               keyCode: settings.extractTextKeyCode, modifiers: settings.extractTextModifiers)
-                    extractRow("Paste QR code or barcode", kind: .code, enabled: $settings.extractCodeHotkeyEnabled,
-                               keyCode: settings.extractCodeKeyCode, modifiers: settings.extractCodeModifiers)
-                    Text("Take a screenshot with \u{2303}\u{21E7}\u{2318}4, then press a shortcut in any app. MaClip reads the newest image clip and pastes the result. \u{2318}V still pastes the image.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            GroupBox("Display") {
-                VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsSection(title: "Appearance") {
+                SettingsRow(title: "Theme") {
                     Picker("Theme", selection: $settings.theme) {
                         Text("System").tag(AppTheme.system)
                         Text("Light").tag(AppTheme.light)
                         Text("Dark").tag(AppTheme.dark)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .fixedSize()
                     .onChange(of: settings.theme) { newTheme in
                         applyTheme(newTheme)
                         NotificationCenter.default.post(name: .themeChanged, object: nil)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Spacer()
+            SettingsSection(title: "Pasting") {
+                SettingsRow(title: "Paste on selection", caption: "Paste the clip into the app that you used before.") {
+                    SettingsSwitch(label: "Paste on selection", isOn: $settings.pasteOnClick)
+                }
+                AccessibilityRow()
+                SettingsRow(title: "Move clip to top on selection") {
+                    SettingsSwitch(label: "Move clip to top on selection", isOn: $settings.moveTopOnClick)
+                }
+            }
+
+            SettingsSection(title: "Clip window") {
+                SettingsRow(title: "Close when idle", caption: "Close the window when you do not type, click or scroll in it.") {
+                    SettingsSwitch(label: "Close when idle", isOn: $settings.autoDismissOverlayEnabled)
+                }
+                SettingsRow(title: "Close after") {
+                    Picker("Close after", selection: $settings.autoDismissOverlayTimeout) {
+                        Text("5 seconds").tag(TimeInterval(5))
+                        Text("10 seconds").tag(TimeInterval(10))
+                        Text("20 seconds").tag(TimeInterval(20))
+                        Text("30 seconds").tag(TimeInterval(30))
+                        Text("1 minute").tag(TimeInterval(60))
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(!settings.autoDismissOverlayEnabled)
+                }
+            }
         }
-        .padding(20)
     }
 }
 
-private extension GeneralTab {
-    func extractRow(_ title: String, kind: ExtractKind, enabled: Binding<Bool>,
-                    keyCode: UInt32, modifiers: UInt32) -> some View {
-        HStack {
-            Toggle(title, isOn: enabled)
-            Spacer()
-            Text(HotkeyUtils.description(keyCode: keyCode, modifiers: modifiers))
-                .font(.system(.body, design: .monospaced))
+private struct AccessibilityRow: View {
+    @ObservedObject private var access = AccessibilityAccess.shared
+    private let poll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text("Accessibility access")
+                    StatusBadge(isOn: access.isGranted)
+                }
+                Text(access.isGranted ? "MaClip can paste for you."
+                                      : "MaClip copies the clip, and you press \u{2318}V.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            Spacer(minLength: 12)
+            if !access.isGranted {
+                Button("Allow\u{2026}") {
+                    AccessibilityPromptWindowController.shared.show(afterCopy: false)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .frame(minHeight: 44)
+        .onAppear { access.refresh() }
+        .onReceive(poll) { _ in access.refresh() }
+    }
+}
+
+// MARK: - Shortcuts
+
+private struct ShortcutsTab: View {
+    @ObservedObject var settings: AppSettings
+    @Binding var isCapturingHotkey: Bool
+    @Binding var extractCapture: ExtractKind?
+    let hotKeyDescription: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsSection(title: "Clip window") {
+                SettingsRow(title: "Open MaClip") {
+                    ShortcutField(shortcut: hotKeyDescription, isRecording: isCapturingHotkey) {
+                        extractCapture = nil
+                        isCapturingHotkey = true
+                    }
+                }
+            }
+
+            SettingsSection(title: "Paste from the last image",
+                            footer: "Take a screenshot with \u{2303}\u{21E7}\u{2318}4, then press a shortcut in any app. MaClip reads the newest image clip and pastes the result. \u{2318}V still pastes the image.") {
+                extractRow("Paste text", kind: .text, enabled: $settings.extractTextHotkeyEnabled,
+                           keyCode: settings.extractTextKeyCode, modifiers: settings.extractTextModifiers)
+                extractRow("Paste QR code or barcode", kind: .code, enabled: $settings.extractCodeHotkeyEnabled,
+                           keyCode: settings.extractCodeKeyCode, modifiers: settings.extractCodeModifiers)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("In the clip window")
+                    .font(.system(size: 13, weight: .semibold))
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())], spacing: 8) {
+                    keyRow("Move", "\u{2191} \u{2193}")
+                    keyRow("Paste", "\u{21A9}")
+                    keyRow("Preview", "space")
+                    keyRow("Close", "esc")
+                    keyRow("Search", "\u{2318}F")
+                    keyRow("Settings", "\u{2318},")
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+            }
+        }
+    }
+
+    private func extractRow(_ title: String, kind: ExtractKind, enabled: Binding<Bool>,
+                            keyCode: UInt32, modifiers: UInt32) -> some View {
+        HStack(spacing: 12) {
+            SettingsSwitch(label: title, isOn: enabled)
+            Text(title)
                 .foregroundColor(enabled.wrappedValue ? .primary : .secondary)
-            Button(extractCapture == kind ? "Press keys\u{2026}" : "Change") {
+            Spacer(minLength: 12)
+            ShortcutField(shortcut: HotkeyUtils.description(keyCode: keyCode, modifiers: modifiers),
+                          isRecording: extractCapture == kind,
+                          isEnabled: enabled.wrappedValue) {
                 isCapturingHotkey = false
                 extractCapture = kind
             }
-            .foregroundColor(extractCapture == kind ? .orange : .blue)
-            .disabled(!enabled.wrappedValue)
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 44)
+    }
+
+    private func keyRow(_ label: String, _ key: String) -> some View {
+        HStack {
+            Text(label).foregroundColor(.secondary)
+            Spacer()
+            KeyLabel(key: key)
         }
     }
 }
 
-// MARK: - Storage Tab
+// MARK: - Storage
 
 private struct StorageTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
-    @Binding var cleanOlderThanDays: String
+    @State private var failure: String?
+    @State private var isShowingClearConfirm = false
+
+    /// 0 means Never.
+    private var cleanDays: Binding<Int> {
+        Binding(
+            get: { settings.autoCleanEnabled ? settings.autoCleanDays : 0 },
+            set: { days in
+                settings.autoCleanEnabled = days > 0
+                if days > 0 { settings.autoCleanDays = days }
+                viewModel.applyAutoClean()
+            }
+        )
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            GroupBox("Storage") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Maximum Items:")
-                        Spacer()
-                        TextField("", value: $settings.maxItems, formatter: NumberFormatter())
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 80)
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsSection(title: "History") {
+                SettingsRow(title: "Keep up to") {
+                    HStack(spacing: 6) {
+                        TextField("Clips", value: $settings.maxItems, formatter: NumberFormatter())
+                            .textFieldStyle(.roundedBorder)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 60)
                             .onChange(of: settings.maxItems) { newValue in
                                 viewModel.applyMaxItems(newValue)
                             }
+                        Text("clips").foregroundColor(.secondary)
                     }
-
-                    Toggle("Auto-clean old items", isOn: $settings.autoCleanEnabled)
-
-                    HStack {
-                        Text("Clean items older than:")
-                        Spacer()
-                        TextField("7", text: $cleanOlderThanDays)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 60)
-                        Text("days")
-                    }
-                    .padding(.leading)
-                    .disabled(!settings.autoCleanEnabled)
-                    .opacity(settings.autoCleanEnabled ? 1.0 : 0.5)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                SettingsRow(title: "Delete clips older than") {
+                    Picker("Delete clips older than", selection: cleanDays) {
+                        Text("Never").tag(0)
+                        Text("1 day").tag(1)
+                        Text("7 days").tag(7)
+                        Text("30 days").tag(30)
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
 
-            EncryptionBox(settings: settings, viewModel: viewModel)
-
-            Spacer()
-        }
-        .padding(20)
-    }
-}
-
-private struct EncryptionBox: View {
-    @ObservedObject var settings: AppSettings
-    @ObservedObject var viewModel: ClipboardListViewModel
-    @State private var failure: String?
-
-    var body: some View {
-        GroupBox("Encryption") {
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Encrypt history on disk", isOn: Binding(
-                    get: { settings.encryptHistory },
-                    set: { enabled in
-                        if !viewModel.setHistoryEncryption(enabled) {
-                            failure = enabled
-                                ? "MaClip could not read or create the encryption key. Your history did not change."
-                                : "MaClip could not read the encryption key. Your history stays encrypted."
+            SettingsSection(title: "Encryption") {
+                SettingsRow(title: "Encrypt history on disk",
+                            caption: "MaClip keeps the key in your login Keychain. macOS can ask for your password after each MaClip update.") {
+                    SettingsSwitch(label: "Encrypt history on disk", isOn: Binding(
+                        get: { settings.encryptHistory },
+                        set: { enabled in
+                            if !viewModel.setHistoryEncryption(enabled) {
+                                failure = enabled
+                                    ? "MaClip could not read or create the encryption key. Your history did not change."
+                                    : "MaClip could not read the encryption key. Your history stays encrypted."
+                            }
                         }
-                    }
-                ))
-                Text("MaClip keeps the key in your login Keychain. macOS can ask for your password to allow MaClip to read the key, usually after each MaClip update.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
+                    ))
+                }
                 if viewModel.hasEncryptedHistoryToRestore {
-                    Divider().padding(.vertical, 2)
-                    Text("MaClip found encrypted clips from an earlier version.")
-                    Button("Restore Earlier Clips") {
-                        if viewModel.restoreEncryptedHistory() {
-                            settings.encryptedHistoryNoticeDismissed = true
-                        } else {
-                            failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
+                    SettingsRow(title: "Earlier encrypted clips",
+                                caption: "From MaClip 1.9 to 1.11. macOS asks for your password one time.") {
+                        Button("Restore\u{2026}") {
+                            if viewModel.restoreEncryptedHistory() {
+                                settings.encryptedHistoryNoticeDismissed = true
+                            } else {
+                                failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
+                            }
                         }
                     }
-                    Text("macOS asks for your password to allow MaClip to read the key one time.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            SettingsSection(title: "Clear") {
+                SettingsRow(title: "Clear history",
+                            caption: "Deletes all \(viewModel.items.count) clips and their images. You cannot undo this.") {
+                    Button("Clear History\u{2026}") { isShowingClearConfirm = true }
+                        .foregroundColor(.red)
+                        .disabled(viewModel.items.isEmpty)
+                }
+            }
         }
         .alert("Could not change encryption", isPresented: Binding(
             get: { failure != nil },
@@ -353,198 +432,173 @@ private struct EncryptionBox: View {
         } message: {
             Text(failure ?? "")
         }
-    }
-}
-
-private struct AccessibilityStatusRow: View {
-    @ObservedObject private var access = AccessibilityAccess.shared
-    private let poll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: access.isGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundColor(access.isGranted ? .green : .orange)
-            Text(access.isGranted ? "Accessibility access: On" : "Accessibility access: Off. MaClip copies the clip, but you must press \u{2318}V.")
-                .font(.caption)
-                .fixedSize(horizontal: false, vertical: true)
-            if !access.isGranted {
-                Spacer()
-                Button("Allow\u{2026}") {
-                    AccessibilityPromptWindowController.shared.show(afterCopy: false)
-                }
-                .font(.caption)
-            }
+        .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) { viewModel.clearHistory() }
+        } message: {
+            Text("This deletes all clips and their images. You cannot undo this.")
         }
-        .onAppear { access.refresh() }
-        .onReceive(poll) { _ in access.refresh() }
     }
 }
 
-// MARK: - Privacy Tab
+// MARK: - Privacy
 
 private struct PrivacyTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
     let addApplicationViaPicker: () -> Void
+    @State private var selection: String?
     @State private var showingRestoreConfirm = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Excluded Apps")
-                .font(.subheadline.bold())
-            ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(settings.excludedBundleIDs, id: \.self) { bundleID in
-                        HStack(spacing: 8) {
-                            if let icon = AppMetadata.shared.icon(for: bundleID) {
-                                Image(nsImage: icon).resizable().frame(width: 18, height: 18)
-                            } else {
-                                Image(systemName: "questionmark.app.dashed").frame(width: 18, height: 18)
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Don\u{2019}t save clips from these apps")
+                    .font(.system(size: 13, weight: .semibold))
+                VStack(spacing: 0) {
+                    ScrollView {
+                        VStack(spacing: 1) {
+                            ForEach(settings.excludedBundleIDs, id: \.self) { bundleID in
+                                appRow(bundleID)
                             }
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(AppMetadata.shared.displayName(for: bundleID) ?? bundleID)
-                                    .font(.body)
-                                Text(bundleID).font(.caption).foregroundColor(.secondary)
+                            if settings.excludedBundleIDs.isEmpty {
+                                Text("No apps. Click + to add one.")
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(10)
                             }
-                            Spacer()
-                            Button(action: {
-                                settings.excludedBundleIDs.removeAll { $0 == bundleID }
-                            }) {
-                                Image(systemName: "minus.circle.fill")
-                                    .foregroundColor(.red)
-                            }
-                            .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 2)
+                        .padding(4)
                     }
-                    if settings.excludedBundleIDs.isEmpty {
-                        Text("No apps excluded.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 4)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 2)
-            }
-            .frame(minHeight: 80, maxHeight: 200)
-            .background(Color.secondary.opacity(0.06))
-            .cornerRadius(6)
-            Button("+ Add Application…") {
-                addApplicationViaPicker()
-            }
-            Text("Clips copied from these apps will never be saved to your history.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Divider().padding(.vertical, 4)
-
-            Toggle("Skip concealed clipboard items", isOn: $settings.skipConcealedItems)
-            HStack {
-                Text("Auto-clear concealed items after")
-                Spacer()
-                Picker("", selection: $settings.concealedClearTimeout) {
-                    Text("5 sec").tag(TimeInterval(5))
-                    Text("10 sec").tag(TimeInterval(10))
-                    Text("20 sec").tag(TimeInterval(20))
-                    Text("30 sec").tag(TimeInterval(30))
-                    Text("1 min").tag(TimeInterval(60))
-                    Text("2 min").tag(TimeInterval(120))
-                    Text("5 min").tag(TimeInterval(300))
-                    Text("10 min").tag(TimeInterval(600))
-                    Text("15 min").tag(TimeInterval(900))
-                    Text("30 min").tag(TimeInterval(1800))
-                    Text("Never").tag(TimeInterval(-1))
-                }
-                .pickerStyle(.menu)
-                .frame(width: 110)
-                .disabled(settings.skipConcealedItems)
-            }
-            Text("Items marked secret by apps like 1Password are kept with redacted preview, then removed automatically. Turn the toggle on to skip them entirely.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Divider().padding(.vertical, 4)
-
-            Button("Restore Privacy Defaults") {
-                showingRestoreConfirm = true
-            }
-            .foregroundColor(.red)
-            .alert("Restore Privacy defaults?", isPresented: $showingRestoreConfirm) {
-                Button("Cancel", role: .cancel) { }
-                Button("Restore", role: .destructive) {
-                    AppSettings.shared.restorePrivacyDefaults()
-                }
-            } message: {
-                Text("This resets the excluded apps list to the default password-manager seed, turns off \"Skip concealed clipboard items\", and sets the auto-clear timeout to 5 minutes.")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-    }
-}
-
-// MARK: - Behavior Tab
-
-private struct BehaviorTab: View {
-    @ObservedObject var settings: AppSettings
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            GroupBox("Auto-dismiss") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Auto-dismiss overlay after idle", isOn: $settings.autoDismissOverlayEnabled)
-                    HStack {
-                        Text("Close after")
+                    .frame(height: 190)
+                    Rectangle().fill(Theme.line).frame(height: 1)
+                    HStack(spacing: 0) {
+                        Button(action: addApplicationViaPicker) {
+                            Image(systemName: "plus").frame(width: 28, height: 24).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Add an app")
+                        .accessibilityLabel("Add an app")
+                        Rectangle().fill(Theme.line).frame(width: 1, height: 16)
+                        Button(action: removeSelected) {
+                            Image(systemName: "minus").frame(width: 28, height: 24).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(selection == nil)
+                        .help("Remove the selected app")
+                        .accessibilityLabel("Remove the selected app")
                         Spacer()
-                        Picker("", selection: $settings.autoDismissOverlayTimeout) {
-                            Text("5 sec").tag(TimeInterval(5))
-                            Text("10 sec").tag(TimeInterval(10))
-                            Text("20 sec").tag(TimeInterval(20))
-                            Text("30 sec").tag(TimeInterval(30))
-                            Text("1 min").tag(TimeInterval(60))
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 110)
-                        .disabled(!settings.autoDismissOverlayEnabled)
+                        Text("\(settings.excludedBundleIDs.count) apps")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .padding(.trailing, 10)
                     }
-                    Text("Closes the clipboard overlay automatically when there is no keyboard, mouse, or scroll activity inside the window.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    .padding(.horizontal, 4)
+                    .frame(height: 30)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
             }
 
-            GroupBox("Behavior") {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Paste on selection", isOn: $settings.pasteOnClick)
-                    Text("Automatically paste to the previous app when selecting an item.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 24)
-                    AccessibilityStatusRow()
-                        .padding(.leading, 24)
-
-                    Toggle("Move item to top on selection", isOn: $settings.moveTopOnClick)
-                    Text("When selecting an item, move it to the top of the history list.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 24)
+            SettingsSection(title: "Concealed clips") {
+                SettingsRow(title: "Don\u{2019}t save concealed clips",
+                            caption: "Password managers mark passwords as concealed when you copy them.") {
+                    SettingsSwitch(label: "Don\u{2019}t save concealed clips", isOn: $settings.skipConcealedItems)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                SettingsRow(title: "Delete concealed clips after") {
+                    Picker("Delete concealed clips after", selection: $settings.concealedClearTimeout) {
+                        Text("5 seconds").tag(TimeInterval(5))
+                        Text("10 seconds").tag(TimeInterval(10))
+                        Text("20 seconds").tag(TimeInterval(20))
+                        Text("30 seconds").tag(TimeInterval(30))
+                        Text("1 minute").tag(TimeInterval(60))
+                        Text("2 minutes").tag(TimeInterval(120))
+                        Text("5 minutes").tag(TimeInterval(300))
+                        Text("10 minutes").tag(TimeInterval(600))
+                        Text("15 minutes").tag(TimeInterval(900))
+                        Text("30 minutes").tag(TimeInterval(1800))
+                        Text("Never").tag(TimeInterval(-1))
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(settings.skipConcealedItems)
+                }
             }
 
-            Spacer()
+            HStack {
+                Spacer()
+                Button("Restore Defaults\u{2026}") { showingRestoreConfirm = true }
+            }
         }
-        .padding(20)
+        .alert("Restore the privacy defaults?", isPresented: $showingRestoreConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Restore", role: .destructive) {
+                AppSettings.shared.restorePrivacyDefaults()
+                selection = nil
+            }
+        } message: {
+            Text("This sets the app list to the default password managers, saves concealed clips again, and deletes them after 5 minutes.")
+        }
+    }
+
+    private func appRow(_ bundleID: String) -> some View {
+        let isSelected = selection == bundleID
+        return HStack(spacing: 10) {
+            if let icon = AppMetadata.shared.icon(for: bundleID) {
+                Image(nsImage: icon).resizable().frame(width: 20, height: 20)
+            } else {
+                Image(systemName: "questionmark.app.dashed")
+                    .font(.system(size: 16))
+                    .foregroundColor(.secondary)
+                    .frame(width: 20, height: 20)
+            }
+            let installedName = AppMetadata.shared.displayName(for: bundleID)
+            Text(installedName ?? Self.knownNames[bundleID] ?? bundleID)
+            if installedName == nil {
+                Text("\u{00B7} not installed").font(.system(size: 11)).foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+            }
+            Spacer()
+            if installedName != nil || Self.knownNames[bundleID] != nil {
+                Text(bundleID)
+                    .font(.system(size: 11))
+                    .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                    .lineLimit(1)
+            }
+        }
+        .foregroundColor(isSelected ? .white : .primary)
+        .padding(.horizontal, 10)
+        .frame(height: 32)
+        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(isSelected ? Theme.accent : Color.clear))
+        .contentShape(Rectangle())
+        .onTapGesture { selection = isSelected ? nil : bundleID }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// Names of the default password managers, for when the app is not installed.
+    private static let knownNames: [String: String] = [
+        "com.agilebits.onepassword7": "1Password 7",
+        "com.1password.1password": "1Password",
+        "com.bitwarden.desktop": "Bitwarden",
+        "com.apple.keychainaccess": "Keychain Access",
+        "com.dashlane.dashlanephonefinal": "Dashlane",
+        "com.lastpass.LastPassMacDesktop": "LastPass",
+        "com.jokot.MacClipboard": "MaClip",
+    ]
+
+    private func removeSelected() {
+        guard let selection else { return }
+        settings.excludedBundleIDs.removeAll { $0 == selection }
+        self.selection = nil
     }
 }
+
+// MARK: - Window
 
 class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
     init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 600),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

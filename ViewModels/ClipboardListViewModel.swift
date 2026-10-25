@@ -501,8 +501,17 @@ final class ClipboardListViewModel: ObservableObject {
     }
 
     private func autoClean() {
-        let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
-        items.removeAll { $0.date < sevenDaysAgo }
+        let days = max(1, AppSettings.shared.autoCleanDays)
+        let cutoff = Date().addingTimeInterval(-Double(days) * 24 * 60 * 60)
+        items.removeAll { $0.date < cutoff }
+    }
+
+    /// Runs auto-clean now, for example after the setting changes, and saves the result.
+    func applyAutoClean() {
+        guard AppSettings.shared.autoCleanEnabled else { return }
+        let before = items.count
+        autoClean()
+        if items.count != before { repository.saveToDiskAsync(items: items) }
     }
     // Helper methods for cached OCR results
     func findItemByCachedId(_ cachedId: String) -> ClipboardItem? {

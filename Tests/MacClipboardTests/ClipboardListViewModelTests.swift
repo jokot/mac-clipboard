@@ -744,6 +744,44 @@ final class ClipboardListViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Auto-clean
+
+    @MainActor
+    func test_autoCleanUsesTheChosenNumberOfDays() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = true
+        AppSettings.shared.autoCleanDays = 1
+        defer { AppSettings.shared.autoCleanEnabled = false; AppSettings.shared.autoCleanDays = 7 }
+        let fresh = ClipboardItem(date: Date(timeIntervalSinceNow: -3600), content: .text("fresh"))
+        let old = ClipboardItem(date: Date(timeIntervalSinceNow: -2 * 86_400), content: .text("two days"))
+        let repo = MockRepo()
+        repo.savedItems = [fresh, old]
+
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        XCTAssertEqual(vm.items.map(\.id), [fresh.id])
+    }
+
+    @MainActor
+    func test_applyAutoCleanRemovesOldClipsNow() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let fresh = ClipboardItem(date: Date(), content: .text("fresh"))
+        let old = ClipboardItem(date: Date(timeIntervalSinceNow: -10 * 86_400), content: .text("ten days"))
+        let repo = MockRepo()
+        repo.savedItems = [fresh, old]
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+        XCTAssertEqual(vm.items.count, 2)
+
+        AppSettings.shared.autoCleanEnabled = true
+        AppSettings.shared.autoCleanDays = 7
+        defer { AppSettings.shared.autoCleanEnabled = false }
+        vm.applyAutoClean()
+
+        XCTAssertEqual(vm.items.map(\.id), [fresh.id])
+        XCTAssertEqual(repo.savedItems.map(\.id), [fresh.id], "the change is saved")
+    }
+
     // MARK: - History encryption
 
     @MainActor
