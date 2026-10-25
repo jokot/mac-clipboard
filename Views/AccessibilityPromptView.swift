@@ -2,7 +2,8 @@ import SwiftUI
 import AppKit
 import Combine
 
-/// Explains why MaClip needs Accessibility access before macOS asks.
+/// Explains why MaClip needs Accessibility access before macOS asks. It has three steps:
+/// the reason, the steps in System Settings while MaClip waits, and the success message.
 struct AccessibilityPromptView: View {
     @ObservedObject var access: AccessibilityAccess
     @ObservedObject private var settings = AppSettings.shared
@@ -14,85 +15,135 @@ struct AccessibilityPromptView: View {
     private let poll = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
-                Image(systemName: access.isGranted ? "checkmark.circle.fill" : "hand.point.up.left.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(access.isGranted ? .green : .accentColor)
-                    .frame(width: 36)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(title).font(.headline)
-                    ForEach(lines, id: \.self) { line in
-                        Text(line).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-
-            if !access.isGranted {
-                HStack {
-                    if settings.pasteOnClick {
-                        Button("Turn Off Paste on Selection") {
-                            settings.pasteOnClick = false
-                            onClose()
-                        }
-                        .buttonStyle(.link)
-                    }
-                    Spacer()
-                    Button("Not Now") { onClose() }
-                        .keyboardShortcut(.cancelAction)
-                    Button(primaryTitle) { primaryAction() }
-                        .keyboardShortcut(.defaultAction)
-                }
+        Group {
+            if access.isGranted {
+                granted
+            } else if askedSystem || access.needsRepair {
+                waiting
+            } else {
+                intro
             }
         }
         .padding(20)
-        .frame(width: 460)
+        .frame(width: 400)
         .onReceive(poll) { _ in
             let wasGranted = access.isGranted
             access.refresh()
             if access.isGranted && !wasGranted {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { onClose() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { onClose() }
             }
         }
     }
 
-    private var title: String {
-        if access.isGranted { return "MaClip can paste now" }
-        return access.needsRepair ? "Allow MaClip again" : "Allow MaClip to paste for you"
+    // MARK: Step 1
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AppIconView().frame(width: 44, height: 44)
+            Text("Allow MaClip to paste for you")
+                .font(.system(size: 15, weight: .semibold))
+            if afterCopy {
+                Text("The clip is copied. Press \u{2318}V to paste it now.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.green.opacity(0.14)))
+            }
+            Text("To paste for you, MaClip needs Accessibility access. MaClip uses it only to press \u{2318}V in the app that you used before.")
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                if settings.pasteOnClick {
+                    Button("Turn Off Paste on Selection") {
+                        settings.pasteOnClick = false
+                        onClose()
+                    }
+                    .buttonStyle(.link)
+                    .font(.system(size: 12))
+                }
+                Spacer()
+                Button("Not Now") { onClose() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Continue") {
+                    access.requestSystemPrompt()
+                    askedSystem = true
+                }
+                .buttonStyle(AccentButtonStyle())
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 6)
+        }
     }
 
-    private var lines: [String] {
-        if access.isGranted {
-            return ["Pick a clip, and MaClip pastes it into the app that you used before."]
+    // MARK: Step 2
+
+    private var waiting: some View {
+        let repair = access.needsRepair
+        let steps = repair
+            ? ["Click Open System Settings.",
+               "Select MaClip in the Accessibility list, and click \u{2212} to remove it.",
+               "Click +, choose MaClip in Applications, and turn it on."]
+            : ["In the macOS dialog, click Open System Settings.",
+               "Turn on MaClip in the Accessibility list.",
+               "MaClip already on? Select it, click \u{2212}, then add it again with +."]
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(repair ? "Allow MaClip again" : "Turn on MaClip in System Settings")
+                .font(.system(size: 15, weight: .semibold))
+            if repair {
+                Text("MaClip was updated, so macOS needs you to allow it again.")
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 20, height: 20)
+                            .background(Circle().fill(Theme.tileFill))
+                        Text(step).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Waiting for access\u{2026}")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            HStack(spacing: 8) {
+                Spacer()
+                Button("Not Now") { onClose() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Open System Settings") { access.openSettings() }
+                    .buttonStyle(AccentButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 4)
         }
-        var lines: [String] = []
-        if afterCopy {
-            lines.append("MaClip copied the clip. Press \u{2318}V to paste it.")
-        }
-        if access.needsRepair {
-            lines.append("MaClip was updated, so macOS needs you to allow it again.")
-            lines.append("In the list, select MaClip and click \u{2212} to remove it. Then click +, choose MaClip in Applications, and turn it on.")
-        } else if askedSystem {
-            lines.append("In the macOS dialog, click Open System Settings. Then turn on MaClip in the list.")
-            lines.append("If MaClip is already on, select it and click \u{2212} to remove it. Then click Continue again.")
-        } else {
-            lines.append("To paste a clip into the app that you used before, MaClip needs Accessibility access. MaClip uses it only to press \u{2318}V for you.")
-            lines.append("Click Continue. macOS then asks you to allow MaClip.")
-        }
-        return lines
     }
 
-    private var primaryTitle: String {
-        access.needsRepair ? "Open Accessibility Settings" : "Continue"
-    }
+    // MARK: Step 3
 
-    private func primaryAction() {
-        if access.needsRepair {
-            access.openSettings()
-        } else {
-            access.requestSystemPrompt()
-            askedSystem = true
+    private var granted: some View {
+        VStack(spacing: 10) {
+            Circle()
+                .fill(Color.green.opacity(0.18))
+                .frame(width: 48, height: 48)
+                .overlay(Image(systemName: "checkmark").font(.system(size: 22, weight: .bold)).foregroundColor(.green))
+            Text("MaClip can paste now")
+                .font(.system(size: 15, weight: .semibold))
+            Text("Pick a clip, and MaClip pastes it into the app that you used before.")
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Text("This window closes in 2 seconds.")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
 }
 

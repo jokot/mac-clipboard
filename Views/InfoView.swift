@@ -7,51 +7,42 @@ struct InfoView: View {
     private let repoURL = URL(string: "https://github.com/jokot/mac-clipboard")!
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 6) {
             AppIconView()
-                .frame(width: 128, height: 128)
+                .frame(width: 96, height: 96)
 
             Text(viewModel.getAppName())
-                .font(.title3).bold()
+                .font(.system(size: 20, weight: .bold))
+                .padding(.top, 6)
 
             Text("Version \(viewModel.getAppVersion())")
                 .foregroundColor(.secondary)
 
-            Button {
-                NSWorkspace.shared.open(repoURL)
-            } label: {
-                Label("Open on GitHub", systemImage: "link")
-            }
-            .buttonStyle(.bordered)
-
-            Button(action: viewModel.checkForUpdates) {
-                if viewModel.isCheckingUpdate {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                        Text("Checking…")
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Updates")
+                        Text("Last checked: \(viewModel.getFormattedLastChecked())")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .id(refreshTrigger) // Force refresh when this changes
                     }
-                } else {
-                    Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+                    .layoutPriority(1)
+                    Spacer()
+                    Button(viewModel.isCheckingUpdate ? "Checking\u{2026}" : "Check Now", action: viewModel.checkForUpdates)
+                        .disabled(viewModel.isCheckingUpdate)
                 }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 52)
+                Rectangle().fill(Theme.line).frame(height: 1).padding(.leading, 12)
+                linkRow("Source code on GitHub", url: repoURL)
+                Rectangle().fill(Theme.line).frame(height: 1).padding(.leading, 12)
+                linkRow("Release notes", url: repoURL.appendingPathComponent("releases"))
             }
-            .disabled(viewModel.isCheckingUpdate)
-            .buttonStyle(.borderedProminent)
-
-            Text("Last checked: \(viewModel.getFormattedLastChecked())")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .id(refreshTrigger) // Force refresh when this changes
-
-            Spacer(minLength: 8)
-            Divider()
-            HStack(spacing: 6) {
-                Text("Made with")
-                Image(systemName: "heart.fill")
-                    .foregroundColor(.pink)
-                Text("by jokot")
-            }
-            .font(.footnote)
-            .foregroundColor(.secondary)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+            .padding(.top, 18)
 
             if HistoryDecryptFailure.didFailOnThisLaunch {
                 Text("Couldn't decrypt clipboard history on this launch. A new encryption key will be created when you next copy something. Past clips are unrecoverable on this device.")
@@ -61,9 +52,16 @@ struct InfoView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
             }
+
+            Spacer(minLength: 12)
+            Text("Made by jokot \u{00B7} MIT License")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
         }
-        .padding(24)
-        .frame(minWidth: 360)
+        .padding(.horizontal, 28)
+        .padding(.top, 8)
+        .padding(.bottom, 20)
+        .frame(width: 340)
         .onAppear {
             startRefreshTimer()
         }
@@ -89,6 +87,22 @@ struct InfoView: View {
         }
     }
     
+    private func linkRow(_ title: String, url: URL) -> some View {
+        Button(action: { NSWorkspace.shared.open(url) }) {
+            HStack {
+                Text(title)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 40)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func startRefreshTimer() {
         // Refresh every 30 seconds to keep the "last checked" text current
         Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
@@ -108,7 +122,7 @@ final class InfoWindowController: NSObject {
             let view = InfoView()
             let hosting = NSHostingController(rootView: view)
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
+                contentRect: NSRect(x: 0, y: 0, width: 340, height: 440),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
