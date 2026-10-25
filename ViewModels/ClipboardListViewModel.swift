@@ -6,6 +6,8 @@ import Cocoa
 final class ClipboardListViewModel: ObservableObject {
     @Published private(set) var items: [ClipboardItem] = []
     @Published var searchText: String = ""
+    /// Encryption is off, and an earlier version left encrypted clips on disk.
+    @Published private(set) var hasEncryptedHistoryToRestore = false
 
     private let repository: ClipboardRepositoryProtocol
     private let monitor: ClipboardMonitorProtocol
@@ -19,6 +21,7 @@ final class ClipboardListViewModel: ObservableObject {
         // Load initial once
         let loadedItems = repository.loadFromDisk()
         self.items = loadedItems
+        self.hasEncryptedHistoryToRestore = repository.hasEncryptedHistoryToRestore
         
         // Apply current settings limits immediately after loading
         applyMaxItems(AppSettings.shared.maxItems)
@@ -72,6 +75,58 @@ final class ClipboardListViewModel: ObservableObject {
         repository.clearAllFiles()
         // Use synchronous save for critical operations to avoid race conditions
         repository.saveToDisk(items: items)
+        hasEncryptedHistoryToRestore = repository.hasEncryptedHistoryToRestore
+    }
+
+    // MARK: - History encryption
+
+    /// Turns history encryption on or off and converts the saved history.
+    /// Reads the Keychain key, so macOS can ask for the password. Call it only from a
+    /// user action. Returns false, and changes nothing, when the key cannot be read or created.
+    @discardableResult
+    func setHistoryEncryption(_ enabled: Bool) -> Bool {
+        guard enabled != AppSettings.shared.encryptHistory else { return true }
+        let before = items
+        // Keep the clips of an earlier version in the new encrypted history.
+        if enabled, repository.hasEncryptedHistoryToRestore {
+            guard mergeEncryptedHistory() else { return false }
+        }
+        guard repository.switchStorage(items: items, toEncrypted: enabled) else {
+            items = before
+            return false
+        }
+        AppSettings.shared.encryptHistory = enabled
+        reloadFromDisk()
+        return true
+    }
+
+    /// Adds the encrypted clips of 1.9.0-1.11.x after the current clips and saves them as plain files.
+    /// Reads the Keychain key, so macOS can ask for the password. Call it only from a user action.
+    @discardableResult
+    func restoreEncryptedHistory() -> Bool {
+        guard repository.hasEncryptedHistoryToRestore else { return true }
+        let before = items
+        guard mergeEncryptedHistory(),
+              repository.switchStorage(items: items, toEncrypted: false) else {
+            items = before
+            return false
+        }
+        reloadFromDisk()
+        return true
+    }
+
+    private func mergeEncryptedHistory() -> Bool {
+        guard let restored = repository.loadEncryptedHistory() else { return false }
+        let known = Set(items.map(\.id))
+        items += restored.filter { !known.contains($0.id) }
+        applyMaxItems(AppSettings.shared.maxItems)
+        return true
+    }
+
+    /// The image files move to a new format, so the clips must point at the new files.
+    private func reloadFromDisk() {
+        items = repository.loadFromDisk()
+        hasEncryptedHistoryToRestore = repository.hasEncryptedHistoryToRestore
     }
 
     func remove(_ item: ClipboardItem) {
@@ -223,8 +278,8 @@ final class ClipboardListViewModel: ObservableObject {
         return true
     }
 
-    /// Decrypts image bytes stored at `url` (an `Images/*.enc` ciphertext file).
-    /// Returns the plaintext PNG `Data` suitable for `NSImage(data:)`, or `nil` on failure.
+    /// Reads image bytes stored at `url` (`Images/*.png`, or `Images/*.enc`, which it decrypts).
+    /// Returns the PNG `Data` suitable for `NSImage(data:)`, or `nil` on failure.
     func imageData(at url: URL) -> Data? {
         repository.readImageData(at: url)
     }

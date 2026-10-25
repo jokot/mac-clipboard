@@ -7,10 +7,17 @@ enum HistoryCryptoError: Error {
     case keychainStatus(OSStatus)
 }
 
+/// Holds the raw bytes of the history key.
+protocol HistoryKeyStore: AnyObject {
+    func read() throws -> Data?
+    func write(_ data: Data) throws
+    func delete()
+}
+
 enum HistoryCrypto {
 
-    private static let service = "com.jokot.MacClipboard.HistoryEncryptionKey"
-    private static let account = "default"
+    /// Under XCTest, the key stays in memory, so tests never read or change the real Keychain item.
+    static var keyStore: HistoryKeyStore = AppEnvironment.isRunningTests ? InMemoryKeyStore() : KeychainKeyStore()
 
     // MARK: - Public
 
@@ -30,15 +37,25 @@ enum HistoryCrypto {
     }
 
     static func key() throws -> SymmetricKey {
-        if let existing = try fetchKey() { return existing }
+        if let existing = try keyStore.read() { return SymmetricKey(data: existing) }
         let new = SymmetricKey(size: .bits256)
-        try storeKey(new)
+        try keyStore.write(new.withUnsafeBytes { Data($0) })
         return new
     }
 
-    // MARK: - Keychain
+    /// Removes the key. Call this only when no file on disk is encrypted with it.
+    static func deleteKey() {
+        keyStore.delete()
+    }
+}
 
-    private static func fetchKey() throws -> SymmetricKey? {
+/// Keeps the key in the login Keychain.
+final class KeychainKeyStore: HistoryKeyStore {
+
+    private let service = "com.jokot.MacClipboard.HistoryEncryptionKey"
+    private let account = "default"
+
+    func read() throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -50,8 +67,7 @@ enum HistoryCrypto {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         switch status {
         case errSecSuccess:
-            guard let data = item as? Data else { return nil }
-            return SymmetricKey(data: data)
+            return item as? Data
         case errSecItemNotFound:
             return nil
         default:
@@ -59,8 +75,7 @@ enum HistoryCrypto {
         }
     }
 
-    private static func storeKey(_ key: SymmetricKey) throws {
-        let data = key.withUnsafeBytes { Data($0) }
+    func write(_ data: Data) throws {
         let attrs: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -74,6 +89,22 @@ enum HistoryCrypto {
             throw HistoryCryptoError.keychainStatus(status)
         }
     }
+
+    func delete() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+}
+
+final class InMemoryKeyStore: HistoryKeyStore {
+    private var data: Data?
+    func read() throws -> Data? { data }
+    func write(_ data: Data) throws { self.data = data }
+    func delete() { data = nil }
 }
 
 /// Static one-launch flag set by the repository when decryption fails.

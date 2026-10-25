@@ -5,6 +5,7 @@ import Foundation
 
 struct ContentView: View {
     @ObservedObject var viewModel: ClipboardListViewModel
+    @ObservedObject private var settings = AppSettings.shared
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
     var onEditImage: (ClipboardItem, NSImage) -> Void = { _, _ in }
@@ -35,6 +36,10 @@ struct ContentView: View {
         VStack(spacing: 0) {
             header
             Divider()
+            if viewModel.hasEncryptedHistoryToRestore && !settings.encryptedHistoryNoticeDismissed {
+                restoreNotice
+                Divider()
+            }
             if viewModel.filteredItems.isEmpty {
                 GeometryReader { proxy in
                     VStack(spacing: 8) {
@@ -89,6 +94,27 @@ struct ContentView: View {
             return
         }
         onEditImage(item, image)
+    }
+
+    // Shown after an update from 1.9.0-1.11.x, which encrypted the history.
+    private var restoreNotice: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .foregroundColor(.secondary)
+            Text("Your earlier clips are encrypted. Restore them in Settings → Storage.")
+                .font(.caption)
+            Spacer()
+            Button("Open Settings") { onOpenSettings() }
+                .font(.caption)
+            Button(action: { settings.encryptedHistoryNoticeDismissed = true }) {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.plain)
+            .help("Hide this message")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.secondary.opacity(0.08))
     }
 
     private var header: some View {
