@@ -47,6 +47,7 @@
 		C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815338FAF7D3A98423D0E86C /* ClipboardItem.swift */; };
 		CC082A9CFED49E1BD9FBF5C3 /* ImageEditorWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */; };
 		D350C3F63B3D0E46C6DEFEA6 /* URLUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */; };
+		DA3DC83A5333247B6A45CC07 /* SpyKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D51B70AAAA729C12A4DBB6 /* SpyKeyStore.swift */; };
 		E0C61B17E9A3D544890A8A61 /* HotkeyCapturingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64179F24FF8AFF7D440BC24 /* HotkeyCapturingView.swift */; };
 		E101AE6EFE5EF8A09F57725E /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C7D258BC605842AEBA68655 /* CanvasView.swift */; };
 		E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */; };
@@ -120,6 +121,7 @@
 		EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCrypto.swift; sourceTree = "<group>"; };
 		EF7344C6550C102B4815F469 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentTagsTests.swift; sourceTree = "<group>"; };
+		F4D51B70AAAA729C12A4DBB6 /* SpyKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpyKeyStore.swift; sourceTree = "<group>"; };
 		F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViewModel.swift; sourceTree = "<group>"; };
 		FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViewModelTests.swift; sourceTree = "<group>"; };
 		FF0A2CBE284BC96A3E2EF8E1 /* EditLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditLayer.swift; sourceTree = "<group>"; };
@@ -222,6 +224,7 @@
 				03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */,
 				5E9FF33AF5F9B8A12F4B06BD /* ImageEditorViewModelTests.swift */,
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
+				F4D51B70AAAA729C12A4DBB6 /* SpyKeyStore.swift */,
 				DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */,
 				555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */,
 			);
@@ -364,6 +367,7 @@
 				C127FE0E57A35CA8C307010D /* ImageCompositorTests.swift in Sources */,
 				232718A01D9DEB7A1DCD2305 /* ImageEditorViewModelTests.swift in Sources */,
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
+				DA3DC83A5333247B6A45CC07 /* SpyKeyStore.swift in Sources */,
 				87011F9E077DDB68590A1E5D /* TextPreviewTests.swift in Sources */,
 				571B862018FC471035814617 /* URLUtilsTests.swift in Sources */,
 			);

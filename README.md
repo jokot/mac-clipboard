@@ -36,7 +36,7 @@ https://github.com/user-attachments/assets/55cb6c86-be5d-4175-98f1-ddbddc5ded3d
 - Edit text, link, and file clips. Edit image clips: crop, rotate, arrow, shapes, text, pen, and redact.
 - Extract text (OCR) and barcodes or QR codes from images.
 - Skip apps that you choose, such as password managers. Hide and auto-clear concealed items.
-- Stores the history encrypted on disk.
+- Optional: encrypt the history on disk (Settings → Storage). This feature uses a key in your login Keychain.
 
 ## Usage
 1. Press <kbd>⌃</kbd> <kbd>⌘</kbd> <kbd>V</kbd> to open MaClip.

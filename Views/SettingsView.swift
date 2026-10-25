@@ -245,9 +245,62 @@ private struct StorageTab: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            EncryptionBox(settings: settings, viewModel: viewModel)
+
             Spacer()
         }
         .padding(20)
+    }
+}
+
+private struct EncryptionBox: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var viewModel: ClipboardListViewModel
+    @State private var failure: String?
+
+    var body: some View {
+        GroupBox("Encryption") {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Encrypt history on disk", isOn: Binding(
+                    get: { settings.encryptHistory },
+                    set: { enabled in
+                        if !viewModel.setHistoryEncryption(enabled) {
+                            failure = enabled
+                                ? "MaClip could not read or create the encryption key. Your history did not change."
+                                : "MaClip could not read the encryption key. Your history stays encrypted."
+                        }
+                    }
+                ))
+                Text("MaClip keeps the key in your login Keychain. macOS can ask for your password to allow MaClip to read the key, usually after each MaClip update.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if viewModel.hasEncryptedHistoryToRestore {
+                    Divider().padding(.vertical, 2)
+                    Text("MaClip found encrypted clips from an earlier version.")
+                    Button("Restore Earlier Clips") {
+                        if viewModel.restoreEncryptedHistory() {
+                            settings.encryptedHistoryNoticeDismissed = true
+                        } else {
+                            failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
+                        }
+                    }
+                    Text("macOS asks for your password to allow MaClip to read the key one time.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .alert("Could not change encryption", isPresented: Binding(
+            get: { failure != nil },
+            set: { if !$0 { failure = nil } }
+        )) {
+            Button("OK") { failure = nil }
+        } message: {
+            Text(failure ?? "")
+        }
     }
 }
 

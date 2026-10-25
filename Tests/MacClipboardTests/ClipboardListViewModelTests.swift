@@ -743,6 +743,87 @@ final class ClipboardListViewModelTests: XCTestCase {
             XCTAssertEqual(repo.savedItems.first?.id, vm.items[0].id, "edit must be persisted")
         }
     }
+
+    // MARK: - History encryption
+
+    @MainActor
+    func test_restoreEncryptedHistoryAddsOldClipsAfterCurrentClips() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        AppSettings.shared.encryptHistory = false
+        let current = ClipboardItem(date: Date(), content: .text("new"))
+        let old = ClipboardItem(date: Date(timeIntervalSinceNow: -60), content: .text("old"))
+        let repo = MockRepo()
+        repo.savedItems = [current]
+        repo.encryptedHistory = [old, current]
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+        XCTAssertTrue(vm.hasEncryptedHistoryToRestore)
+
+        XCTAssertTrue(vm.restoreEncryptedHistory())
+
+        XCTAssertEqual(repo.switchCalls, [false])
+        XCTAssertEqual(vm.items.map(\.id), [current.id, old.id], "no duplicates, old clips last")
+        XCTAssertFalse(vm.hasEncryptedHistoryToRestore)
+        XCTAssertFalse(AppSettings.shared.encryptHistory)
+    }
+
+    @MainActor
+    func test_restoreFailureKeepsCurrentClips() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        AppSettings.shared.encryptHistory = false
+        let current = ClipboardItem(date: Date(), content: .text("new"))
+        let repo = MockRepo()
+        repo.savedItems = [current]
+        repo.encryptedHistory = [ClipboardItem(date: Date(), content: .text("old"))]
+        repo.failEncryptedLoad = true
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        XCTAssertFalse(vm.restoreEncryptedHistory())
+
+        XCTAssertEqual(repo.switchCalls, [])
+        XCTAssertEqual(vm.items.map(\.id), [current.id])
+        XCTAssertTrue(vm.hasEncryptedHistoryToRestore)
+    }
+
+    @MainActor
+    func test_turnOnEncryptionRestoresOldClipsThenEncrypts() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        AppSettings.shared.encryptHistory = false
+        let current = ClipboardItem(date: Date(), content: .text("new"))
+        let old = ClipboardItem(date: Date(timeIntervalSinceNow: -60), content: .text("old"))
+        let repo = MockRepo()
+        repo.savedItems = [current]
+        repo.encryptedHistory = [old]
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        XCTAssertTrue(vm.setHistoryEncryption(true))
+
+        XCTAssertEqual(repo.switchCalls, [true])
+        XCTAssertEqual(repo.savedItems.map(\.id), [current.id, old.id])
+        XCTAssertTrue(AppSettings.shared.encryptHistory)
+        AppSettings.shared.encryptHistory = false
+    }
+
+    @MainActor
+    func test_encryptionSwitchFailureKeepsSettingAndClips() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        AppSettings.shared.encryptHistory = false
+        let current = ClipboardItem(date: Date(), content: .text("new"))
+        let repo = MockRepo()
+        repo.savedItems = [current]
+        repo.encryptedHistory = [ClipboardItem(date: Date(), content: .text("old"))]
+        repo.failSwitch = true
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        XCTAssertFalse(vm.setHistoryEncryption(true))
+
+        XCTAssertFalse(AppSettings.shared.encryptHistory)
+        XCTAssertEqual(vm.items.map(\.id), [current.id], "merged clips are dropped on failure")
+        XCTAssertTrue(vm.hasEncryptedHistoryToRestore)
+    }
 }
 
 // MARK: - Mocks
@@ -752,6 +833,21 @@ private final class MockRepo: ClipboardRepositoryProtocol {
     var imageSaveCount = 0
     var deletedImageURLs: [URL] = []
     var failImageSaves = false
+    /// Encrypted clips from an earlier version. nil means there is nothing to restore.
+    var encryptedHistory: [ClipboardItem]?
+    var failEncryptedLoad = false
+    var failSwitch = false
+    private(set) var switchCalls: [Bool] = []
+
+    var hasEncryptedHistoryToRestore: Bool { encryptedHistory != nil }
+    func loadEncryptedHistory() -> [ClipboardItem]? { failEncryptedLoad ? nil : encryptedHistory }
+    func switchStorage(items: [ClipboardItem], toEncrypted: Bool) -> Bool {
+        switchCalls.append(toEncrypted)
+        if failSwitch { return false }
+        savedItems = items
+        encryptedHistory = nil
+        return true
+    }
 
     func loadFromDisk() -> [ClipboardItem] { savedItems }
     func saveToDisk(items: [ClipboardItem]) { savedItems = items }
