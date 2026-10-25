@@ -1,7 +1,8 @@
 # Release flow:
 # 1. A merge to main runs release-please. It opens or updates the release PR
 #    ("chore(main): release x.y.z") with CHANGELOG.md and the new version.
-#    sync-build then sets the build number and the Xcode project on that PR.
+#    sync-build then sets the build number and the Xcode project on the open
+#    release PR.
 # 2. A merge of the release PR leaves it labeled "autorelease: pending".
 #    find-release sees that PR. release builds the DMG from the merge commit,
 #    then publish.sh makes a hidden draft, attaches both files, and publishes
@@ -99,11 +100,8 @@ jobs:
       # release-please sets the "autorelease: pending" label on its PR.
       issues: write
       pull-requests: write
-    outputs:
-      pr: ${{ steps.rp.outputs.pr }}
     steps:
-      - id: rp
-        uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -115,18 +113,38 @@ jobs:
     # release-please needs release, which is skipped when nothing waits for a
     # release. Without a status function, GitHub skips every job after a
     # skipped job, so this condition must check the results itself.
-    if: ${{ !cancelled() && needs.release-please.result == 'success' && needs.release-please.outputs.pr != '' }}
+    if: ${{ !cancelled() && needs.release-please.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+      pull-requests: read
     steps:
+      # release-please sets its "pr" output only when it creates or changes the
+      # release PR. Find the open release PR here, so a run also repairs a PR
+      # that release-please did not change.
+      - id: find
+        name: Find the open release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main \
+            --label "autorelease: pending" --json headRefName \
+            --jq 'sort_by(.number) | first | .headRefName // empty')"
+          if [ -z "$branch" ]; then
+            echo "No open release PR."
+          else
+            echo "Release PR branch: $branch"
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        if: steps.find.outputs.branch != ''
         with:
-          ref: ${{ env.BRANCH }}
+          ref: ${{ steps.find.outputs.branch }}
           fetch-depth: 0
       - name: Set build number and sync the Xcode project
+        if: steps.find.outputs.branch != ''
+        env:
+          BRANCH: ${{ steps.find.outputs.branch }}
         run: |
           # The manifest on main holds the last released version. On the
           # release branch, release-please has already changed it.
