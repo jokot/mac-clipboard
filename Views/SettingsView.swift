@@ -95,6 +95,7 @@ struct SettingsView: View {
                         Image(systemName: item.symbol)
                             .font(.system(size: 17))
                             .foregroundColor(tab == item ? Theme.accent : .secondary)
+                            .frame(height: 20)
                         Text(item.title)
                             .font(.system(size: 11))
                             .foregroundColor(tab == item ? .primary : .secondary)
@@ -558,16 +559,18 @@ private struct PrivacyTab: View {
                     .foregroundColor(.secondary)
                     .frame(width: 20, height: 20)
             }
-            let name = AppMetadata.shared.displayName(for: bundleID)
-            Text(name ?? bundleID)
-            if name == nil {
+            let installedName = AppMetadata.shared.displayName(for: bundleID)
+            Text(installedName ?? Self.knownNames[bundleID] ?? bundleID)
+            if installedName == nil {
                 Text("\u{00B7} not installed").font(.system(size: 11)).foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
             }
             Spacer()
-            Text(bundleID)
-                .font(.system(size: 11))
-                .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
-                .lineLimit(1)
+            if installedName != nil || Self.knownNames[bundleID] != nil {
+                Text(bundleID)
+                    .font(.system(size: 11))
+                    .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                    .lineLimit(1)
+            }
         }
         .foregroundColor(isSelected ? .white : .primary)
         .padding(.horizontal, 10)
@@ -577,6 +580,17 @@ private struct PrivacyTab: View {
         .onTapGesture { selection = isSelected ? nil : bundleID }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
+
+    /// Names of the default password managers, for when the app is not installed.
+    private static let knownNames: [String: String] = [
+        "com.agilebits.onepassword7": "1Password 7",
+        "com.1password.1password": "1Password",
+        "com.bitwarden.desktop": "Bitwarden",
+        "com.apple.keychainaccess": "Keychain Access",
+        "com.dashlane.dashlanephonefinal": "Dashlane",
+        "com.lastpass.LastPassMacDesktop": "LastPass",
+        "com.jokot.MacClipboard": "MaClip",
+    ]
 
     private func removeSelected() {
         guard let selection else { return }
