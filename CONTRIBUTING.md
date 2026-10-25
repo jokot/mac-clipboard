@@ -44,7 +44,7 @@ Releases are automatic. The workflow is `.github/workflows/release.yml`.
    - `fix:` increases the patch version (1.11.0 to 1.11.1).
    - `feat!:` or a `BREAKING CHANGE:` footer increases the major version.
    - `docs:`, `chore:`, `test:`, `refactor:` and `ci:` do not make a release.
-2. Merge PRs to `main` with a merge commit, not a squash merge. A merge commit keeps the type of each commit. A squash merge keeps only the PR title.
+2. Merge PRs to `main` with a squash merge. The repository allows only squash merges. The squash commit uses the PR title, so the PR title must use the commit type format, for example `fix(installer): keep hidden DMG files away from the install steps`. Each PR gives one line in `CHANGELOG.md`.
 3. After each merge, CI opens or updates the release PR `chore(main): release x.y.z`. This PR updates `CHANGELOG.md`, `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`.
 4. Before you merge, check the new section in `CHANGELOG.md` on the release PR. That section becomes the text of the GitHub release. To change the text, edit `CHANGELOG.md` on the release PR branch.
 5. To publish, merge the release PR. CI builds the DMG from the merge commit. Then CI makes a hidden draft release, attaches `MacClip-x.y.z.dmg` and `MacClip-x.y.z.dmg.sha256`, and publishes it. The tag `vx.y.z` is created only at that last step.
