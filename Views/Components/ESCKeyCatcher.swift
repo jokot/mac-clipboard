@@ -35,6 +35,8 @@ final class KeyCatcherView: NSView {
                 NotificationCenter.default.post(name: .overlayMoveSelectionDown, object: nil)
             case 36, 76: // Return or Keypad Enter
                 NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
+            case 49 where event.modifierFlags.intersection([.command, .control, .option]).isEmpty: // Space
+                NotificationCenter.default.post(name: .overlayTogglePreview, object: nil)
             default:
                 if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers {
                     if chars == "," {

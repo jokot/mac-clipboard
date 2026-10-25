@@ -93,3 +93,19 @@ struct KeyLabel: View {
             .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.keyFill))
     }
 }
+
+/// The main button of a window: accent fill, white text. Unlike `.borderedProminent`, it keeps
+/// its color in a panel that is not the key window, such as the preview panel.
+struct AccentButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .frame(height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Theme.accent.opacity(configuration.isPressed ? 0.8 : 1))
+            )
+    }
+}

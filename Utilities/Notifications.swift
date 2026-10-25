@@ -10,6 +10,10 @@ extension Notification.Name {
     static let overlayDidShow = Notification.Name("OverlayDidShow")
     static let overlayOpenSettings = Notification.Name("OverlayOpenSettings")
     static let overlayFocusSearch = Notification.Name("OverlayFocusSearch")
+    /// Space in the clip window: open or close the preview of the selected clip.
+    static let overlayTogglePreview = Notification.Name("OverlayTogglePreview")
+    /// Edit… in the preview: the row with this clip id (the object) opens its text editor.
+    static let overlayEditItem = Notification.Name("OverlayEditItem")
 
     // Theme change
     static let themeChanged = Notification.Name("ThemeChanged")
