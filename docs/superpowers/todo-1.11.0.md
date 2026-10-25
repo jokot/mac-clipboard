@@ -1,4 +1,6 @@
-# MaClip 1.11.0: open tasks
+# MaClip 1.11.0: open tasks (archived)
+
+Archived on 2026-10-25. MaClip 1.11.0 is released. The open tasks are in `docs/superpowers/todo.md`.
 
 Branch: `feature/1.11.0-image-edit`. Last update: 2026-10-21.
 
@@ -115,10 +117,10 @@ Plan: `docs/superpowers/plans/2026-10-22-release-workflow.md`.
 - [x] `.github/workflows/release.yml`. The PR build passed on GitHub (run 39695871291). The artifact checksum is OK.
 - [x] README "What's new" sections moved to `CHANGELOG.md`. Release steps are in `CONTRIBUTING.md`.
 - [x] Repository setting "Allow GitHub Actions to create and approve pull requests" is on (set by the owner on 2026-10-22).
-- [ ] After PR #13 merges: check that the release PR `chore(main): release 1.11.0` opens.
-- [ ] Before you merge the release PR, replace the 1.11.0 section of `CHANGELOG.md` on the branch `release-please--branches--main` with the text below, then push. The notes made from commits list the reverted resizable overlay as a feature, list a test-only fix, and leave out the new history limit. The release job copies this section into the GitHub release.
+- [x] After PR #13 merges: check that the release PR `chore(main): release 1.11.0` opens.
+- [x] (Done after the release, on 2026-10-25: the release page and `CHANGELOG.md` have the text below.) Before you merge the release PR, replace the 1.11.0 section of `CHANGELOG.md` on the branch `release-please--branches--main` with the text below, then push. The notes made from commits list the reverted resizable overlay as a feature, list a test-only fix, and leave out the new history limit. The release job copies this section into the GitHub release.
   - Do not merge another PR to `main` between this edit and the release merge. A new merge makes release-please write the section again.
-- [ ] Merge the release PR. Check the release page: tag `v1.11.0`, the notes below, `MacClip-1.11.0.dmg` and `MacClip-1.11.0.dmg.sha256`.
+- [x] Merge the release PR. Check the release page: tag `v1.11.0`, the notes below, `MacClip-1.11.0.dmg` and `MacClip-1.11.0.dmg.sha256`.
 - [x] A release is public only after the DMG is built and attached (`publish.sh`, 8 tests). A failed step leaves at most a hidden draft.
 
 ### Release notes for 1.11.0 (paste into CHANGELOG.md on the release PR)
