@@ -10,6 +10,8 @@
 #    it. Only the publish creates the tag. If any step fails, nothing is
 #    public, and a re-run of the failed job continues.
 # PRs to main run pr-build, which uploads the DMG as a workflow artifact.
+# The website in site/ is not part of the app. release-please skips commits
+# that change only site/ (exclude-paths), and those PRs do not run pr-build.
 # The release PR changes only the files in paths-ignore, so it does not run
 # pr-build. Each change to the release PR is two pushes (release-please, then
 # sync-build). Each push would start a run, and GitHub asks for an approval
@@ -33,6 +35,8 @@ on:
       - .release-please-manifest.json
       - project.yml
       - MacClipboard.xcodeproj/project.pbxproj
+      # The website. Cloudflare Pages deploys it. It does not change the app.
+      - site/**
 
 concurrency:
   group: release-${{ github.ref }}

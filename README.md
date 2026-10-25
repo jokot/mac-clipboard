@@ -7,6 +7,8 @@ MaClip
 
 A simple macOS clipboard history app built with SwiftUI.
 
+Website: [maclip.jokot.dev](https://maclip.jokot.dev)
+
 ## Install
 
 1. Download `MacClip-<version>.dmg` from the [latest release](https://github.com/jokot/mac-clipboard/releases/latest).
