@@ -13,10 +13,11 @@ enum HotkeyUtils {
     /// Build a user-facing hotkey description from keyCode and carbon modifier flags
     static func description(keyCode: UInt32, modifiers: UInt32) -> String {
         var components: [String] = []
-        if modifiers.containsCmd { components.append("⌘") }
+        // The order of macOS menus: Control, Option, Shift, Command.
         if modifiers.containsCtrl { components.append("⌃") }
         if modifiers.containsAlt { components.append("⌥") }
         if modifiers.containsShift { components.append("⇧") }
+        if modifiers.containsCmd { components.append("⌘") }
         let key = letterMap[keyCode] ?? "V"
         components.append(key)
         return components.joined()

@@ -7,6 +7,8 @@ struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject var viewModel: ClipboardListViewModel
     @State private var isCapturingHotkey = false
+    /// The extract shortcut that waits for new keys, or nil.
+    @State private var extractCapture: ExtractKind?
     @State private var newHotkeyModifiers: UInt32 = 0
     @State private var newHotkeyKeyCode: UInt32 = 0
     @State private var isShowingClearConfirm: Bool = false
@@ -18,6 +20,7 @@ struct SettingsView: View {
                 GeneralTab(
                     settings: settings,
                     isCapturingHotkey: $isCapturingHotkey,
+                    extractCapture: $extractCapture,
                     startCapturingHotkey: startCapturingHotkey,
                     applyTheme: applyTheme,
                     hotKeyDescription: hotKeyDescription
@@ -68,8 +71,22 @@ struct SettingsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 480)
-        .background(HotkeyCapturingView(isCapturing: $isCapturingHotkey) { keyCode, modifiers in
-            updateHotkey(keyCode: keyCode, modifiers: modifiers)
+        .background(HotkeyCapturingView(isCapturing: Binding(
+            get: { isCapturingHotkey || extractCapture != nil },
+            set: { if !$0 { isCapturingHotkey = false; extractCapture = nil } }
+        )) { keyCode, modifiers in
+            switch extractCapture {
+            case .text:
+                settings.extractTextKeyCode = keyCode
+                settings.extractTextModifiers = modifiers
+                extractCapture = nil
+            case .code:
+                settings.extractCodeKeyCode = keyCode
+                settings.extractCodeModifiers = modifiers
+                extractCapture = nil
+            case nil:
+                updateHotkey(keyCode: keyCode, modifiers: modifiers)
+            }
         })
         .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
             Button("Cancel", role: .cancel) { }
@@ -84,6 +101,7 @@ struct SettingsView: View {
     }
 
     private func startCapturingHotkey() {
+        extractCapture = nil
         isCapturingHotkey = true
     }
 
@@ -160,6 +178,7 @@ struct SettingsView: View {
 private struct GeneralTab: View {
     @ObservedObject var settings: AppSettings
     @Binding var isCapturingHotkey: Bool
+    @Binding var extractCapture: ExtractKind?
     let startCapturingHotkey: () -> Void
     let applyTheme: (AppTheme) -> Void
     let hotKeyDescription: String
@@ -184,6 +203,20 @@ private struct GeneralTab: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            GroupBox("Paste From the Last Image") {
+                VStack(alignment: .leading, spacing: 8) {
+                    extractRow("Paste text", kind: .text, enabled: $settings.extractTextHotkeyEnabled,
+                               keyCode: settings.extractTextKeyCode, modifiers: settings.extractTextModifiers)
+                    extractRow("Paste QR code or barcode", kind: .code, enabled: $settings.extractCodeHotkeyEnabled,
+                               keyCode: settings.extractCodeKeyCode, modifiers: settings.extractCodeModifiers)
+                    Text("Take a screenshot with \u{2303}\u{21E7}\u{2318}4, then press a shortcut in any app. MaClip reads the newest image clip and pastes the result. \u{2318}V still pastes the image.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             GroupBox("Display") {
                 VStack(alignment: .leading, spacing: 8) {
                     Picker("Theme", selection: $settings.theme) {
@@ -203,6 +236,25 @@ private struct GeneralTab: View {
             Spacer()
         }
         .padding(20)
+    }
+}
+
+private extension GeneralTab {
+    func extractRow(_ title: String, kind: ExtractKind, enabled: Binding<Bool>,
+                    keyCode: UInt32, modifiers: UInt32) -> some View {
+        HStack {
+            Toggle(title, isOn: enabled)
+            Spacer()
+            Text(HotkeyUtils.description(keyCode: keyCode, modifiers: modifiers))
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(enabled.wrappedValue ? .primary : .secondary)
+            Button(extractCapture == kind ? "Press keys\u{2026}" : "Change") {
+                isCapturingHotkey = false
+                extractCapture = kind
+            }
+            .foregroundColor(extractCapture == kind ? .orange : .blue)
+            .disabled(!enabled.wrappedValue)
+        }
     }
 }
 
