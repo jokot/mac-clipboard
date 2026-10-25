@@ -28,6 +28,10 @@ final class AppSettings: ObservableObject {
     @Published var autoCleanEnabled: Bool {
         didSet { AppEnvironment.defaults.set(autoCleanEnabled, forKey: Keys.autoCleanEnabled) }
     }
+    /// With `autoCleanEnabled`, MaClip deletes clips older than this number of days.
+    @Published var autoCleanDays: Int {
+        didSet { AppEnvironment.defaults.set(autoCleanDays, forKey: Keys.autoCleanDays) }
+    }
     @Published var excludedBundleIDs: [String] {
         didSet {
             if let data = try? JSONEncoder().encode(excludedBundleIDs) {
@@ -88,6 +92,7 @@ final class AppSettings: ObservableObject {
         static let theme = "settings.theme"
         static let maxItems = "settings.maxItems"
         static let autoCleanEnabled = "settings.autoClean"
+        static let autoCleanDays = "settings.autoClean.days"
         static let pasteOnClick = "settings.pasteOnClick"
         static let moveTopOnClick = "settings.moveTopOnClick"
         static let excludedBundleIDs = "settings.excludedBundleIDs"
@@ -188,6 +193,8 @@ final class AppSettings: ObservableObject {
         self.theme = initialTheme
         self.maxItems = initialMax
         self.autoCleanEnabled = initialAutoClean
+        // Before 2.0, auto-clean always used 7 days.
+        self.autoCleanDays = (defaults.object(forKey: Keys.autoCleanDays) as? Int).flatMap { $0 > 0 ? $0 : nil } ?? 7
         self.excludedBundleIDs = initialExcluded
         self.skipConcealedItems = initialSkipConcealed
         self.concealedClearTimeout = initialConcealedTimeout
