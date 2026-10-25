@@ -25,8 +25,10 @@ struct InfoView: View {
                         Text("Last checked: \(viewModel.getFormattedLastChecked())")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                             .id(refreshTrigger) // Force refresh when this changes
                     }
+                    .layoutPriority(1)
                     Spacer()
                     Button(viewModel.isCheckingUpdate ? "Checking\u{2026}" : "Check Now", action: viewModel.checkForUpdates)
                         .disabled(viewModel.isCheckingUpdate)
