@@ -3,6 +3,13 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [2.0.1](https://github.com/jokot/mac-clipboard/compare/v2.0.0...v2.0.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **icon:** use the 1.x symbol in the 1.x gradient on a white tile ([#39](https://github.com/jokot/mac-clipboard/issues/39)) ([d843589](https://github.com/jokot/mac-clipboard/commit/d8435893fa7f7661c0020f9135bf640bf46835f8))
+
 ## [2.0.0](https://github.com/jokot/mac-clipboard/compare/v1.13.1...v2.0.0) (2026-10-25)
 
 
