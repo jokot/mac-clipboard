@@ -21,7 +21,8 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         { "type": "generic", "path": "project.yml" }
-      ]
+      ],
+      "exclude-paths": ["site"]
     }
   }
 }
