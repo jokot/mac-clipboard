@@ -112,7 +112,10 @@ jobs:
 
   sync-build:
     needs: release-please
-    if: needs.release-please.outputs.pr != ''
+    # release-please needs release, which is skipped when nothing waits for a
+    # release. Without a status function, GitHub skips every job after a
+    # skipped job, so this condition must check the results itself.
+    if: ${{ !cancelled() && needs.release-please.result == 'success' && needs.release-please.outputs.pr != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
