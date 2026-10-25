@@ -3,6 +3,13 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [1.13.1](https://github.com/jokot/mac-clipboard/compare/v1.13.0...v1.13.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **links:** use https for a copied bare domain ([#28](https://github.com/jokot/mac-clipboard/issues/28)) ([1729fc1](https://github.com/jokot/mac-clipboard/commit/1729fc1b66fb969f81a3d782e6d0baba017f9d63))
+
 ## [1.13.0](https://github.com/jokot/mac-clipboard/compare/v1.12.1...v1.13.0) (2026-10-25)
 
 
