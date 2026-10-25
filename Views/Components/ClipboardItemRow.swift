@@ -1,11 +1,13 @@
 import SwiftUI
 
+/// One clip in the clip window: the kind icon with the source app icon, the content,
+/// and at the right the age. On hover, the row actions replace the age.
 struct ClipboardItemRow: View {
     let item: ClipboardItem
     let onSelect: (ClipboardItem) -> Void
     let onRemove: () -> Void
     var isSelected: Bool = false
-    
+
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
     var onExcludeApp: ((String) -> Void)? = nil
@@ -17,69 +19,42 @@ struct ClipboardItemRow: View {
     var onCopyPath: ((ClipboardItem) -> Void)? = nil
     var onEdit: ((ClipboardItem, ClipboardItemContent) -> Void)? = nil
     var onEditImage: ((ClipboardItem) -> Void)? = nil
+    /// Puts the clip on the pasteboard without pasting it.
+    var onCopyOnly: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
     @State private var isEditing: Bool = false
     @State private var editText: String = ""
     @State private var editError: String? = nil
+    @State private var revealedUntil: Date? = nil
 
     var body: some View {
         Group {
             if isEditing {
-                EditorView(
-                    text: $editText,
-                    error: $editError,
-                    onCancel: { isEditing = false },
-                    onSave: { commitEdit() }
-                )
-                .padding(6)
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.06))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
-                )
+                HStack(alignment: .top, spacing: 12) {
+                    KindTile(systemImage: kindSymbol, tint: kindTint, bundleID: item.sourceBundleID)
+                    EditorView(
+                        text: $editText,
+                        error: $editError,
+                        onCancel: { isEditing = false },
+                        onSave: { commitEdit() }
+                    )
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.hoverFill))
             } else {
                 content
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: Theme.rowHeight)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(isSelected ? Theme.selectedFill : (isHovered ? Theme.hoverFill : Color.clear))
+                    )
                     .contentShape(Rectangle())
                     .onTapGesture { onSelect(item) }
                     .onHover { isHovered = $0 }
-                    .padding(6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill((isHovered || isSelected) ? Color.accentColor.opacity(0.12) : Color.clear)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.secondary.opacity((isHovered || isSelected) ? 0.35 : 0.1), lineWidth: 1)
-                    )
-                    .contextMenu {
-                        // Content-specific actions first
-                        if case .file = item.content {
-                            Button("Open") { onOpenFile?(item) }
-                            Button("Reveal in Finder") { onRevealInFinder?(item) }
-                            Button("Copy Path") { onCopyPath?(item) }
-                            Divider()
-                        }
-                        if canEdit(item.content) {
-                            Button("Edit…") { enterEditMode() }
-                            Divider()
-                        }
-                        if case .image = item.content, let onEditImage {
-                            Button("Edit…") { onEditImage(item) }
-                            Divider()
-                        }
-                        // Common action: exclude source app
-                        if let bundleID = item.sourceBundleID, let onExcludeApp {
-                            let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
-                            Button("Exclude \"\(name)\" from history") { onExcludeApp(bundleID) }
-                        } else {
-                            Text("Source unknown for this clip")
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                    .contextMenu { contextMenu }
             }
         }
         .onChange(of: item.id) { _ in
@@ -90,6 +65,39 @@ struct ClipboardItemRow: View {
             isEditing = false
             editError = nil
         }
+    }
+
+    // MARK: - Context menu
+
+    @ViewBuilder
+    private var contextMenu: some View {
+        Button("Paste") { onSelect(item) }
+        Button("Copy Only") { onCopyOnly?(item) }
+        switch item.content {
+        case .url(let url):
+            Button("Open Link") { openLink(url) }
+        case .file:
+            Button("Open") { onOpenFile?(item) }
+            Button("Reveal in Finder") { onRevealInFinder?(item) }
+            Button("Copy Path") { onCopyPath?(item) }
+        case .image:
+            if let onExtractText { Button("Copy Text from Image") { onExtractText(item) } }
+            if let onExtractBarcode { Button("Copy QR Code or Barcode") { onExtractBarcode(item) } }
+        case .text:
+            EmptyView()
+        }
+        if canEdit(item.content) {
+            Button("Edit…") { enterEditMode() }
+        } else if case .image = item.content, let onEditImage {
+            Button("Edit…") { onEditImage(item) }
+        }
+        Divider()
+        if let bundleID = item.sourceBundleID, let onExcludeApp {
+            let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+            Button("Don\u{2019}t Save Clips from \(name)\u{2026}") { onExcludeApp(bundleID) }
+            Divider()
+        }
+        Button("Delete", role: .destructive) { onRemove() }
     }
 
     // MARK: - Edit helpers
@@ -148,249 +156,245 @@ struct ClipboardItemRow: View {
         }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        switch item.content {
-        case .text(let string):
-            TextItemContent(string: string,
-                            date: item.date,
-                            bundleID: item.sourceBundleID,
-                            isConcealed: item.isConcealed,
-                            concealedExpiresAt: item.concealedExpiresAt,
-                            isOCRResult: item.isOCRResult,
-                            isHovered: isHovered,
-                            fullItem: item,
-                            onRemove: onRemove)
-        case .image(let imgContent):
-            ImageItemContent(imgContent: imgContent,
-                             item: item,
-                             bundleID: item.sourceBundleID,
-                             isConcealed: item.isConcealed,
-                             concealedExpiresAt: item.concealedExpiresAt,
-                             isOCRResult: item.isOCRResult,
-                             isHovered: isHovered,
-                             onRemove: onRemove,
-                             onExtractText: onExtractText,
-                             onExtractBarcode: onExtractBarcode,
-                             loadImageData: loadImageData)
-        case .url(let url):
-            URLItemContent(url: url,
-                           date: item.date,
-                           bundleID: item.sourceBundleID,
-                           isConcealed: item.isConcealed,
-                           concealedExpiresAt: item.concealedExpiresAt,
-                           isOCRResult: item.isOCRResult,
-                           isHovered: isHovered,
-                           fullItem: item,
-                           onRemove: onRemove)
-        case .file(let urls):
-            FileItemContent(
-                urls: urls,
-                date: item.date,
-                bundleID: item.sourceBundleID,
-                isConcealed: item.isConcealed,
-                concealedExpiresAt: item.concealedExpiresAt,
-                isOCRResult: item.isOCRResult,
-                isHovered: isHovered,
-                onRemove: onRemove,
-                onOpen: { onOpenFile?(item) },
-                onRevealInFinder: { onRevealInFinder?(item) },
-                onCopyPath: { onCopyPath?(item) }
-            )
-        }
-    }
-}
+    // MARK: - Content
 
-// MARK: - Private subviews (Option B)
-
-private struct TextItemContent: View {
-    let string: String
-    let date: Date
-    let bundleID: String?
-    let isConcealed: Bool
-    let concealedExpiresAt: Date?
-    let isOCRResult: Bool
-    let isHovered: Bool
-    let fullItem: ClipboardItem
-    let onRemove: () -> Void
-
-    @State private var revealedUntil: Date? = nil
-
-    private var isCurrentlyRevealed: Bool {
+    private var isRevealed: Bool {
         guard let revealedUntil else { return false }
         return revealedUntil > Date()
     }
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            let primary = ContentTagDetector.primaryTag(for: fullItem)
-            let iconColor: Color = (primary == .color)
-                ? (ColorParser.color(fromHex: string) ?? .accentColor)
-                : .accentColor
-            Image(systemName: primary?.symbolName ?? "doc.on.clipboard")
-                .font(.title3)
-                .foregroundColor(iconColor)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 6) {
-                let displayString = (isConcealed && !isCurrentlyRevealed)
-                    ? String(repeating: "•", count: min(8, max(1, string.count)))
-                    : TextPreview.preview(for: string)
-                Text(displayString)
-                    .font(.body)
-                    .lineLimit(4)
-                HStack(spacing: 8) {
-                    Text(date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if isConcealed {
-                        ConcealedBadge(expiresAt: concealedExpiresAt)
+    private func reveal() {
+        revealedUntil = Date().addingTimeInterval(5)
+        Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+            Task { @MainActor in revealedUntil = nil }
+        }
+    }
+
+    private func openLink(_ url: URL) {
+        NSWorkspace.shared.open(url)
+        NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+    }
+
+    private var kindSymbol: String {
+        if item.isConcealed { return "lock.fill" }
+        if item.isOCRResult { return "text.viewfinder" }
+        switch item.content {
+        case .image: return "photo"
+        case .file(let urls):
+            guard let first = urls.first, FileManager.default.fileExists(atPath: first.path) else {
+                return "questionmark.folder"
+            }
+            return first.hasDirectoryPath ? "folder" : "doc"
+        case .url: return ContentTagDetector.primaryTag(for: item)?.symbolName ?? "link"
+        case .text: return ContentTagDetector.primaryTag(for: item)?.symbolName ?? "text.alignleft"
+        }
+    }
+
+    private var kindTint: Color {
+        if item.isConcealed { return Theme.warning }
+        if case .text(let string) = item.content, ContentTagDetector.primaryTag(for: item) == .color {
+            return ColorParser.color(fromHex: string) ?? .secondary
+        }
+        return .secondary
+    }
+
+    private func masked(_ string: String) -> String {
+        String(repeating: "\u{2022}", count: min(12, max(4, string.count)))
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch item.content {
+        case .image(let imgContent):
+            HStack(alignment: .top, spacing: 12) {
+                KindTile(systemImage: kindSymbol, tint: kindTint, bundleID: item.sourceBundleID)
+                ImagePreview(imgContent: imgContent,
+                             isConcealed: item.isConcealed && !isRevealed,
+                             loadImageData: loadImageData)
+                    .overlay(alignment: .topTrailing) {
+                        if isHovered { imageActions.padding(8) }
                     }
-                }
+                trailing(actions: { EmptyView() })
             }
-            Spacer()
-            if isOCRResult {
-                OCRBadge()
-            }
-            if isConcealed && isHovered {
-                RevealButton {
-                    revealedUntil = Date().addingTimeInterval(5)
-                    Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
-                        Task { @MainActor in
-                            revealedUntil = nil
-                        }
-                    }
-                }
-            }
-            SourceIconBadge(bundleID: bundleID)
-            if isHovered {
-                pillButton(label: "Delete", systemImage: "trash", color: .red,
-                           outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
+        default:
+            HStack(alignment: .center, spacing: 12) {
+                KindTile(systemImage: kindSymbol, tint: kindTint, bundleID: item.sourceBundleID)
+                mainText
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                trailing(actions: { rowActions })
             }
         }
-        .padding(.trailing, 10)
+    }
+
+    @ViewBuilder
+    private var mainText: some View {
+        let hidden = item.isConcealed && !isRevealed
+        switch item.content {
+        case .text(let string):
+            let tag = ContentTagDetector.primaryTag(for: item)
+            let isCode = tag == .code || tag == .json || tag == .diff
+            Text(hidden ? masked(string) : TextPreview.preview(for: string))
+                .font(isCode && !hidden ? .system(size: 12, design: .monospaced) : .body)
+                .foregroundColor(hidden ? .secondary : .primary)
+                .lineLimit(2)
+        case .url(let url):
+            Text(hidden ? masked(url.absoluteString) : url.absoluteString)
+                .foregroundColor(hidden ? .secondary : Theme.accent)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        case .file(let urls):
+            let name = urls.first?.lastPathComponent ?? "(unknown)"
+            (Text(hidden ? masked(name) : name)
+             + Text(urls.count > 1 && !hidden ? "  and \(urls.count - 1) more" : "").foregroundColor(.secondary))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .help(urls.prefix(10).map(\.path).joined(separator: "\n")
+                      + (urls.count > 10 ? "\n(\(urls.count - 10) more)" : ""))
+        case .image:
+            EmptyView()
+        }
+    }
+
+    /// The age, or the clear countdown of a concealed clip. On hover, the actions.
+    @ViewBuilder
+    private func trailing<A: View>(@ViewBuilder actions: () -> A) -> some View {
+        if isHovered && !(A.self == EmptyView.self) {
+            HStack(spacing: 2) { actions() }
+        } else if item.isConcealed, let expiresAt = item.concealedExpiresAt, expiresAt < .distantFuture {
+            TimelineView(.periodic(from: Date(), by: 1)) { context in
+                Text("clears in \(Self.countdown(until: expiresAt, now: context.date))")
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundColor(Theme.warning)
+            }
+        } else {
+            TimelineView(.periodic(from: Date(), by: 30)) { context in
+                Text(ClipAge.short(from: item.date, now: context.date))
+                    .font(.system(size: 11))
+                    .foregroundColor(isSelected ? .primary.opacity(0.7) : .secondary)
+            }
+        }
+    }
+
+    static func countdown(until date: Date, now: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(now)))
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    @ViewBuilder
+    private var rowActions: some View {
+        if item.isConcealed {
+            RowActionButton(label: "Show for 5 Seconds", systemImage: "eye", action: reveal)
+        }
+        switch item.content {
+        case .url(let url):
+            RowActionButton(label: "Open Link", systemImage: "arrow.up.right") { openLink(url) }
+        case .file:
+            RowActionButton(label: "Reveal in Finder", systemImage: "folder") { onRevealInFinder?(item) }
+        default:
+            EmptyView()
+        }
+        if canEdit(item.content) {
+            RowActionButton(label: "Edit", systemImage: "pencil") { enterEditMode() }
+        }
+        RowActionButton(label: "Delete", systemImage: "trash", action: onRemove)
+    }
+
+    /// Image actions float on the image, so the image keeps its full width.
+    private var imageActions: some View {
+        HStack(spacing: 0) {
+            if item.isConcealed {
+                RowActionButton(label: "Show for 5 Seconds", systemImage: "eye", tint: .primary, action: reveal)
+            }
+            if let onExtractText {
+                RowActionButton(label: "Copy Text from Image", systemImage: "text.viewfinder", tint: .primary) { onExtractText(item) }
+            }
+            if let onExtractBarcode {
+                RowActionButton(label: "Copy QR Code or Barcode", systemImage: "qrcode.viewfinder", tint: .primary) { onExtractBarcode(item) }
+            }
+            if let onEditImage {
+                RowActionButton(label: "Edit Image", systemImage: "pencil", tint: .primary) { onEditImage(item) }
+            }
+            RowActionButton(label: "Delete", systemImage: "trash", tint: .primary, action: onRemove)
+        }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+        )
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Theme.line, lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
     }
 }
 
-private struct ImageItemContent: View {
+// MARK: - Image preview
+
+/// A wide image fills the row width at 132 pt high, cut at the bottom. A square or tall
+/// image keeps its shape at 112 pt high.
+private struct ImagePreview: View {
     let imgContent: ImageContent
-    let item: ClipboardItem
-    let bundleID: String?
     let isConcealed: Bool
-    let concealedExpiresAt: Date?
-    let isOCRResult: Bool
-    let isHovered: Bool
-    let onRemove: () -> Void
-    var onExtractText: ((ClipboardItem) -> Void)? = nil
-    var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
-    var loadImageData: ((URL) -> Data?)? = nil
+    var loadImageData: ((URL) -> Data?)?
 
     @State private var loadedImage: NSImage? = nil
     // ponytail: rows are keyed by index and keep @State across content changes,
     // so remember which file the cache came from. An edit (new .enc URL) or a
     // shifted row then reloads instead of showing the previous image.
     @State private var loadedURL: URL? = nil
-    @State private var revealedUntil: Date? = nil
-
-    private var isCurrentlyRevealed: Bool {
-        guard let revealedUntil else { return false }
-        return revealedUntil > Date()
-    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "photo")
-                .font(.title3)
-                .foregroundColor(.accentColor)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 8) {
-                imageView
-                    .frame(maxWidth: .infinity, maxHeight: 200)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-                    .overlay {
-                        if isConcealed && !isCurrentlyRevealed {
-                            ZStack {
-                                Color.black.opacity(0.45)
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 32, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .cornerRadius(8)
-                        }
-                    }
-
-                if isHovered {
-                    HStack(spacing: 8) {
-                        if let onExtractText {
-                            pillButton(label: "Extract Text", systemImage: "text.viewfinder", color: .accentColor, outlineOpacity: 0.35, fillsWidth: true) {
-                                onExtractText(item)
-                            }
-                        }
-                        if let onExtractBarcode {
-                            pillButton(label: "Extract Code", systemImage: "barcode.viewfinder", color: .accentColor, outlineOpacity: 0.35, fillsWidth: true) {
-                                onExtractBarcode(item)
-                            }
-                        }
-
-                        pillButton(label: "Delete", systemImage: "trash", color: .red, outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-
-                HStack(spacing: 8) {
-                    Text(item.date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if isConcealed {
-                        ConcealedBadge(expiresAt: concealedExpiresAt)
-                    }
-                    Spacer()
-                    if isOCRResult {
-                        OCRBadge()
-                    }
-                    if isConcealed && isHovered {
-                        RevealButton {
-                            revealedUntil = Date().addingTimeInterval(5)
-                            Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
-                                Task { @MainActor in
-                                    revealedUntil = nil
-                                }
-                            }
-                        }
-                    }
-                    SourceIconBadge(bundleID: bundleID)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.trailing, 2)
-    }
-    
-    @ViewBuilder
-    private var imageView: some View {
         Group {
             if let image = effectiveImage {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
+                let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
+                if aspect >= 1.2 {
+                    // A clear box sets the size. The image fills it from the top, and the box
+                    // clips it, so a very wide image cannot make the row wider.
+                    Color.clear
+                        .frame(maxWidth: .infinity)
+                        .frame(height: Theme.imageHeight)
+                        .overlay(alignment: .top) {
+                            Image(nsImage: image)
+                                .resizable()
+                                .scaledToFill()
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                        .overlay { concealedCover }
+                } else {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 112 * aspect, height: 112)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                        .overlay { concealedCover }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             } else {
-                Color.secondary.opacity(0.1)
-                    .overlay(ProgressView())
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Theme.tileFill)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 96)
+                    .overlay(ProgressView().controlSize(.small))
                     .task {
-                        if case .file(let url) = imgContent.source {
-                            if let data = loadImageData?(url), let img = NSImage(data: data) {
-                                self.loadedImage = img
-                                self.loadedURL = url
-                            }
+                        if case .file(let url) = imgContent.source,
+                           let data = loadImageData?(url), let img = NSImage(data: data) {
+                            loadedImage = img
+                            loadedURL = url
                         }
                     }
             }
         }
     }
-    
+
+    @ViewBuilder
+    private var concealedCover: some View {
+        if isConcealed {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(.ultraThickMaterial)
+                .overlay(Image(systemName: "lock.fill").font(.system(size: 22, weight: .semibold)).foregroundColor(Theme.warning))
+        }
+    }
+
     // Use memory image if available, otherwise use loaded image
     private var effectiveImage: NSImage? {
         switch imgContent.source {
@@ -399,162 +403,6 @@ private struct ImageItemContent: View {
         case .file(let url):
             return loadedURL == url ? loadedImage : nil
         }
-    }
-}
-
-private struct URLItemContent: View {
-    let url: URL
-    let date: Date
-    let bundleID: String?
-    let isConcealed: Bool
-    let concealedExpiresAt: Date?
-    let isOCRResult: Bool
-    let isHovered: Bool
-    let fullItem: ClipboardItem
-    let onRemove: () -> Void
-
-    @State private var revealedUntil: Date? = nil
-
-    private var isCurrentlyRevealed: Bool {
-        guard let revealedUntil else { return false }
-        return revealedUntil > Date()
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: ContentTagDetector.primaryTag(for: fullItem)?.symbolName ?? "link")
-                .font(.title3)
-                .foregroundColor(.accentColor)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 6) {
-                let displayString: String = {
-                    if isConcealed && !isCurrentlyRevealed {
-                        let n = min(8, max(1, url.absoluteString.count))
-                        return String(repeating: "•", count: n)
-                    }
-                    return url.absoluteString
-                }()
-                Text(displayString)
-                    .font(.body)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                HStack(spacing: 8) {
-                    Text(date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if isConcealed {
-                        ConcealedBadge(expiresAt: concealedExpiresAt)
-                    }
-                }
-            }
-            Spacer()
-            if isOCRResult {
-                OCRBadge()
-            }
-            if isConcealed && isHovered {
-                RevealButton {
-                    revealedUntil = Date().addingTimeInterval(5)
-                    Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
-                        Task { @MainActor in
-                            revealedUntil = nil
-                        }
-                    }
-                }
-            }
-            SourceIconBadge(bundleID: bundleID)
-            HStack(spacing: 8) {
-                if isHovered {
-                    pillButton(label: "Open", systemImage: "safari", color: .accentColor, outlineOpacity: 0.35, fillsWidth: false) {
-                        NSWorkspace.shared.open(url)
-                        NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
-                    }
-                    pillButton(label: "Delete", systemImage: "trash", color: .red, outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
-                }
-            }
-        }
-        .padding(.trailing, 10)
-    }
-}
-
-// MARK: - Small styling helper
-
-@ViewBuilder
-private func pillButton(label: String, systemImage: String, color: Color, outlineOpacity: Double, fillsWidth: Bool = false, action: @escaping () -> Void) -> some View {
-    let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-    Button(action: action) {
-        Label(label, systemImage: systemImage)
-            .font(.callout)
-            .foregroundColor(color)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 10)
-            .frame(maxWidth: fillsWidth ? .infinity : nil)
-            .contentShape(shape)
-            .background(
-                shape
-                    .stroke(color.opacity(outlineOpacity), lineWidth: 1)
-            )
-    }
-    .buttonStyle(.plain)
-}
-
-private struct SourceIconBadge: View {
-    let bundleID: String?
-
-    var body: some View {
-        Group {
-            if let bundleID,
-               let icon = AppMetadata.shared.icon(for: bundleID) {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: 16, height: 16)
-                    .help(AppMetadata.shared.displayName(for: bundleID) ?? bundleID)
-            } else {
-                Image(systemName: "questionmark.app.dashed")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                    .frame(width: 16, height: 16)
-                    .help("Unknown source")
-            }
-        }
-    }
-}
-
-private struct ConcealedBadge: View {
-    let expiresAt: Date?
-    @State private var now: Date = Date()
-    private let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 12))
-                .foregroundColor(.orange)
-            if let expiresAt, expiresAt < Date.distantFuture {
-                let remaining = max(0, Int(expiresAt.timeIntervalSince(now)))
-                Text(formatRemaining(seconds: remaining))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundColor(.secondary)
-            }
-        }
-        .onReceive(timer) { now = $0 }
-    }
-
-    private func formatRemaining(seconds: Int) -> String {
-        if seconds >= 60 {
-            return "\(seconds / 60)m"
-        }
-        return "\(seconds)s"
-    }
-}
-
-private struct OCRBadge: View {
-    var body: some View {
-        Image(systemName: "text.viewfinder")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.secondary)
-            .frame(width: 16, height: 16)
-            .contentShape(Rectangle())
-            .help("Extracted from image")
     }
 }
 
@@ -584,63 +432,6 @@ private enum ColorParser {
     }
 }
 
-private struct RevealButton: View {
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "eye")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-                .frame(width: 16, height: 16)
-                .contentShape(Rectangle())
-                .help("Reveal for 5 seconds")
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct FileLeadingIcon: View {
-    let url: URL?
-    @State private var exists: Bool = false
-
-    var body: some View {
-        Group {
-            if let url = url {
-                if exists {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                        .resizable()
-                        .frame(width: 28, height: 28)
-                } else {
-                    Image(systemName: "questionmark.folder")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
-                        .help("File missing")
-                }
-            } else {
-                Image(systemName: "doc")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28, height: 28)
-            }
-        }
-        .onAppear {
-            recheck()
-        }
-        .onChange(of: url) { _ in
-            recheck()
-        }
-        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
-            recheck()
-        }
-    }
-
-    private func recheck() {
-        guard let url else { exists = false; return }
-        exists = FileManager.default.fileExists(atPath: url.path)
-    }
-}
-
 private struct EditorView: View {
     @Binding var text: String
     @Binding var error: String?
@@ -652,10 +443,12 @@ private struct EditorView: View {
         VStack(alignment: .leading, spacing: 8) {
             TextEditor(text: $text)
                 .font(.body)
-                .frame(minHeight: 80, maxHeight: 240)
+                .frame(minHeight: 76, maxHeight: 240)
+                .padding(4)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color(nsColor: .textBackgroundColor)))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Theme.accent, lineWidth: 1)
                 )
             if let error = error {
                 Text(error)
@@ -663,12 +456,15 @@ private struct EditorView: View {
                     .foregroundColor(.red)
             }
             HStack(spacing: 8) {
+                Text("esc cancels \u{00B7} \u{2318}\u{21A9} saves")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
                 Spacer()
                 Button("Cancel", action: onCancel)
-                    .buttonStyle(.bordered)
                     .keyboardShortcut(.cancelAction)
-                Button("Save ⌘↩", action: onSave)
+                Button("Save", action: onSave)
                     .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
                     .keyboardShortcut(.defaultAction)
             }
         }
@@ -720,75 +516,3 @@ private struct EditorView: View {
     }
 }
 
-private struct FileItemContent: View {
-    let urls: [URL]
-    let date: Date
-    let bundleID: String?
-    let isConcealed: Bool
-    let concealedExpiresAt: Date?
-    let isOCRResult: Bool
-    let isHovered: Bool
-    let onRemove: () -> Void
-    let onOpen: () -> Void
-    let onRevealInFinder: () -> Void
-    let onCopyPath: () -> Void
-
-    @State private var revealedUntil: Date? = nil
-
-    private var isCurrentlyRevealed: Bool {
-        guard let revealedUntil else { return false }
-        return revealedUntil > Date()
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            FileLeadingIcon(url: urls.first)
-                .frame(width: 28)
-
-            VStack(alignment: .leading, spacing: 6) {
-                let primaryName = urls.first?.lastPathComponent ?? "(unknown)"
-                let suffix = urls.count > 1 ? " +\(urls.count - 1) more" : ""
-                let display = (isConcealed && !isCurrentlyRevealed)
-                    ? String(repeating: "•", count: min(8, max(1, primaryName.count)))
-                    : primaryName + suffix
-                Text(display)
-                    .font(.body)
-                    .lineLimit(2)
-                HStack(spacing: 8) {
-                    if let parent = urls.first?.deletingLastPathComponent().lastPathComponent {
-                        Text(parent)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    Text(date, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if isConcealed {
-                        ConcealedBadge(expiresAt: concealedExpiresAt)
-                    }
-                }
-            }
-            Spacer()
-            if isConcealed && isHovered {
-                RevealButton {
-                    revealedUntil = Date().addingTimeInterval(5)
-                    Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
-                        Task { @MainActor in revealedUntil = nil }
-                    }
-                }
-            }
-            if isOCRResult {
-                OCRBadge()
-            }
-            SourceIconBadge(bundleID: bundleID)
-            if isHovered {
-                pillButton(label: "Delete", systemImage: "trash", color: .red,
-                           outlineOpacity: 0.35, fillsWidth: false, action: onRemove)
-            }
-        }
-        .padding(.trailing, 10)
-        .help(urls.prefix(10).map(\.path).joined(separator: "\n")
-              + (urls.count > 10 ? "\n(\(urls.count - 10) more)" : ""))
-    }
-}

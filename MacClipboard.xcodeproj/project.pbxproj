@@ -12,6 +12,7 @@
 		0414F7BC1B9B2B06BD0E210F /* HistoryCryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */; };
 		0EFE4D34B1B4FC0A9B17E1B6 /* TextPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF81986603D19912EF59AD1 /* TextPreview.swift */; };
 		112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */; };
+		18C0680CAEFAFBEBFBC0DE10 /* ClipListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */; };
 		19742895E7A968E617947BA6 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2A25C559C9759FD8E4AF7B /* AppIconView.swift */; };
 		1D6DE4479371170E637893FB /* ESCKeyCatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AD13AA20CF1337FECA2753 /* ESCKeyCatcher.swift */; };
 		1E1D00340048E2DFA2FB166D /* ContentTags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A83A199875AAD6DA273591F /* ContentTags.swift */; };
@@ -30,6 +31,7 @@
 		59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F4194F31C555F3F3166BDA /* OCRService.swift */; };
 		6D63E92309F2D1CA637A99EB /* MenuBarIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 42329943E61EA51FA9377AE9 /* MenuBarIcon@2x.png */; };
 		7170F47F267388BAF4517709 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7F2BCE8886027192AD2307 /* Notifications.swift */; };
+		757DEF736A5B201C9CBFA93E /* ClipListTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */; };
 		77C2E8A92F5F7C12481B5954 /* ExtractPasteControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A90B1A3298B9A8AB94DA69 /* ExtractPasteControllerTests.swift */; };
 		7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E827E59109586E92EF348B3C /* AppSettingsTests.swift */; };
 		7D307A167F9C9108005E211D /* HotKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */; };
@@ -61,6 +63,7 @@
 		E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */; };
 		E30B468F5CA2FC0F21CC9586 /* ContentTagsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */; };
 		E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A5E1B92A0543BA5D33AD02 /* InfoView.swift */; };
+		EE872585A2A6A7AE34B797F5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A2B6F8E069A6DFFDA84A50 /* Theme.swift */; };
 		F4C53B0274A8E0982EF17495 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72305A678DEF1D5E247BFC8C /* AppSettings.swift */; };
 		F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */; };
 		FE0F7B7C5343F48E133EBC95 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E9632926ED59CE6C55930B8 /* AppEnvironment.swift */; };
@@ -125,10 +128,13 @@
 		AFD1F11CCE8A7517D18F5F1B /* ImageEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorViewModel.swift; sourceTree = "<group>"; };
 		B18F8150D9761A140088F983 /* AppMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadataTests.swift; sourceTree = "<group>"; };
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
+		BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListTextTests.swift; sourceTree = "<group>"; };
 		C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironmentTests.swift; sourceTree = "<group>"; };
+		C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListText.swift; sourceTree = "<group>"; };
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtils.swift; sourceTree = "<group>"; };
 		C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCryptoTests.swift; sourceTree = "<group>"; };
+		D4A2B6F8E069A6DFFDA84A50 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D561C754CE8B3377968813CC /* AppMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadata.swift; sourceTree = "<group>"; };
 		DA06703AB7DD76075D2895A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextPreviewTests.swift; sourceTree = "<group>"; };
@@ -174,6 +180,7 @@
 				5B9C1B3758DFC3B21C63A452 /* ClipboardItemRow.swift */,
 				72AD13AA20CF1337FECA2753 /* ESCKeyCatcher.swift */,
 				A64179F24FF8AFF7D440BC24 /* HotkeyCapturingView.swift */,
+				D4A2B6F8E069A6DFFDA84A50 /* Theme.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -217,6 +224,7 @@
 			children = (
 				2E9632926ED59CE6C55930B8 /* AppEnvironment.swift */,
 				D561C754CE8B3377968813CC /* AppMetadata.swift */,
+				C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */,
 				1A83A199875AAD6DA273591F /* ContentTags.swift */,
 				1D2888C02F1F29FE5B864D3A /* FirstMouseHostingView.swift */,
 				C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */,
@@ -239,6 +247,7 @@
 				01F92F8B7254620E41576506 /* CanvasGeometryTests.swift */,
 				69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */,
 				524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */,
+				BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */,
 				F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */,
 				87A90B1A3298B9A8AB94DA69 /* ExtractPasteControllerTests.swift */,
 				C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */,
@@ -386,6 +395,7 @@
 				7F3572A26C94675BE9BEC70F /* AppMetadataTests.swift in Sources */,
 				7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */,
 				547F5F36DFED0664C5620D45 /* CanvasGeometryTests.swift in Sources */,
+				757DEF736A5B201C9CBFA93E /* ClipListTextTests.swift in Sources */,
 				F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */,
 				FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */,
 				E30B468F5CA2FC0F21CC9586 /* ContentTagsTests.swift in Sources */,
@@ -413,6 +423,7 @@
 				7D36C39CD905DCAE569715DC /* AppMetadata.swift in Sources */,
 				F4C53B0274A8E0982EF17495 /* AppSettings.swift in Sources */,
 				E101AE6EFE5EF8A09F57725E /* CanvasView.swift in Sources */,
+				18C0680CAEFAFBEBFBC0DE10 /* ClipListText.swift in Sources */,
 				9C6C8FF40C01C790EC9D8607 /* ClipboardApp.swift in Sources */,
 				C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */,
 				03AC489464E5D2A5DC7208DD /* ClipboardItemRow.swift in Sources */,
@@ -442,6 +453,7 @@
 				B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */,
 				7E0D43030BBB9BE895CCF2C2 /* SettingsView.swift in Sources */,
 				0EFE4D34B1B4FC0A9B17E1B6 /* TextPreview.swift in Sources */,
+				EE872585A2A6A7AE34B797F5 /* Theme.swift in Sources */,
 				D350C3F63B3D0E46C6DEFEA6 /* URLUtils.swift in Sources */,
 				1E6AC014FCA09D04301E79CF /* UpdateService.swift in Sources */,
 			);

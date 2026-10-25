@@ -35,27 +35,15 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
             if viewModel.hasEncryptedHistoryToRestore && !settings.encryptedHistoryNoticeDismissed {
                 restoreNotice
-                Divider()
             }
             if viewModel.filteredItems.isEmpty {
-                GeometryReader { proxy in
-                    VStack(spacing: 8) {
-                        Image(systemName: "tray")
-                            .font(.system(size: 28, weight: .regular))
-                            .foregroundColor(.secondary)
-                        Text("No items yet")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .padding(.top, max(48, proxy.size.height * 0.3))
-                }
+                emptyState
             } else {
                 list
             }
+            hintBar
         }
         .frame(minWidth: 480, minHeight: 480)
         .ignoresSafeArea(.container, edges: .top)
@@ -98,67 +86,155 @@ struct ContentView: View {
 
     // Shown after an update from 1.9.0-1.11.x, which encrypted the history.
     private var restoreNotice: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: "lock.fill")
-                .foregroundColor(.secondary)
-            Text("Your earlier clips are encrypted. Restore them in Settings → Storage.")
-                .font(.caption)
-            Spacer()
-            Button("Open Settings") { onOpenSettings() }
-                .font(.caption)
-            Button(action: { settings.encryptedHistoryNoticeDismissed = true }) {
-                Image(systemName: "xmark")
+                .foregroundColor(Theme.warning)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your earlier clips are encrypted").fontWeight(.semibold)
+                Text("Restore them in Settings \u{2192} Storage. macOS asks for your password one time.")
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Button("Restore Clips\u{2026}") { onOpenSettings() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.accent)
+                    Button("Not Now") { settings.encryptedHistoryNoticeDismissed = true }
+                }
+                .padding(.top, 4)
             }
-            .buttonStyle(.plain)
-            .help("Hide this message")
+            Spacer(minLength: 0)
         }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.secondary.opacity(0.08))
+        .padding(.bottom, 8)
     }
 
     private var header: some View {
-        HStack {
-            Text("Clipboard History")
-                .font(.headline)
-            TextField("Search… (try \"from:Safari\", \"tag:code\")", text: $viewModel.searchText)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .frame(maxWidth: 240)
-                .focused($isSearchFocused)
-            Spacer()
-            Button(action: { isShowingClearConfirm = true }) {
-                Image(systemName: "trash")
+        HStack(spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField("Search", text: $viewModel.searchText)
+                    .textFieldStyle(.plain)
+                    .focused($isSearchFocused)
+                    .help("Search the clips. Filter with from:Safari or tag:code.")
+                if !viewModel.searchText.isEmpty {
+                    Button(action: { viewModel.searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear the search")
+                }
             }
-            .buttonStyle(.plain)
-            .padding(.trailing, 6)
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fieldFill))
+
             Button(action: { onOpenSettings() }) {
-                Image(systemName: "gearshape.fill")
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 6)
-            Button(action: { NSApp.terminate(nil) }) {
-                Image(systemName: "power")
+            .help("Settings")
+            .accessibilityLabel("Settings")
+
+            Menu {
+                Button("Clear History\u{2026}") { isShowingClearConfirm = true }
+                Button("About MaClip") { InfoWindow.show() }
+                Divider()
+                Button("Quit MaClip") { NSApp.terminate(nil) }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
             }
-            .buttonStyle(.plain)
-            .padding(.trailing, 6)
-            Button(action: { NotificationCenter.default.post(name: .overlayCloseRequested, object: nil) }) {
-                Image(systemName: "xmark.circle.fill")
-            }
-            .buttonStyle(.plain)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(width: 32, height: 32)
+            .help("More")
+            .accessibilityLabel("More")
         }
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
         .alert("Clear all history?", isPresented: $isShowingClearConfirm) {
             Button("Cancel", role: .cancel) { }
             Button("Clear", role: .destructive) { viewModel.clearHistory() }
         } message: {
-            Text("This will remove all clipboard items from the list.")
+            Text("This deletes all clips and their images. You cannot undo this.")
+        }
+    }
+
+    private var isSearching: Bool {
+        !viewModel.searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Spacer(minLength: 0)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Theme.fieldFill)
+                .frame(width: 56, height: 56)
+                .overlay(
+                    Image(systemName: isSearching ? "magnifyingglass" : "doc.on.clipboard")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary)
+                )
+            if isSearching {
+                Text("No clips match").font(.headline)
+                Text("Try another word, or filter with from:Safari or tag:code.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("No clips yet").font(.headline)
+                Text("Copy text, a link, an image or a file in any app. MaClip saves it here.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 48)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Keyboard hints at the left, the clip count at the right.
+    private var hintBar: some View {
+        HStack(spacing: 16) {
+            if !viewModel.filteredItems.isEmpty {
+                hint("\u{2191}\u{2193}", "Move")
+                hint("\u{21A9}", "Paste")
+            }
+            hint("esc", "Close")
+            Spacer()
+            Text(ClipListSummary.text(total: viewModel.items.count,
+                                      limit: settings.maxItems,
+                                      matches: isSearching ? viewModel.filteredItems.count : nil))
+        }
+        .font(.system(size: 11))
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 14)
+        .frame(height: 34)
+        .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
+    }
+
+    private func hint(_ key: String, _ label: String) -> some View {
+        HStack(spacing: 5) {
+            KeyLabel(key: key)
+            Text(label)
         }
     }
 
     private var list: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 8) {
+                LazyVStack(alignment: .leading, spacing: 2) {
                     let items = viewModel.filteredItems
                     ForEach(Array(items.indices), id: \.self) { index in
                         let item = items[index]
@@ -308,13 +384,17 @@ struct ContentView: View {
                             },
                             onEditImage: { item in
                                 openImageEditor(for: item)
+                            },
+                            onCopyOnly: { item in
+                                viewModel.setPasteboard(to: item)
+                                NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
                             }
                         )
                         .id(item.id)
-                        Divider()
                     }
                 }
-                .padding(12)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
             }
             .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
                 viewModel.searchText = ""
