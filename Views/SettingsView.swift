@@ -176,14 +176,7 @@ struct SettingsView: View {
     }
 
     private func applyTheme(_ theme: AppTheme) {
-        switch theme {
-        case .light:
-            NSApp.appearance = NSAppearance(named: .aqua)
-        case .dark:
-            NSApp.appearance = NSAppearance(named: .darkAqua)
-        case .system:
-            NSApp.appearance = nil
-        }
+        NSApp.appearance = theme.nsAppearance
     }
 }
 

@@ -214,6 +214,15 @@ final class AppSettings: ObservableObject {
 }
 
 extension AppTheme {
+    /// The appearance for `NSApp.appearance`. nil follows the macOS setting.
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light: return NSAppearance(named: .aqua)
+        case .dark: return NSAppearance(named: .darkAqua)
+        }
+    }
+
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
