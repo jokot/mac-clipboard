@@ -3,6 +3,22 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [2.0.0](https://github.com/jokot/mac-clipboard/compare/v1.13.1...v2.0.0) (2026-10-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* redesign MaClip for 2.0 with a new app icon ([#31](https://github.com/jokot/mac-clipboard/issues/31))
+
+### Features
+
+* **clips:** preview a clip in full with the space bar ([#33](https://github.com/jokot/mac-clipboard/issues/33)) ([08e22f8](https://github.com/jokot/mac-clipboard/commit/08e22f8198d52004bd284270d78e337cbb200237))
+* **clips:** redesign the clip window for 2.0 ([#32](https://github.com/jokot/mac-clipboard/issues/32)) ([dcfb19e](https://github.com/jokot/mac-clipboard/commit/dcfb19e7eb2d6457012ce14fdcfd9875c13c54e7))
+* **editor:** redesign the image editor toolbar for 2.0 ([#35](https://github.com/jokot/mac-clipboard/issues/35)) ([a0181f0](https://github.com/jokot/mac-clipboard/commit/a0181f078f40fd37ba8a5b20b34ce70616bd562f))
+* redesign MaClip for 2.0 with a new app icon ([#31](https://github.com/jokot/mac-clipboard/issues/31)) ([51125fc](https://github.com/jokot/mac-clipboard/commit/51125fc566da98f77838076b194a505f976d6d65))
+* redesign the Accessibility prompt, the extract messages and About for 2.0 ([#36](https://github.com/jokot/mac-clipboard/issues/36)) ([8ebc06b](https://github.com/jokot/mac-clipboard/commit/8ebc06b25280f3ee8705e4dcc18a3958e8a49e14))
+* **settings:** redesign the Settings window for 2.0 ([#34](https://github.com/jokot/mac-clipboard/issues/34)) ([004bccd](https://github.com/jokot/mac-clipboard/commit/004bccd86a09a08775bdd8927aae5bf80d4e6de0))
+
 ## [1.13.1](https://github.com/jokot/mac-clipboard/compare/v1.13.0...v1.13.1) (2026-10-25)
 
 

@@ -27,7 +27,7 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.jokot.MacClipboard
       INFOPLIST_FILE: App/Info.plist
       CURRENT_PROJECT_VERSION: 19
-      MARKETING_VERSION: 1.13.1 # x-release-please-version
+      MARKETING_VERSION: 2.0.0 # x-release-please-version
       DEFINES_MODULE: YES
     scheme:
       testTargets:
