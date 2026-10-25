@@ -8,7 +8,6 @@ release-please from the commit messages.
 
 ### Bug Fixes
 
-* **installer:** keep hidden DMG files away from the install steps ([c93e8e0](https://github.com/jokot/mac-clipboard/commit/c93e8e0f148d860e617c41408994ddaf35cae2cb))
 * **installer:** keep hidden DMG files away from the install steps ([4766ce2](https://github.com/jokot/mac-clipboard/commit/4766ce2576f207607bcd604e9d5b7c373d3e4c70))
 
 ## [1.12.0](https://github.com/jokot/mac-clipboard/compare/v1.11.0...v1.12.0) (2026-10-25)
@@ -16,13 +15,11 @@ release-please from the commit messages.
 
 ### Features
 
-* **privacy:** make history encryption optional and off by default ([9aecb3c](https://github.com/jokot/mac-clipboard/commit/9aecb3c9db2882a7043cc0a9a231ba715a4b7130))
 * **privacy:** make history encryption optional and off by default ([9d1481a](https://github.com/jokot/mac-clipboard/commit/9d1481ac60495c4e2633a2ca747eb502de4b1e6c))
 
 
 ### Bug Fixes
 
-* **installer:** show the install steps in the DMG window ([f976afd](https://github.com/jokot/mac-clipboard/commit/f976afde0929acbe1082ba63250a60bfd24baffc))
 * **installer:** show the install steps in the DMG window ([2ad0f3e](https://github.com/jokot/mac-clipboard/commit/2ad0f3e07a9635235476cd206a1389f4e94a7b67))
 
 ## [1.11.0](https://github.com/jokot/mac-clipboard/compare/v1.10.1...v1.11.0) (2026-10-22)
