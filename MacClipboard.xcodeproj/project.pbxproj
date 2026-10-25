@@ -10,6 +10,7 @@
 		036DF1DC3402A0369E1AC409 /* ExtractToastWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5D4D6E0F6E1192A1CCC6AE /* ExtractToastWindow.swift */; };
 		03AC489464E5D2A5DC7208DD /* ClipboardItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9C1B3758DFC3B21C63A452 /* ClipboardItemRow.swift */; };
 		0414F7BC1B9B2B06BD0E210F /* HistoryCryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */; };
+		0A01B58AB7BD50779A091321 /* EditorStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDB820E002001C4564D4D1F /* EditorStatusTests.swift */; };
 		0EFE4D34B1B4FC0A9B17E1B6 /* TextPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF81986603D19912EF59AD1 /* TextPreview.swift */; };
 		112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */; };
 		18C0680CAEFAFBEBFBC0DE10 /* ClipListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */; };
@@ -138,6 +139,7 @@
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtils.swift; sourceTree = "<group>"; };
 		C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCryptoTests.swift; sourceTree = "<group>"; };
+		CDDB820E002001C4564D4D1F /* EditorStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorStatusTests.swift; sourceTree = "<group>"; };
 		D4A2B6F8E069A6DFFDA84A50 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D561C754CE8B3377968813CC /* AppMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadata.swift; sourceTree = "<group>"; };
 		DA06703AB7DD76075D2895A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -258,6 +260,7 @@
 				BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */,
 				DBA4E423CBDD3E2D37FEB7F3 /* ClipPreviewInfoTests.swift */,
 				F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */,
+				CDDB820E002001C4564D4D1F /* EditorStatusTests.swift */,
 				87A90B1A3298B9A8AB94DA69 /* ExtractPasteControllerTests.swift */,
 				C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */,
 				AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */,
@@ -409,6 +412,7 @@
 				F5D648D9827AADB779C058D9 /* ClipboardItemRepositoryTests.swift in Sources */,
 				FF4EFF5E894A57D70AE7B126 /* ClipboardListViewModelTests.swift in Sources */,
 				E30B468F5CA2FC0F21CC9586 /* ContentTagsTests.swift in Sources */,
+				0A01B58AB7BD50779A091321 /* EditorStatusTests.swift in Sources */,
 				77C2E8A92F5F7C12481B5954 /* ExtractPasteControllerTests.swift in Sources */,
 				0414F7BC1B9B2B06BD0E210F /* HistoryCryptoTests.swift in Sources */,
 				E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */,
