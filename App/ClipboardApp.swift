@@ -94,7 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem?.button {
             // MenuBarIcon.png is made from assets/icon/menubar.svg by scripts/make-icons.sh.
             if let image = NSImage(named: "MenuBarIcon")
-                ?? NSImage(systemSymbolName: "paperclip", accessibilityDescription: "MaClip") {
+                ?? NSImage(systemSymbolName: "doc.on.doc.fill", accessibilityDescription: "MaClip") {
                 image.isTemplate = true
                 image.accessibilityDescription = "MaClip"
                 button.image = image
