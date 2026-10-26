@@ -237,3 +237,30 @@ final class KeyShortcutsTests: XCTestCase {
         XCTAssertEqual(titles, ["Tabs", "Controls", "Window"])
     }
 }
+
+final class KeyMonitorBlockTests: XCTestCase {
+    private final class Owner {}
+
+    private let key = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                       windowNumber: 0, context: nil, characters: "a",
+                                       charactersIgnoringModifiers: "a", isARepeat: false, keyCode: 0)!
+
+    func test_aKeyThatTheHandlerUsesIsNotSentOnAgain() {
+        let owner = Owner()
+        let block = KeyMonitorBlock.make(owner) { _, _ in nil }
+        XCTAssertNil(block(key), "macOS plays the error sound for a used key that it gets back")
+    }
+
+    func test_aKeyThatTheHandlerDoesNotUseGoesOn() {
+        let owner = Owner()
+        let block = KeyMonitorBlock.make(owner) { _, event in event }
+        XCTAssertTrue(block(key) === key)
+    }
+
+    func test_aKeyGoesOnAfterTheOwnerIsGone() {
+        var owner: Owner? = Owner()
+        let block = KeyMonitorBlock.make(owner!) { _, _ in nil }
+        owner = nil
+        XCTAssertTrue(block(key) === key)
+    }
+}

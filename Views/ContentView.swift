@@ -242,25 +242,26 @@ struct ContentView: View {
     }
 
     /// Keyboard hints at the left, the clip count at the right.
+    /// Three or four hints at most, so none of them wraps. ⌘/ shows all the keys.
     private var hintBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             if windowState.previewOpen {
-                hint("\u{2191}\u{2193}", "Move")
                 hint("\u{2190} \u{2192}", "Switch")
                 hint("esc", "Close preview")
+            } else if !viewModel.filteredItems.isEmpty {
+                hint("\u{2191}\u{2193}", "Move")
+                hint("\u{21A9}", "Paste")
+                hint("space", "Preview")
             } else {
-                if !viewModel.filteredItems.isEmpty {
-                    hint("\u{2191}\u{2193}", "Move")
-                    hint("\u{21A9}", "Paste")
-                    hint("space", "Preview")
-                }
                 hint("esc", "Close")
             }
             hint("\u{2318}/", "Shortcuts")
-            Spacer()
+            Spacer(minLength: 8)
             Text(ClipListSummary.text(total: viewModel.items.count,
                                       limit: settings.maxItems,
                                       matches: isSearching ? viewModel.filteredItems.count : nil))
+                .lineLimit(1)
+                .fixedSize()
         }
         .font(.system(size: 11))
         .foregroundColor(.secondary)
@@ -274,6 +275,8 @@ struct ContentView: View {
             KeyLabel(key: key)
             Text(label)
         }
+        .lineLimit(1)
+        .fixedSize()
     }
 
     private var list: some View {

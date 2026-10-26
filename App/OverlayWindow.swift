@@ -81,9 +81,8 @@ final class OverlayWindowController: NSObject {
         NotificationCenter.default.post(name: .overlayDidShow, object: nil)
 
         if keyMonitor == nil {
-            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-                self?.handleKey(event) ?? event
-            }
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown],
+                                                          handler: KeyMonitorBlock.make(self) { $0.handleKey($1) })
         }
 
         applyTheme()

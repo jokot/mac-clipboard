@@ -162,3 +162,17 @@ struct ShortcutTable<Command: Hashable> {
         }
     }
 }
+
+/// Makes the block of a local key monitor that holds its owner weakly.
+enum KeyMonitorBlock {
+    /// `handle` returns nil when it used the key. The block then returns nil too, so macOS
+    /// does not send the key on and play the error sound. A plain `owner?.handle(event) ?? event`
+    /// returns the key in that case, because `?.` makes the nil of a used key look like a missing owner.
+    static func make<Owner: AnyObject>(_ owner: Owner,
+                                       _ handle: @escaping (Owner, NSEvent) -> NSEvent?) -> (NSEvent) -> NSEvent? {
+        { [weak owner] event in
+            guard let owner else { return event }
+            return handle(owner, event)
+        }
+    }
+}
