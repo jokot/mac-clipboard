@@ -152,13 +152,16 @@ final class OverlayWindowController: NSObject {
             self?.openSettings()
         }, onEditImage: { [weak self] item, image in
             self?.openImageEditor(item: item, image: image)
+        }, onEdit: { [weak self] item in
+            self?.showPreview(item, editing: true)
         }, onPreview: { [weak self] item in
             self?.showPreview(item)
         }, onTogglePreview: { [weak self] item in
             guard let self else { return }
             if self.previewedItemID != nil { self.closePreview() } else { self.showPreview(item) }
         }, onSelectionChange: { [weak self] item in
-            guard let self, self.previewedItemID != nil else { return }
+            // The same clip is already in the preview. Showing it again would end an edit.
+            guard let self, self.previewedItemID != nil, item?.id != self.previewedItemID else { return }
             if let item { self.showPreview(item) } else { self.closePreview() }
         })
         .background(ESCKeyCatcher())
@@ -293,7 +296,8 @@ private extension OverlayWindowController {
 
     /// Shows the clip in a panel beside the clip window. The panel is a child window, so it
     /// moves and hides with the clip window, and the clip window keeps the keyboard.
-    func showPreview(_ item: ClipboardItem) {
+    /// In edit mode, the panel takes the keyboard until Save or Cancel.
+    func showPreview(_ item: ClipboardItem, editing: Bool = false) {
         guard let window else { return }
         previewedItemID = item.id
         let view = ClipPreviewView(
@@ -305,7 +309,10 @@ private extension OverlayWindowController {
                 self?.hideImmediatelyRefocusOnly()
             },
             onEdit: { [weak self] in self?.editFromPreview(item) },
-            onClose: { [weak self] in self?.closePreview() }
+            onClose: { [weak self] in self?.closePreview() },
+            isEditing: editing,
+            onSave: { [weak self] content in self?.saveEdit(of: item, content: content) },
+            onCancelEdit: { [weak self] in self?.endEdit(showing: item) }
         )
         let panel = previewPanel ?? makePreviewPanel()
         previewPanel = panel
@@ -338,6 +345,22 @@ private extension OverlayWindowController {
         panel.setFrame(NSRect(x: x, y: window.frame.minY, width: size.width, height: size.height), display: true)
         if panel.parent == nil { window.addChildWindow(panel, ordered: .above) }
         panel.orderFront(nil)
+        if editing {
+            panel.makeKey()
+        } else if panel.isKeyWindow {
+            window.makeKey()
+        }
+    }
+
+    private func saveEdit(of item: ClipboardItem, content: ClipboardItemContent) {
+        let updated = viewModel.replaceContent(of: item, with: content) ?? item
+        endEdit(showing: updated)
+    }
+
+    /// Back to the preview, and the clip window takes the keyboard again.
+    private func endEdit(showing item: ClipboardItem) {
+        showPreview(item)
+        window?.makeKey()
     }
 
     func closePreview() {
@@ -380,8 +403,8 @@ private extension OverlayWindowController {
     }
 
     private func editFromPreview(_ item: ClipboardItem) {
-        closePreview()
         if case .image(let content) = item.content {
+            closePreview()
             var image: NSImage?
             switch content.source {
             case .memory(let img): image = img
@@ -389,7 +412,7 @@ private extension OverlayWindowController {
             }
             if let image { openImageEditor(item: item, image: image) }
         } else {
-            NotificationCenter.default.post(name: .overlayEditItem, object: item.id)
+            showPreview(item, editing: true)
         }
     }
 
