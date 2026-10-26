@@ -4,6 +4,7 @@ import Combine
 import Foundation
 
 struct ContentView: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     @ObservedObject var viewModel: ClipboardListViewModel
     /// The side with focus and the preview state, shared with the window controller.
     @ObservedObject var windowState: ClipWindowState

@@ -237,6 +237,7 @@ struct ImageEditorSheet: View {
 
 /// A 32 × 30 pt icon button of the editor toolbar. A selected tool has the accent fill.
 private struct ToolbarIconButton: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let label: String
     let systemImage: String
     var isSelected: Bool = false

@@ -4,13 +4,14 @@ import Carbon.HIToolbox
 import UniformTypeIdentifiers
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, shortcuts, storage, privacy
+    case general, appearance, shortcuts, storage, privacy
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .general: return "General"
+        case .appearance: return "Appearance"
         case .shortcuts: return "Shortcuts"
         case .storage: return "Storage"
         case .privacy: return "Privacy"
@@ -25,6 +26,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .general: return "gearshape"
+        case .appearance: return "circle.lefthalf.filled"
         case .shortcuts: return "keyboard"
         case .storage: return "internaldrive"
         case .privacy: return "hand.raised"
@@ -33,6 +35,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 }
 
 struct SettingsView: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject var viewModel: ClipboardListViewModel
     @State private var tab: SettingsTab = .general
@@ -53,6 +56,8 @@ struct SettingsView: View {
                     switch tab {
                     case .general:
                         GeneralTab(settings: settings, applyTheme: applyTheme)
+                    case .appearance:
+                        AppearanceTab(settings: settings, applyTheme: applyTheme)
                     case .shortcuts:
                         ShortcutsTab(settings: settings,
                                      isCapturingHotkey: $isCapturingHotkey,
@@ -116,7 +121,7 @@ struct SettingsView: View {
                     VStack(spacing: 3) {
                         Image(systemName: item.symbol)
                             .font(.system(size: 17))
-                            .foregroundColor(tab == item ? Theme.accent : .secondary)
+                            .foregroundColor(tab == item ? Theme.accentText : .secondary)
                             .frame(height: 20)
                         Text(item.title)
                             .font(.system(size: 11))
@@ -247,27 +252,10 @@ struct SettingsView: View {
 private struct GeneralTab: View {
     @ObservedObject var settings: AppSettings
     let applyTheme: (AppTheme) -> Void
+    @State private var showingRestoreConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SettingsSection(title: "Appearance") {
-                SettingsRow(title: "Theme") {
-                    Picker("Theme", selection: $settings.theme) {
-                        Text("System").tag(AppTheme.system)
-                        Text("Light").tag(AppTheme.light)
-                        Text("Dark").tag(AppTheme.dark)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .fixedSize()
-                    .settingsFocus("theme", choice: $settings.theme, values: [AppTheme.system, .light, .dark])
-                    .onChange(of: settings.theme) { newTheme in
-                        applyTheme(newTheme)
-                        NotificationCenter.default.post(name: .themeChanged, object: nil)
-                    }
-                }
-            }
-
             SettingsSection(title: "Pasting") {
                 SettingsRow(title: "Paste on selection", caption: "Paste the clip into the app that you used before.") {
                     SettingsSwitch(label: "Paste on selection", isOn: $settings.pasteOnClick)
@@ -300,7 +288,29 @@ private struct GeneralTab: View {
                                    choice: $settings.autoDismissOverlayTimeout, values: [5, 10, 20, 30, 60])
                 }
             }
+
+            SettingsSection(title: "Reset") {
+                SettingsRow(title: "Restore default settings",
+                            caption: "Sets every setting back to its default. Your clips, the clip limit and encryption do not change.") {
+                    Button("Restore Defaults\u{2026}") { showingRestoreConfirm = true }
+                        .settingsFocus("restoreDefaults") { showingRestoreConfirm = true }
+                }
+            }
         }
+        .alert("Restore default settings?", isPresented: $showingRestoreConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Restore") { restoreDefaults() }
+        } message: {
+            Text("MaClip sets the theme, the accent color, pasting, the clip window, the shortcuts, the list of apps and concealed clips back to their defaults. Your clips, the clip limit and encryption do not change.")
+        }
+    }
+
+    private func restoreDefaults() {
+        settings.restoreDefaultSettings()
+        applyTheme(settings.theme)
+        NotificationCenter.default.post(name: .themeChanged, object: nil)
+        HotKeyService.shared.unregister()
+        HotKeyService.shared.register(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
     }
 }
 
@@ -415,6 +425,7 @@ private struct ShortcutsTab: View {
 // MARK: - Storage
 
 private struct StorageTab: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
     @ObservedObject private var focus = SettingsFocusState.shared
@@ -572,11 +583,11 @@ private struct StorageTab: View {
 // MARK: - Privacy
 
 private struct PrivacyTab: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
     let addApplicationViaPicker: () -> Void
     @State private var selection: String?
-    @State private var showingRestoreConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -679,23 +690,8 @@ private struct PrivacyTab: View {
                                    values: [5, 10, 20, 30, 60, 120, 300, 600, 900, 1800, -1])
                 }
             }
-
-            HStack {
-                Spacer()
-                Button("Restore Defaults\u{2026}") { showingRestoreConfirm = true }
-                    .settingsFocus("restoreDefaults") { showingRestoreConfirm = true }
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsRemoveSelectedApp)) { _ in removeSelected() }
-        .alert("Restore the privacy defaults?", isPresented: $showingRestoreConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("Restore", role: .destructive) {
-                AppSettings.shared.restorePrivacyDefaults()
-                selection = nil
-            }
-        } message: {
-            Text("This sets the app list to the default password managers, turns off Save clips that you copy in MaClip, saves concealed clips again, and deletes them after 5 minutes.")
-        }
     }
 
     private func appRow(_ bundleID: String) -> some View {

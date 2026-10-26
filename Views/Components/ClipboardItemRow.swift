@@ -3,6 +3,7 @@ import SwiftUI
 /// One clip in the clip window: the kind icon with the source app icon, the content,
 /// and at the right the age. On hover and on the selected row, the row actions replace the age.
 struct ClipboardItemRow: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let item: ClipboardItem
     let onSelect: (ClipboardItem) -> Void
     let onRemove: () -> Void
@@ -189,7 +190,7 @@ struct ClipboardItemRow: View {
                 .lineLimit(2)
         case .url(let url):
             Text(hidden ? masked(url.absoluteString) : url.absoluteString)
-                .foregroundColor(hidden ? .secondary : Theme.accent)
+                .foregroundColor(hidden ? .secondary : Theme.accentText)
                 .lineLimit(1)
                 .truncationMode(.middle)
         case .file(let urls):
