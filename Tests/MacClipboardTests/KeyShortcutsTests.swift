@@ -251,6 +251,54 @@ final class KeyShortcutsTests: XCTestCase {
         XCTAssertEqual(SettingsKeyMap.table.command(for: KeyCombo(.delete)), .removeSelectedApp)
     }
 
+    func test_settingsControlKeysWorkWithoutTheMacKeyboardNavigationSetting() {
+        let table = SettingsKeyMap.table
+        XCTAssertEqual(table.command(for: KeyCombo(.tab)), .nextControl)
+        XCTAssertEqual(table.command(for: KeyCombo(.down)), .nextControl)
+        XCTAssertEqual(table.command(for: KeyCombo(.tab, .shift)), .previousControl)
+        XCTAssertEqual(table.command(for: KeyCombo(.up)), .previousControl)
+        XCTAssertEqual(table.command(for: KeyCombo(.space)), .activate)
+        XCTAssertEqual(table.command(for: KeyCombo(.returnKey)), .activate)
+        XCTAssertEqual(table.command(for: KeyCombo(.left)), .stepBack)
+        XCTAssertEqual(table.command(for: KeyCombo(.right)), .stepForward)
+    }
+
+    func test_numberFieldKeepsTypingKeys() {
+        XCTAssertTrue(SettingsKeyMap.worksInTextField(KeyCombo(.tab)))
+        XCTAssertTrue(SettingsKeyMap.worksInTextField(KeyCombo(.tab, .shift)))
+        XCTAssertTrue(SettingsKeyMap.worksInTextField(.command("2")))
+        XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.space)))
+        XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.left)))
+        XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.delete)))
+        XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.down)))
+    }
+
+    func test_settingsFocusMovesInOrderAndWraps() {
+        let ids = ["theme", "paste", "top"]
+        XCTAssertEqual(SettingsFocus.move(in: ids, from: nil, by: 1), "theme")
+        XCTAssertEqual(SettingsFocus.move(in: ids, from: nil, by: -1), "top")
+        XCTAssertEqual(SettingsFocus.move(in: ids, from: "theme", by: 1), "paste")
+        XCTAssertEqual(SettingsFocus.move(in: ids, from: "top", by: 1), "theme")
+        XCTAssertEqual(SettingsFocus.move(in: ids, from: "theme", by: -1), "top")
+        XCTAssertEqual(SettingsFocus.move(in: ids, from: "gone", by: 1), "theme", "a control that is gone starts again at the top")
+        XCTAssertNil(SettingsFocus.move(in: [], from: nil, by: 1))
+    }
+
+    func test_choiceStepsStopAtTheEnds() {
+        let values = [5, 10, 20]
+        XCTAssertEqual(SettingsFocus.step(values, from: 10, by: 1), 20)
+        XCTAssertEqual(SettingsFocus.step(values, from: 20, by: 1), 20)
+        XCTAssertEqual(SettingsFocus.step(values, from: 5, by: -1), 5)
+        XCTAssertEqual(SettingsFocus.step(values, from: 7, by: 1), 5, "a value not in the list goes to the first")
+    }
+
+    func test_removingTheFocusedAppFocusesTheNextApp() {
+        let ids = ["app:a", "app:b", "app:c", "add"]
+        XCTAssertEqual(SettingsFocus.afterRemoving("app:b", from: ids), "app:c")
+        XCTAssertEqual(SettingsFocus.afterRemoving("app:c", from: ids), "app:b")
+        XCTAssertEqual(SettingsFocus.afterRemoving("app:a", from: ["app:a", "add"]), "add")
+    }
+
     func test_tableGroupsKeepTheirOrder() {
         let titles = SettingsKeyMap.table.groups().map(\.title)
         XCTAssertEqual(titles, ["Tabs", "Controls", "Window"])

@@ -83,7 +83,8 @@ struct ShortcutsCard: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
         }
-        .frame(width: columns.count > 1 ? 496 : 340)
+        // At most this wide. In a narrow window, such as About, the card fits the window.
+        .frame(maxWidth: columns.count > 1 ? 496 : 340)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(nsColor: .windowBackgroundColor))

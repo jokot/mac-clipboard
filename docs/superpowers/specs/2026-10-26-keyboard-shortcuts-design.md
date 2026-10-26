@@ -106,7 +106,12 @@ Tool, color and width keys are off while the text tool has a text field open.
 
 ## Settings, About, Accessibility prompt
 
-- Settings: ⌘1–⌘4 select the tabs. esc, ⌘W and ⌘, close. ⌫ removes the selected app in Privacy.
+- Settings: ⌘1–⌘4 select the tabs. esc, ⌘W and ⌘, close.
+  MaClip moves the focus between the controls itself, so Keyboard navigation in System Settings is not needed.
+  ⇥ or ↓ goes to the next control, ⇧⇥ or ↑ to the previous one. A 2 pt accent ring shows the focused control.
+  Space or ↩ turns a switch on or off, presses a button, or records a shortcut. ← → change a choice.
+  Each app of the Privacy list takes the focus. ⌫ removes the focused app.
+  In the number field, ⇥ and ⇧⇥ leave the field, esc takes the cursor out, and other keys type.
 - About: ↩ checks for updates. esc, ⌘W and ⌘I close.
 - Accessibility prompt: ↩ runs the main button. esc and ⌘W run Not Now.
 

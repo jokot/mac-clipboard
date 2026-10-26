@@ -36,6 +36,9 @@ struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject var viewModel: ClipboardListViewModel
     @State private var tab: SettingsTab = .general
+    @ObservedObject private var focus = SettingsFocusState.shared
+    /// The focusable controls of the visible tab, in order.
+    @State private var controlIDs: [String] = []
     @State private var isCapturingHotkey = false
     /// The extract shortcut that waits for new keys, or nil.
     @State private var extractCapture: ExtractKind?
@@ -44,6 +47,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             tabBar
             Rectangle().fill(Theme.line).frame(height: 1)
+            ScrollViewReader { proxy in
             ScrollView {
                 Group {
                     switch tab {
@@ -64,17 +68,23 @@ struct SettingsView: View {
                 .padding(.horizontal, 28)
                 .padding(.vertical, 20)
             }
+            .onPreferenceChange(SettingsFocusIDsKey.self) { controlIDs = $0 }
+            .onChange(of: focus.focused) { id in
+                guard let id else { return }
+                withAnimation(.easeInOut(duration: 0.12)) { proxy.scrollTo(id, anchor: .center) }
+            }
+            }
         }
         .frame(width: 640, height: 600)
-        .shortcutsPanel(.settings, title: "Settings",
-                        note: "\u{21E5} reaches every control when Keyboard navigation is on in System Settings \u{2192} Keyboard.") {
+        .shortcutsPanel(.settings, title: "Settings", note: "A ring shows the control that takes the keys.") {
             [SettingsKeyMap.table.groups()]
         }
-        .onReceive(NotificationCenter.default.publisher(for: .settingsSelectTab)) { note in
-            if let selected = note.object as? SettingsTab { tab = selected }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsCommand)) { note in
+            if let command = note.object as? SettingsCommand { perform(command) }
         }
         .onAppear { setWindowTitle() }
         .onChange(of: tab) { _ in
+            focus.focused = nil
             isCapturingHotkey = false
             extractCapture = nil
             setWindowTitle()
@@ -134,6 +144,39 @@ struct SettingsView: View {
         .overlay(alignment: .trailing) {
             ShortcutsButton(scope: .settings).padding(.trailing, 12)
         }
+    }
+
+    private func perform(_ command: SettingsCommand) {
+        switch command {
+        case .tab(let selected):
+            tab = selected
+        case .nextControl:
+            focus.focused = SettingsFocus.move(in: controlIDs, from: focus.focused, by: 1)
+        case .previousControl:
+            focus.focused = SettingsFocus.move(in: controlIDs, from: focus.focused, by: -1)
+        case .activate:
+            send(.activate)
+        case .stepBack:
+            send(.step(-1))
+        case .stepForward:
+            send(.step(1))
+        case .removeSelectedApp:
+            guard let id = focus.focused, id.hasPrefix("app:") else {
+                // No app has the focus: remove the app that a click selected.
+                NotificationCenter.default.post(name: .settingsRemoveSelectedApp, object: nil)
+                return
+            }
+            let next = SettingsFocus.afterRemoving(id, from: controlIDs)
+            send(.remove)
+            focus.focused = next
+        case .close, .showShortcuts:
+            break
+        }
+    }
+
+    private func send(_ action: SettingsControlAction) {
+        guard let id = focus.focused else { return NSSound.beep() }
+        NotificationCenter.default.post(name: .settingsControlAction, object: SettingsControlEvent(id: id, action: action))
     }
 
     private func setWindowTitle() {
@@ -217,6 +260,7 @@ private struct GeneralTab: View {
                     .labelsHidden()
                     .pickerStyle(.segmented)
                     .fixedSize()
+                    .settingsFocus("theme", choice: $settings.theme, values: [AppTheme.system, .light, .dark])
                     .onChange(of: settings.theme) { newTheme in
                         applyTheme(newTheme)
                         NotificationCenter.default.post(name: .themeChanged, object: nil)
@@ -227,16 +271,19 @@ private struct GeneralTab: View {
             SettingsSection(title: "Pasting") {
                 SettingsRow(title: "Paste on selection", caption: "Paste the clip into the app that you used before.") {
                     SettingsSwitch(label: "Paste on selection", isOn: $settings.pasteOnClick)
+                        .settingsFocus("pasteOnClick", toggle: $settings.pasteOnClick)
                 }
                 AccessibilityRow()
                 SettingsRow(title: "Move clip to top on selection") {
                     SettingsSwitch(label: "Move clip to top on selection", isOn: $settings.moveTopOnClick)
+                        .settingsFocus("moveTopOnClick", toggle: $settings.moveTopOnClick)
                 }
             }
 
             SettingsSection(title: "Clip window") {
                 SettingsRow(title: "Close when idle", caption: "Close the window when you do not type, click or scroll in it.") {
                     SettingsSwitch(label: "Close when idle", isOn: $settings.autoDismissOverlayEnabled)
+                        .settingsFocus("closeWhenIdle", toggle: $settings.autoDismissOverlayEnabled)
                 }
                 SettingsRow(title: "Close after") {
                     Picker("Close after", selection: $settings.autoDismissOverlayTimeout) {
@@ -249,6 +296,8 @@ private struct GeneralTab: View {
                     .labelsHidden()
                     .fixedSize()
                     .disabled(!settings.autoDismissOverlayEnabled)
+                    .settingsFocus("closeAfter", enabled: settings.autoDismissOverlayEnabled,
+                                   choice: $settings.autoDismissOverlayTimeout, values: [5, 10, 20, 30, 60])
                 }
             }
         }
@@ -274,6 +323,9 @@ private struct AccessibilityRow: View {
             Spacer(minLength: 12)
             if !access.isGranted {
                 Button("Allow\u{2026}") {
+                    AccessibilityPromptWindowController.shared.show(afterCopy: false)
+                }
+                .settingsFocus("allowAccessibility") {
                     AccessibilityPromptWindowController.shared.show(afterCopy: false)
                 }
             }
@@ -302,6 +354,10 @@ private struct ShortcutsTab: View {
                         extractCapture = nil
                         isCapturingHotkey = true
                     }
+                    .settingsFocus("openShortcut") {
+                        extractCapture = nil
+                        isCapturingHotkey = true
+                    }
                 }
             }
 
@@ -321,7 +377,7 @@ private struct ShortcutsTab: View {
                     .padding(.vertical, 12)
                     .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
                     .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
-                Text("Press \u{2318}/ in any MaClip window to see its keys. To reach every button and switch with \u{21E5}, turn on Keyboard navigation in System Settings \u{2192} Keyboard.")
+                Text("Press \u{2318}/ in any MaClip window to see its keys. In Settings, \u{21E5} moves between the controls, and space turns a switch on or off.")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -333,12 +389,17 @@ private struct ShortcutsTab: View {
                             keyCode: UInt32, modifiers: UInt32) -> some View {
         HStack(spacing: 12) {
             SettingsSwitch(label: title, isOn: enabled)
+                .settingsFocus("\(kind)Enabled", toggle: enabled)
             Text(title)
                 .foregroundColor(enabled.wrappedValue ? .primary : .secondary)
             Spacer(minLength: 12)
             ShortcutField(shortcut: HotkeyUtils.description(keyCode: keyCode, modifiers: modifiers),
                           isRecording: extractCapture == kind,
                           isEnabled: enabled.wrappedValue) {
+                isCapturingHotkey = false
+                extractCapture = kind
+            }
+            .settingsFocus("\(kind)Shortcut", enabled: enabled.wrappedValue) {
                 isCapturingHotkey = false
                 extractCapture = kind
             }
@@ -353,8 +414,31 @@ private struct ShortcutsTab: View {
 private struct StorageTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
+    @ObservedObject private var focus = SettingsFocusState.shared
+    @FocusState private var isNumberFocused: Bool
     @State private var failure: String?
     @State private var isShowingClearConfirm = false
+
+    private var encryption: Binding<Bool> {
+        Binding(
+            get: { settings.encryptHistory },
+            set: { enabled in
+                if !viewModel.setHistoryEncryption(enabled) {
+                    failure = enabled
+                        ? "MaClip could not read or create the encryption key. Your history did not change."
+                        : "MaClip could not read the encryption key. Your history stays encrypted."
+                }
+            }
+        )
+    }
+
+    private func restoreEarlierClips() {
+        if viewModel.restoreEncryptedHistory() {
+            settings.encryptedHistoryNoticeDismissed = true
+        } else {
+            failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
+        }
+    }
 
     /// 0 means Never.
     private var cleanDays: Binding<Int> {
@@ -377,9 +461,15 @@ private struct StorageTab: View {
                             .textFieldStyle(.roundedBorder)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 60)
+                            .focused($isNumberFocused)
                             .onChange(of: settings.maxItems) { newValue in
                                 viewModel.applyMaxItems(newValue)
                             }
+                            // ⇥ to the field puts the cursor in it. ⇥ again takes it out.
+                            .settingsFocus("maxItems") { action in
+                                if action == .activate { isNumberFocused = true }
+                            }
+                            .onChange(of: focus.focused) { id in isNumberFocused = id == "maxItems" }
                         Text("clips").foregroundColor(.secondary)
                     }
                 }
@@ -392,33 +482,21 @@ private struct StorageTab: View {
                     }
                     .labelsHidden()
                     .fixedSize()
+                    .settingsFocus("deleteOlderThan", choice: cleanDays, values: [0, 1, 7, 30])
                 }
             }
 
             SettingsSection(title: "Encryption") {
                 SettingsRow(title: "Encrypt history on disk",
                             caption: "MaClip keeps the key in your login Keychain. macOS can ask for your password after each MaClip update.") {
-                    SettingsSwitch(label: "Encrypt history on disk", isOn: Binding(
-                        get: { settings.encryptHistory },
-                        set: { enabled in
-                            if !viewModel.setHistoryEncryption(enabled) {
-                                failure = enabled
-                                    ? "MaClip could not read or create the encryption key. Your history did not change."
-                                    : "MaClip could not read the encryption key. Your history stays encrypted."
-                            }
-                        }
-                    ))
+                    SettingsSwitch(label: "Encrypt history on disk", isOn: encryption)
+                        .settingsFocus("encryptHistory", toggle: encryption)
                 }
                 if viewModel.hasEncryptedHistoryToRestore {
                     SettingsRow(title: "Earlier encrypted clips",
                                 caption: "From MaClip 1.9 to 1.11. macOS asks for your password one time.") {
-                        Button("Restore\u{2026}") {
-                            if viewModel.restoreEncryptedHistory() {
-                                settings.encryptedHistoryNoticeDismissed = true
-                            } else {
-                                failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
-                            }
-                        }
+                        Button("Restore\u{2026}", action: restoreEarlierClips)
+                            .settingsFocus("restoreEarlierClips", press: restoreEarlierClips)
                     }
                 }
             }
@@ -429,6 +507,7 @@ private struct StorageTab: View {
                     Button("Clear History\u{2026}") { isShowingClearConfirm = true }
                         .foregroundColor(.red)
                         .disabled(viewModel.items.isEmpty)
+                        .settingsFocus("clearHistory", enabled: !viewModel.items.isEmpty) { isShowingClearConfirm = true }
                 }
             }
         }
@@ -485,6 +564,7 @@ private struct PrivacyTab: View {
                             Image(systemName: "plus").frame(width: 28, height: 24).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .settingsFocus("addApp", press: addApplicationViaPicker)
                         .help("Add an app")
                         .accessibilityLabel("Add an app")
                         Rectangle().fill(Theme.line).frame(width: 1, height: 16)
@@ -493,6 +573,7 @@ private struct PrivacyTab: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(selection == nil)
+                        .settingsFocus("removeApp", enabled: selection != nil, press: removeSelected)
                         .help("Remove the selected app")
                         .accessibilityLabel("Remove the selected app")
                         Spacer()
@@ -512,6 +593,7 @@ private struct PrivacyTab: View {
                 SettingsRow(title: "Don\u{2019}t save concealed clips",
                             caption: "Password managers mark passwords as concealed when you copy them.") {
                     SettingsSwitch(label: "Don\u{2019}t save concealed clips", isOn: $settings.skipConcealedItems)
+                        .settingsFocus("skipConcealed", toggle: $settings.skipConcealedItems)
                 }
                 SettingsRow(title: "Delete concealed clips after") {
                     Picker("Delete concealed clips after", selection: $settings.concealedClearTimeout) {
@@ -530,12 +612,16 @@ private struct PrivacyTab: View {
                     .labelsHidden()
                     .fixedSize()
                     .disabled(settings.skipConcealedItems)
+                    .settingsFocus("concealedTimeout", enabled: !settings.skipConcealedItems,
+                                   choice: $settings.concealedClearTimeout,
+                                   values: [5, 10, 20, 30, 60, 120, 300, 600, 900, 1800, -1])
                 }
             }
 
             HStack {
                 Spacer()
                 Button("Restore Defaults\u{2026}") { showingRestoreConfirm = true }
+                    .settingsFocus("restoreDefaults") { showingRestoreConfirm = true }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsRemoveSelectedApp)) { _ in removeSelected() }
@@ -581,6 +667,18 @@ private struct PrivacyTab: View {
         .contentShape(Rectangle())
         .onTapGesture { selection = isSelected ? nil : bundleID }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // Each app takes the focus in turn. ⌫ removes the focused app, and space selects it.
+        .settingsFocus("app:\(bundleID)") { action in
+            switch action {
+            case .remove:
+                settings.excludedBundleIDs.removeAll { $0 == bundleID }
+                if selection == bundleID { selection = nil }
+            case .activate:
+                selection = isSelected ? nil : bundleID
+            case .step:
+                break
+            }
+        }
     }
 
     /// Names of the default password managers, for when the app is not installed.
@@ -633,15 +731,21 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
                 if combo == KeyCombo(.escape) || combo == .command("/") { panel.hide(.settings) }
                 return nil
             }
+            // The number field takes the typing keys. Esc takes the cursor out of it.
+            if (window.firstResponder as? NSTextView)?.isFieldEditor == true {
+                if combo == KeyCombo(.escape) {
+                    window.makeFirstResponder(nil)
+                    return nil
+                }
+                guard SettingsKeyMap.worksInTextField(combo) else { return event }
+            }
             switch SettingsKeyMap.table.command(for: combo) {
-            case .tab(let tab):
-                NotificationCenter.default.post(name: .settingsSelectTab, object: tab)
-            case .removeSelectedApp:
-                NotificationCenter.default.post(name: .settingsRemoveSelectedApp, object: nil)
             case .close:
                 window.close()
             case .showShortcuts:
                 panel.toggle(.settings)
+            case .some(let command):
+                NotificationCenter.default.post(name: .settingsCommand, object: command)
             case nil:
                 return event
             }
@@ -651,6 +755,7 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         ShortcutsPanelState.shared.hide(.settings)
+        SettingsFocusState.shared.focused = nil
     }
 
     required init?(coder: NSCoder) {

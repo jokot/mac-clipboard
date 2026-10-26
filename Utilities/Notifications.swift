@@ -14,8 +14,10 @@ extension Notification.Name {
     static let overlayRevealItem = Notification.Name("OverlayRevealItem")
     /// A key in the edit mode of the preview. The object is the `PreviewEditAction`.
     static let previewEditCommand = Notification.Name("PreviewEditCommand")
-    /// ⌘1 to ⌘4 in Settings. The object is the `SettingsTab`.
-    static let settingsSelectTab = Notification.Name("SettingsSelectTab")
+    /// A key in Settings. The object is the `SettingsCommand`.
+    static let settingsCommand = Notification.Name("SettingsCommand")
+    /// A key for one Settings control. The object is the `SettingsControlEvent`.
+    static let settingsControlAction = Notification.Name("SettingsControlAction")
     /// ⌫ in Settings: remove the selected app from the list of apps that MaClip does not save from.
     static let settingsRemoveSelectedApp = Notification.Name("SettingsRemoveSelectedApp")
 

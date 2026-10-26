@@ -70,6 +70,13 @@ enum EditorKeyMap {
 
 enum SettingsCommand: Hashable {
     case tab(SettingsTab)
+    /// MaClip moves the focus between the controls itself, so the keys work without
+    /// Keyboard navigation in System Settings.
+    case nextControl, previousControl
+    /// Turn on or off a switch, press a button, or record a shortcut.
+    case activate
+    /// The previous or next value of a choice.
+    case stepBack, stepForward
     case removeSelectedApp, close, showShortcuts
 }
 
@@ -79,15 +86,55 @@ enum SettingsKeyMap {
         bindings: SettingsTab.allCases.enumerated().map { index, tab in
             KeyBinding(command: .tab(tab), label: tab.title, group: "Tabs", keys: [.command("\(index + 1)")])
         } + [
-            KeyBinding(command: nil, label: "Next or previous control", group: "Controls", keys: [],
-                       display: ["\u{21E5}", "\u{21E7}\u{21E5}"]),
-            KeyBinding(command: nil, label: "Turn on or off, or click", group: "Controls", keys: [], display: ["space"]),
-            KeyBinding(command: nil, label: "Choose in a menu", group: "Controls", keys: [], display: ["\u{2191}", "\u{2193}"]),
-            KeyBinding(command: .removeSelectedApp, label: "Remove the selected app", group: "Controls", keys: [KeyCombo(.delete)]),
+            KeyBinding(command: .nextControl, label: "Next control", group: "Controls",
+                       keys: [KeyCombo(.tab), KeyCombo(.down)], display: ["\u{21E5}", "\u{2193}"]),
+            KeyBinding(command: .previousControl, label: "Previous control", group: "Controls",
+                       keys: [KeyCombo(.tab, .shift), KeyCombo(.up)], display: ["\u{21E7}\u{21E5}", "\u{2191}"]),
+            KeyBinding(command: .activate, label: "Turn on or off, or press", group: "Controls",
+                       keys: [KeyCombo(.space), KeyCombo(.returnKey)], display: ["space"]),
+            KeyBinding(command: nil, label: "Change a choice", group: "Controls", keys: [], display: ["\u{2190}", "\u{2192}"]),
+            KeyBinding(command: .stepBack, label: "Previous choice", group: "Controls", keys: [KeyCombo(.left)], listed: false),
+            KeyBinding(command: .stepForward, label: "Next choice", group: "Controls", keys: [KeyCombo(.right)], listed: false),
+            KeyBinding(command: .removeSelectedApp, label: "Remove the focused app", group: "Controls", keys: [KeyCombo(.delete)]),
             KeyBinding(command: .close, label: "Close Settings", group: "Window",
                        keys: [KeyCombo(.escape), .command("w"), .command(",")]),
             KeyBinding(command: .showShortcuts, label: "This list", group: "Window", keys: [.command("/")], listed: false),
         ])
+
+    /// While the number field has the cursor, the field takes every key except ⇥, ⇧⇥ and ⌘ keys.
+    static func worksInTextField(_ combo: KeyCombo) -> Bool {
+        combo.key == .tab || combo.modifiers.contains(.command)
+    }
+}
+
+/// The order of the focus in Settings, and the values of a choice.
+enum SettingsFocus {
+    /// The next (`by` 1) or previous (`by` -1) control. It wraps at both ends, like ⇥ in macOS.
+    static func move(in ids: [String], from current: String?, by step: Int) -> String? {
+        guard !ids.isEmpty else { return nil }
+        guard let current, let index = ids.firstIndex(of: current) else {
+            return step >= 0 || current != nil ? ids.first : ids.last
+        }
+        return ids[((index + step) % ids.count + ids.count) % ids.count]
+    }
+
+    /// The next or previous value. It stops at the first and the last value.
+    static func step<Value: Equatable>(_ values: [Value], from current: Value, by step: Int) -> Value {
+        guard let index = values.firstIndex(of: current) else { return values.first ?? current }
+        return values[min(max(0, index + step), values.count - 1)]
+    }
+
+    /// The focus after the focused control goes away. An app of the list goes to the next app,
+    /// else to the app before it, so the focus stays in the list. Else the next control.
+    static func afterRemoving(_ id: String, from ids: [String]) -> String? {
+        guard let index = ids.firstIndex(of: id) else { return ids.first }
+        let kind = id.split(separator: ":").first.map(String.init) ?? id
+        let sameKind = { (other: String) in other != id && other.hasPrefix(kind + ":") }
+        if let next = ids[(index + 1)...].first(where: sameKind) { return next }
+        if let previous = ids[..<index].last(where: sameKind) { return previous }
+        if index + 1 < ids.count { return ids[index + 1] }
+        return index > 0 ? ids[index - 1] : nil
+    }
 }
 
 enum AboutCommand: Hashable {
