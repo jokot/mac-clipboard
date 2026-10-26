@@ -3,6 +3,15 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [2.1.0](https://github.com/jokot/mac-clipboard/compare/v2.0.1...v2.1.0) (2026-10-26)
+
+
+### Features
+
+* **clip-window:** delete the selected clip with Command-Delete ([#43](https://github.com/jokot/mac-clipboard/issues/43)) ([c81a836](https://github.com/jokot/mac-clipboard/commit/c81a836881c492a7a0cdfcdb772c139f71616045))
+* **clip-window:** show the row actions on the selected clip ([#46](https://github.com/jokot/mac-clipboard/issues/46)) ([1993785](https://github.com/jokot/mac-clipboard/commit/1993785dfaeec68d2735847d906eb92e183e35a8))
+* **preview:** edit text, link and file clips in the preview panel ([#44](https://github.com/jokot/mac-clipboard/issues/44)) ([1508618](https://github.com/jokot/mac-clipboard/commit/15086188920147c6a3d5ccb9f82fc498afe3c436))
+
 ## [2.0.1](https://github.com/jokot/mac-clipboard/compare/v2.0.0...v2.0.1) (2026-10-25)
 
 
