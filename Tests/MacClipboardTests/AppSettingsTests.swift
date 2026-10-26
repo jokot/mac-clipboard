@@ -236,6 +236,18 @@ final class MaClipClipsTests: XCTestCase {
         XCTAssertFalse(upgraded.saveMaClipClips, "MaClip was in the list, so its clips stay unsaved")
     }
 
+    func test_maClipStaysOutOfTheListAfterTheSwitchIsSaved() {
+        let resolved = AppSettings.resolveMaClipSetting(storedSwitch: true, storedList: ["com.bitwarden.desktop", own], hadList: true)
+        XCTAssertEqual(resolved.list, ["com.bitwarden.desktop"])
+        XCTAssertTrue(resolved.saveMaClipClips)
+    }
+
+    func test_aNewInstallStartsWithTheSwitchOff() {
+        let resolved = AppSettings.resolveMaClipSetting(storedSwitch: nil, storedList: AppSettings.defaultSeedExclusions, hadList: false)
+        XCTAssertEqual(resolved.list, AppSettings.defaultSeedExclusions)
+        XCTAssertFalse(resolved.saveMaClipClips)
+    }
+
     func test_upgradeTurnsTheSwitchOnWhenMaClipWasRemovedFromTheList() {
         let upgraded = AppSettings.migrateMaClipExclusion(["com.bitwarden.desktop"])
         XCTAssertEqual(upgraded.list, ["com.bitwarden.desktop"])

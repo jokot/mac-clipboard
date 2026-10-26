@@ -141,6 +141,14 @@ final class AppSettings: ObservableObject {
         (stored.filter { $0 != maClipBundleID }, !stored.contains(maClipBundleID))
     }
 
+    /// The list and the switch at launch. MaClip is never in the list. A saved switch wins.
+    /// Without one, an upgrade keeps the old rule of the list, and a new install starts off.
+    static func resolveMaClipSetting(storedSwitch: Bool?, storedList: [String],
+                                     hadList: Bool) -> (list: [String], saveMaClipClips: Bool) {
+        let upgraded = migrateMaClipExclusion(storedList)
+        return (upgraded.list, storedSwitch ?? (hadList && upgraded.saveMaClipClips))
+    }
+
     static let defaultMaxItems = 50
 
     /// Control-Option-Command, the overlay modifiers plus Option.
@@ -197,17 +205,12 @@ final class AppSettings: ObservableObject {
         let initialTheme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? AppTheme.system.rawValue) ?? .system
         let initialMax = AppSettings.initialMaxItems(stored: defaults.integer(forKey: Keys.maxItems))
         let initialAutoClean = defaults.object(forKey: Keys.autoCleanEnabled) as? Bool ?? false
-        var initialExcluded = AppSettings.makeInitialExcludedBundleIDs()
-        let initialSaveMaClipClips: Bool
-        if let stored = defaults.object(forKey: Keys.saveMaClipClips) as? Bool {
-            initialSaveMaClipClips = stored
-        } else {
-            let upgraded = AppSettings.migrateMaClipExclusion(initialExcluded)
-            // A new install has no saved list, and the seed list has no MaClip. The switch then stays off.
-            let hadList = defaults.data(forKey: Keys.excludedBundleIDs) != nil
-            initialExcluded = upgraded.list
-            initialSaveMaClipClips = hadList && upgraded.saveMaClipClips
-        }
+        let maClip = AppSettings.resolveMaClipSetting(
+            storedSwitch: defaults.object(forKey: Keys.saveMaClipClips) as? Bool,
+            storedList: AppSettings.makeInitialExcludedBundleIDs(),
+            hadList: defaults.data(forKey: Keys.excludedBundleIDs) != nil)
+        let initialExcluded = maClip.list
+        let initialSaveMaClipClips = maClip.saveMaClipClips
         let initialSkipConcealed = defaults.object(forKey: Keys.skipConcealedItems) as? Bool ?? false
         let initialConcealedTimeout = (defaults.object(forKey: Keys.concealedClearTimeout) as? Double) ?? 300
         let initialPasteOnClick = defaults.object(forKey: Keys.pasteOnClick) as? Bool ?? true
@@ -243,6 +246,12 @@ final class AppSettings: ObservableObject {
         self.extractCodeHotkeyEnabled = defaults.object(forKey: Keys.extractCodeEnabled) as? Bool ?? true
         self.extractCodeKeyCode = storedUInt32(Keys.extractCodeKeyCode, default: Self.defaultExtractCodeKeyCode)
         self.extractCodeModifiers = storedUInt32(Keys.extractCodeModifiers, default: Self.defaultExtractModifiers)
+
+        // `didSet` does not run in `init`. Save the upgraded list and switch, so the next launch reads them.
+        if let data = try? JSONEncoder().encode(initialExcluded) {
+            defaults.set(data, forKey: Keys.excludedBundleIDs)
+        }
+        defaults.set(initialSaveMaClipClips, forKey: Keys.saveMaClipClips)
     }
 }
 
