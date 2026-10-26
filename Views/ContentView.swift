@@ -315,6 +315,8 @@ struct ContentView: View {
                             }
                         )
                         .id(item.id)
+                        // An upper row draws over the row under it, so its action tip is not hidden.
+                        .zIndex(Double(items.count - index))
                         .background(GeometryReader { proxy in
                             Color.clear.preference(key: SelectedRowFrameKey.self,
                                                    value: index == selectedIndex ? proxy.frame(in: .global) : nil)

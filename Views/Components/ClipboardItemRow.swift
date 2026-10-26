@@ -242,44 +242,44 @@ struct ClipboardItemRow: View {
     @ViewBuilder
     private var rowActions: some View {
         if let onPreview {
-            RowActionButton(label: "Preview (space)", systemImage: "eye") { onPreview(item) }
+            RowActionButton(label: "Preview", shortcut: "space", systemImage: "eye") { onPreview(item) }
         }
         if item.isConcealed {
-            RowActionButton(label: "Show for 5 Seconds (\u{2318}U)", systemImage: "lock.open", action: reveal)
+            RowActionButton(label: "Show for 5 Seconds", shortcut: "\u{2318}U", systemImage: "lock.open", action: reveal)
         }
         switch item.content {
         case .url(let url):
-            RowActionButton(label: "Open Link (\u{2318}O)", systemImage: "arrow.up.right") { openLink(url) }
+            RowActionButton(label: "Open Link", shortcut: "\u{2318}O", systemImage: "arrow.up.right") { openLink(url) }
         case .file:
-            RowActionButton(label: "Reveal in Finder (\u{2318}R)", systemImage: "folder") { onRevealInFinder?(item) }
+            RowActionButton(label: "Reveal in Finder", shortcut: "\u{2318}R", systemImage: "folder") { onRevealInFinder?(item) }
         default:
             EmptyView()
         }
         if ClipEdit.canEdit(item.content), let onEdit {
-            RowActionButton(label: "Edit (\u{2318}E)", systemImage: "pencil") { onEdit(item) }
+            RowActionButton(label: "Edit", shortcut: "\u{2318}E", systemImage: "pencil") { onEdit(item) }
         }
-        RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", action: onRemove)
+        RowActionButton(label: "Delete", shortcut: "\u{2318}\u{232B}", systemImage: "trash", action: onRemove)
     }
 
     /// Image actions float on the image, so the image keeps its full width.
     private var imageActions: some View {
         HStack(spacing: 0) {
             if let onPreview {
-                RowActionButton(label: "Preview (space)", systemImage: "eye", tint: .primary) { onPreview(item) }
+                RowActionButton(label: "Preview", shortcut: "space", systemImage: "eye", tint: .primary) { onPreview(item) }
             }
             if item.isConcealed {
-                RowActionButton(label: "Show for 5 Seconds (\u{2318}U)", systemImage: "lock.open", tint: .primary, action: reveal)
+                RowActionButton(label: "Show for 5 Seconds", shortcut: "\u{2318}U", systemImage: "lock.open", tint: .primary, action: reveal)
             }
             if let onExtractText {
-                RowActionButton(label: "Extract Text (\u{2318}T)", systemImage: "text.viewfinder", tint: .primary) { onExtractText(item) }
+                RowActionButton(label: "Extract Text", shortcut: "\u{2318}T", systemImage: "text.viewfinder", tint: .primary) { onExtractText(item) }
             }
             if let onExtractBarcode {
-                RowActionButton(label: "Extract Code (\u{2318}B)", systemImage: "qrcode.viewfinder", tint: .primary) { onExtractBarcode(item) }
+                RowActionButton(label: "Extract Code", shortcut: "\u{2318}B", systemImage: "qrcode.viewfinder", tint: .primary) { onExtractBarcode(item) }
             }
             if let onEditImage {
-                RowActionButton(label: "Edit Image (\u{2318}E)", systemImage: "pencil", tint: .primary) { onEditImage(item) }
+                RowActionButton(label: "Edit Image", shortcut: "\u{2318}E", systemImage: "pencil", tint: .primary) { onEditImage(item) }
             }
-            RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", tint: .primary, action: onRemove)
+            RowActionButton(label: "Delete", shortcut: "\u{2318}\u{232B}", systemImage: "trash", tint: .primary, action: onRemove)
         }
         .padding(2)
         .background(
