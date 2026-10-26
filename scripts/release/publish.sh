@@ -5,7 +5,10 @@
 # the GitHub release v<version> only when every step works:
 #   1. Check the DMG, its .sha256 and the CHANGELOG.md section.
 #   2. Create a draft release (no tag yet, not public), or reuse a draft.
-#   3. Upload the two files to the draft.
+#   3. Upload the DMG, its .sha256 and MaClip.dmg to the draft. MaClip.dmg is
+#      a copy of the DMG with a fixed name. The website links to
+#      releases/latest/download/MaClip.dmg, so that link always gets the
+#      newest DMG.
 #   4. Publish the draft. GitHub creates the tag at <sha> now.
 #   5. Mark the release PR "autorelease: tagged", so release-please opens
 #      the next release PR.
@@ -18,6 +21,7 @@ sha="${2:?usage: publish.sh <version> <sha> <release-pr-number>}"
 pr="${3:?usage: publish.sh <version> <sha> <release-pr-number>}"
 tag="v$version"
 dmg="dist/MacClip-$version.dmg"
+latest="dist/MaClip.dmg"
 
 for f in "$dmg" "$dmg.sha256"; do
     if [ ! -s "$f" ]; then
@@ -45,7 +49,8 @@ if [ "$state" != "published" ]; then
     if [ -z "$state" ]; then
         gh release create "$tag" --draft --target "$sha" --title "$tag" --notes-file "$notes"
     fi
-    gh release upload "$tag" "$dmg" "$dmg.sha256" --clobber
+    cp "$dmg" "$latest"
+    gh release upload "$tag" "$dmg" "$dmg.sha256" "$latest" --clobber
     gh release edit "$tag" --draft=false --latest
     echo "published $tag"
 else
