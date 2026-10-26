@@ -80,7 +80,7 @@ struct SettingsView: View {
             }
             }
         }
-        .frame(width: 640, height: 600)
+        .frame(width: SettingsWindowController.contentSize.width, height: SettingsWindowController.contentSize.height)
         .shortcutsPanel(.settings, title: "Settings", note: "A ring shows the control that takes the keys.") {
             [SettingsKeyMap.table.groups()]
         }
@@ -760,9 +760,16 @@ private struct PrivacyTab: View {
 
 class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
+    /// Tall enough for the whole preview of the Appearance tab. On a smaller screen the window
+    /// is shorter, with room for the title bar and a margin, and the tab scrolls.
+    static var contentSize: CGSize {
+        let screen = NSScreen.main?.visibleFrame.height ?? 900
+        return CGSize(width: 680, height: min(720, screen - 68))
+    }
+
     init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 640, height: 600),
+            contentRect: NSRect(origin: .zero, size: Self.contentSize),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

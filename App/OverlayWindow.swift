@@ -5,6 +5,9 @@ import Carbon.HIToolbox
 
 @MainActor
 final class OverlayWindowController: NSObject {
+    /// The size of the clip window. With the 408 pt preview beside it, the two are 1,020 pt wide.
+    static let windowSize = CGSize(width: 600, height: 680)
+
     private var window: NSWindow?
     private let viewModel: ClipboardListViewModel
     private let onCloseRequested: (() -> Void)?
@@ -67,7 +70,9 @@ final class OverlayWindowController: NSObject {
 
         guard let window else { return }
         if let screen = NSScreen.main {
-            let size = CGSize(width: 520, height: 600)
+            // A smaller screen gets a smaller window, with a 40 pt margin.
+            let size = CGSize(width: min(Self.windowSize.width, screen.visibleFrame.width - 40),
+                              height: min(Self.windowSize.height, screen.visibleFrame.height - 40))
             let origin = CGPoint(
                 x: screen.visibleFrame.midX - size.width / 2,
                 y: screen.visibleFrame.midY - size.height / 2
@@ -171,7 +176,7 @@ final class OverlayWindowController: NSObject {
 
         let hosting = FirstMouseHostingView(rootView: content)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 600),
+            contentRect: NSRect(origin: .zero, size: Self.windowSize),
             styleMask: [.titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -586,7 +591,7 @@ private extension OverlayWindowController {
     }
 
     private func makePreviewPanel() -> NSPanel {
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 408, height: 600),
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 408, height: Self.windowSize.height),
                             styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
                             backing: .buffered, defer: false)
         panel.titleVisibility = .hidden
