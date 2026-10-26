@@ -48,6 +48,28 @@ https://github.com/user-attachments/assets/55cb6c86-be5d-4175-98f1-ddbddc5ded3d
 4. Press <kbd>⌘</kbd> <kbd>⌫</kbd> to delete the selected clip.
 5. Right-click a clip to edit it or to exclude its app.
 6. Press <kbd>⌘</kbd> <kbd>,</kbd> to open Settings.
+7. Press <kbd>⌘</kbd> <kbd>/</kbd> in any MaClip window to see all of its keys.
+
+## Keyboard shortcuts
+You can use every MaClip window with the keyboard only. Press <kbd>⌘</kbd> <kbd>/</kbd> in a window to see its keys.
+
+In the clip window:
+
+| Action | Keys |
+|---|---|
+| Select a clip | <kbd>↑</kbd> <kbd>↓</kbd>, first or last: <kbd>⌘↑</kbd> <kbd>⌘↓</kbd> |
+| Search | Type, or <kbd>⌘F</kbd> |
+| Paste | <kbd>Return</kbd>, or clip 1 to 9: <kbd>⌘1</kbd> to <kbd>⌘9</kbd> |
+| Copy without pasting | <kbd>⌘C</kbd> |
+| Preview | <kbd>Space</kbd>. Then <kbd>→</kbd> moves focus to the preview, and <kbd>←</kbd> moves it back. |
+| Edit | <kbd>⌘E</kbd> |
+| All actions of the clip | <kbd>⌘K</kbd> |
+| Delete | <kbd>⌘⌫</kbd> |
+| Open, Reveal in Finder | <kbd>⌘O</kbd>, <kbd>⌘R</kbd> |
+| Extract text or code from an image | <kbd>⌘T</kbd>, <kbd>⌘B</kbd> |
+| Back | <kbd>Esc</kbd> ends an edit, then closes the preview, then clears the search, then closes the window. |
+
+The image editor has a key for each tool: <kbd>C</kbd> crop, <kbd>A</kbd> arrow, <kbd>R</kbd> rectangle, <kbd>O</kbd> oval, <kbd>T</kbd> text, <kbd>P</kbd> pen and <kbd>X</kbd> redact.
 
 ## Build from source
 Requires Xcode and Homebrew.
