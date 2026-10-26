@@ -42,6 +42,8 @@ private struct DividedRows: _VariadicView_MultiViewRoot {
 struct SettingsRow<Control: View>: View {
     let title: String
     var caption: String? = nil
+    /// Orange caption text, for a change that deletes something.
+    var captionIsWarning = false
     @ViewBuilder let control: Control
 
     var body: some View {
@@ -51,7 +53,7 @@ struct SettingsRow<Control: View>: View {
                 if let caption {
                     Text(caption)
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(captionIsWarning ? Theme.warning : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -119,5 +121,106 @@ struct ShortcutField: View {
         .disabled(!isEnabled)
         .help(isRecording ? "Press the new shortcut. Esc cancels." : "Click to record a new shortcut")
         .accessibilityLabel(isRecording ? "Recording a new shortcut" : "Shortcut \(shortcut). Click to record a new shortcut.")
+    }
+}
+
+// MARK: - Keyboard focus
+
+/// The Settings control with the keyboard focus. MaClip moves the focus and draws the ring itself,
+/// so ⇥, space and the arrow keys work without Keyboard navigation in System Settings.
+@MainActor
+final class SettingsFocusState: ObservableObject {
+    static let shared = SettingsFocusState()
+    @Published var focused: String?
+}
+
+enum SettingsControlAction: Equatable {
+    case activate
+    /// The previous (-1) or next (1) value of a choice.
+    case step(Int)
+    /// ⌫ on an app of the Privacy list.
+    case remove
+}
+
+/// A key for the control with this id.
+struct SettingsControlEvent {
+    let id: String
+    let action: SettingsControlAction
+}
+
+/// The ids of the focusable controls of the visible tab, in the order of the view.
+struct SettingsFocusIDsKey: PreferenceKey {
+    static var defaultValue: [String] = []
+    static func reduce(value: inout [String], nextValue: () -> [String]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+private struct SettingsFocusable: ViewModifier {
+    let id: String
+    let enabled: Bool
+    let handle: (SettingsControlAction) -> Void
+    @ObservedObject private var focus = SettingsFocusState.shared
+
+    init(id: String, enabled: Bool, handle: @escaping (SettingsControlAction) -> Void) {
+        self.id = id
+        self.enabled = enabled
+        self.handle = handle
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if enabled && focus.focused == id {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(Theme.accent, lineWidth: 2)
+                        .padding(-4)
+                        .allowsHitTesting(false)
+                }
+            }
+            .id(id)
+            .preference(key: SettingsFocusIDsKey.self, value: enabled ? [id] : [])
+            .onReceive(NotificationCenter.default.publisher(for: .settingsControlAction)) { note in
+                guard enabled, let event = note.object as? SettingsControlEvent, event.id == id else { return }
+                handle(event.action)
+            }
+    }
+}
+
+extension View {
+    /// Adds the control to the ⇥ order of Settings. `handle` runs space, ↩, ← → and ⌫.
+    func settingsFocus(_ id: String, enabled: Bool = true,
+                       handle: @escaping (SettingsControlAction) -> Void) -> some View {
+        modifier(SettingsFocusable(id: id, enabled: enabled, handle: handle))
+    }
+
+    /// A switch: space and ↩ turn it on or off.
+    func settingsFocus(_ id: String, enabled: Bool = true, toggle isOn: Binding<Bool>) -> some View {
+        settingsFocus(id, enabled: enabled) { action in
+            if action == .activate { isOn.wrappedValue.toggle() }
+        }
+    }
+
+    /// A choice: ← → select the previous or next value, and space selects the next value.
+    func settingsFocus<Value: Equatable>(_ id: String, enabled: Bool = true,
+                                         choice selection: Binding<Value>, values: [Value]) -> some View {
+        settingsFocus(id, enabled: enabled) { action in
+            switch action {
+            case .step(let step):
+                selection.wrappedValue = SettingsFocus.step(values, from: selection.wrappedValue, by: step)
+            case .activate:
+                guard let index = values.firstIndex(of: selection.wrappedValue) else { return }
+                selection.wrappedValue = values[(index + 1) % values.count]
+            case .remove:
+                break
+            }
+        }
+    }
+
+    /// A button: space and ↩ press it.
+    func settingsFocus(_ id: String, enabled: Bool = true, press: @escaping () -> Void) -> some View {
+        settingsFocus(id, enabled: enabled) { action in
+            if action == .activate { press() }
+        }
     }
 }

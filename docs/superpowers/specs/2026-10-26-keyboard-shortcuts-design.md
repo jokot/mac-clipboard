@@ -1,0 +1,123 @@
+# Keyboard shortcuts in every window
+
+Design canvas: "MaClip Keyboard Shortcuts" (https://claude.ai/artifact/5zPufnQ6tmTPvgVwCtgsdU).
+
+## Goal
+
+A person can use every MaClip window with the keyboard only: move, run every action, and close each window.
+Each window shows its own keys in a panel. Press ⌘/ to open the panel.
+
+## One list of keys for each window
+
+Each window has one table of key bindings. The key handling and the ⌘/ panel read the same table.
+A unit test fails when two actions in one table use the same key.
+
+## Clip window
+
+The clip window has two sides: the list and the preview. Only one side has focus.
+The clip window stays the key window. MaClip sends each key to the side with focus.
+
+- Space opens the preview. The list keeps focus.
+- → moves focus to the preview. ← moves focus back to the list.
+- A 2 pt accent ring shows the side with focus while the preview is open.
+- A click on a side gives focus to that side.
+- In the search field, ← → switch sides only when the field is empty.
+  When the field has text, ← → move the text cursor.
+- ↑ and ↓ take the cursor out of the search field. The search text stays, and the list takes the keys.
+  Space then opens the preview. A typed letter goes back to the search. ⌫ in the list deletes the last letter of the search.
+- Space in the search field types a space only after text. In an empty field, Space opens the preview.
+
+Esc goes back one step at a time:
+
+1. End the edit.
+2. Close the preview. The list gets focus.
+3. Clear the search.
+4. Close the window.
+
+### List keys
+
+| Group | Action | Key |
+|---|---|---|
+| Move | Select a clip | ↑ ↓ |
+| Move | First or last clip | ⌘↑ ⌘↓ (also Home, End) |
+| Move | Page up or down | fn↑ fn↓ |
+| Move | Search | ⌘F |
+| Move | Filter by typing | a–z |
+| Move | List or preview | ← → |
+| Move | Back, then close | esc |
+| Clip | Paste | ↩ |
+| Clip | Paste clip 1 to 9 | ⌘1–9 |
+| Clip | Copy only | ⌘C |
+| Clip | Preview | space |
+| Clip | Edit | ⌘E |
+| Clip | All actions | ⌘K |
+| Clip | Delete | ⌘⌫ |
+| Clip | Don’t save from app… | ⌥⌘⌫ |
+| Clip | Show concealed clip | ⌘U |
+| Links and files | Open | ⌘O |
+| Links and files | Reveal in Finder | ⌘R |
+| Links and files | Copy path | ⌥⌘C |
+| Images | Extract text | ⌘T |
+| Images | Extract code | ⌘B |
+| Window | Settings | ⌘, |
+| Window | About MaClip | ⌘I |
+| Window | Clear history… | ⇧⌘⌫ |
+| Window | Close window | ⌘W |
+| Window | Quit MaClip | ⌘Q |
+| Window | This list | ⌘/ |
+
+The panel also shows the 3 global keys from Settings.
+
+### Preview keys (the preview has focus)
+
+| Action | Key |
+|---|---|
+| Scroll | ↑ ↓ |
+| Page up or down | fn↑ fn↓ |
+| Top or bottom | ⌘↑ ⌘↓ |
+| Back to the list | ← |
+| Close preview | space, esc |
+
+Every clip key of the list also works, on the clip in the preview.
+
+### Edit mode
+
+| Action | Key |
+|---|---|
+| Save | ⌘↩, ⌘S |
+| Cancel | esc |
+
+Text keys work as in any Mac text field.
+
+## Image editor
+
+| Action | Key |
+|---|---|
+| Crop, Arrow, Rectangle, Oval, Text, Pen, Redact | C A R O T P X |
+| Color 1 to 8 | 1–8 |
+| Thinner or thicker line | [ ] |
+| Rotate left or right | ⌘L ⌘R |
+| Undo, Redo | ⌘Z ⇧⌘Z |
+| Save | ↩ ⌘S |
+| Save as new clip | ⇧⌘S |
+| Cancel | esc ⌘W |
+
+Tool, color and width keys are off while the text tool has a text field open.
+
+## Settings, About, Accessibility prompt
+
+- Settings: ⌘1–⌘4 select the tabs. esc, ⌘W and ⌘, close.
+  MaClip moves the focus between the controls itself, so Keyboard navigation in System Settings is not needed.
+  ⇥ or ↓ goes to the next control, ⇧⇥ or ↑ to the previous one. A 2 pt accent ring shows the focused control.
+  Space or ↩ turns a switch on or off, presses a button, or records a shortcut. ← → change a choice.
+  Each app of the Privacy list takes the focus. ⌫ removes the focused app.
+  In the number field, ⇥, ⇧⇥, ↑ and ↓ leave the field, esc takes the cursor out, ↩ applies the number, and other keys type.
+- About: ↩ checks for updates. esc, ⌘W and ⌘I close.
+- Accessibility prompt: ↩ runs the main button. esc and ⌘W run Not Now.
+
+Each window also has a keyboard button that opens its panel.
+
+## Panel
+
+The panel is a card on top of its window. ⌘/ or esc closes it. A click outside the card closes it.
+While the panel is open, the window behind it does not take keys.

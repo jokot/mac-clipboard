@@ -39,9 +39,10 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
         let frontmost = NSWorkspace.shared.frontmostApplication
         let sourceBundleID = frontmost?.bundleIdentifier
 
-        // Exclusion list — never ingest from these apps.
-        if let id = sourceBundleID,
-           AppSettings.shared.excludedBundleIDs.contains(id) {
+        // The list of apps, and the MaClip switch.
+        if AppSettings.skipsClip(from: sourceBundleID,
+                                 excluded: AppSettings.shared.excludedBundleIDs,
+                                 saveMaClipClips: AppSettings.shared.saveMaClipClips) {
             return
         }
 

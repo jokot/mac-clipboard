@@ -5,6 +5,8 @@ import Foundation
 
 struct ContentView: View {
     @ObservedObject var viewModel: ClipboardListViewModel
+    /// The side with focus and the preview state, shared with the window controller.
+    @ObservedObject var windowState: ClipWindowState
     @ObservedObject private var settings = AppSettings.shared
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
@@ -16,6 +18,9 @@ struct ContentView: View {
     var onTogglePreview: (ClipboardItem) -> Void = { _ in }
     /// The selected clip changed. An open preview then shows the new clip, or closes when nil.
     var onSelectionChange: (ClipboardItem?) -> Void = { _ in }
+    /// ⌘K: shows these actions in a menu under the selected row.
+    var onShowActions: ([ClipMenuAction], CGRect?) -> Void = { _, _ in }
+    @State private var selectedRowFrame: CGRect?
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
     @FocusState private var isSearchFocused: Bool
@@ -30,14 +35,18 @@ struct ContentView: View {
     }
 
     init(viewModel: ClipboardListViewModel,
+         windowState: ClipWindowState,
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
          onOpenSettings: @escaping () -> Void = {},
          onEditImage: @escaping (ClipboardItem, NSImage) -> Void = { _, _ in },
          onEdit: @escaping (ClipboardItem) -> Void = { _ in },
          onPreview: @escaping (ClipboardItem) -> Void = { _ in },
          onTogglePreview: @escaping (ClipboardItem) -> Void = { _ in },
-         onSelectionChange: @escaping (ClipboardItem?) -> Void = { _ in }) {
+         onSelectionChange: @escaping (ClipboardItem?) -> Void = { _ in },
+         onShowActions: @escaping ([ClipMenuAction], CGRect?) -> Void = { _, _ in }) {
         self.viewModel = viewModel
+        self.windowState = windowState
+        self.onShowActions = onShowActions
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
         self.onEditImage = onEditImage
@@ -62,8 +71,25 @@ struct ContentView: View {
         }
         .frame(minWidth: 480, minHeight: 480)
         .ignoresSafeArea(.container, edges: .top)
+        .overlay {
+            // The focus ring shows which side takes the keys while the preview is open.
+            if windowState.previewOpen && windowState.pane == .list {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Theme.accent, lineWidth: 2)
+                    .padding(3)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+        }
+        .simultaneousGesture(TapGesture().onEnded { windowState.pane = .list })
+        .shortcutsPanel(.clipList, title: "Clip window", note: "Global keys work in any app.") {
+            ClipKeyMap.listColumns(globalKeys: globalKeyRows)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .overlayFocusSearch)) { _ in
             isSearchFocused = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .overlayLeaveSearch)) { _ in
+            isSearchFocused = false
         }
         .alert(item: $extractionAlert) { alert in
             Alert(title: Text("No Result"), message: Text(alert.message), dismissButton: .default(Text("OK")))
@@ -219,18 +245,26 @@ struct ContentView: View {
     }
 
     /// Keyboard hints at the left, the clip count at the right.
+    /// Three or four hints at most, so none of them wraps. ⌘/ shows all the keys.
     private var hintBar: some View {
-        HStack(spacing: 16) {
-            if !viewModel.filteredItems.isEmpty {
+        HStack(spacing: 14) {
+            if windowState.previewOpen {
+                hint("\u{2190} \u{2192}", "Switch")
+                hint("esc", "Close preview")
+            } else if !viewModel.filteredItems.isEmpty {
                 hint("\u{2191}\u{2193}", "Move")
                 hint("\u{21A9}", "Paste")
                 hint("space", "Preview")
+            } else {
+                hint("esc", "Close")
             }
-            hint("esc", "Close")
-            Spacer()
+            hint("\u{2318}/", "Shortcuts")
+            Spacer(minLength: 8)
             Text(ClipListSummary.text(total: viewModel.items.count,
                                       limit: settings.maxItems,
                                       matches: isSearching ? viewModel.filteredItems.count : nil))
+                .lineLimit(1)
+                .fixedSize()
         }
         .font(.system(size: 11))
         .foregroundColor(.secondary)
@@ -244,6 +278,8 @@ struct ContentView: View {
             KeyLabel(key: key)
             Text(label)
         }
+        .lineLimit(1)
+        .fixedSize()
     }
 
     private var list: some View {
@@ -258,135 +294,9 @@ struct ContentView: View {
                             onSelect: onSelect,
                             onRemove: { remove(item, at: index) },
                             isSelected: index == selectedIndex,
-                            onExtractText: { item in
-                                Task { @MainActor in
-                                    if case .image(let imgContent) = item.content {
-                                        // If we have a cached text result (including negative cache as empty string), use it
-                                        if let cachedText = imgContent.cachedText {
-                                            if cachedText.isEmpty {
-                                                NSSound.beep()
-                                                extractionAlert = ExtractionAlert(message: "No text found in the image.")
-                                                return
-                                            } else {
-                                                let resultItem = viewModel.promoteOrInsertResult(
-                                                    text: cachedText,
-                                                    sourceBundleID: item.sourceBundleID,
-                                                    isOCRResult: true
-                                                )
-                                                viewModel.setPasteboard(to: resultItem)
-                                                return
-                                            }
-                                        }
-
-                                        // No cached text yet: perform OCR
-                                        do {
-                                            var resolvedImage: NSImage?
-                                            switch imgContent.source {
-                                            case .memory(let img): resolvedImage = img
-                                            case .file(let url):
-                                                if let data = viewModel.imageData(at: url) { resolvedImage = NSImage(data: data) }
-                                            }
-                                            guard let imageToProcess = resolvedImage else { throw OCRService.OCRError.imageProcessingFailed }
-
-                                            let text = try await ocrService.extractText(from: imageToProcess)
-                                            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                                            guard !trimmed.isEmpty else {
-                                                // Cache negative result to avoid re-running unnecessarily
-                                                viewModel.updateImageItemCache(item, cachedText: "", cachedId: nil, cachedBarcode: nil)
-                                                NSSound.beep()
-                                                extractionAlert = ExtractionAlert(message: "No text found in the image.")
-                                                return
-                                            }
-                                            let textId = text
-                                            viewModel.updateImageItemCache(item, cachedText: text, cachedId: textId, cachedBarcode: nil)
-                                            let resultItem = viewModel.promoteOrInsertResult(
-                                                text: text,
-                                                sourceBundleID: item.sourceBundleID,
-                                                isOCRResult: true
-                                            )
-                                            viewModel.setPasteboard(to: resultItem)
-                                        } catch {
-                                            NSSound.beep()
-                                            if let ocrError = error as? OCRService.OCRError {
-                                                switch ocrError {
-                                                case .noTextFound:
-                                                    // Cache negative result for next time
-                                                    viewModel.updateImageItemCache(item, cachedText: "", cachedId: nil, cachedBarcode: nil)
-                                                    extractionAlert = ExtractionAlert(message: "No text found in the image.")
-                                                case .imageProcessingFailed, .visionRequestFailed:
-                                                    extractionAlert = ExtractionAlert(message: "Failed to extract text from the image.")
-                                                case .noBarcodeFound:
-                                                    break
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            onExtractBarcode: { item in
-                                Task { @MainActor in
-                                    if case .image(let imgContent) = item.content {
-                                        // If we have a cached barcode result (including negative cache as empty string), use it
-                                        if let barcode = imgContent.cachedBarcode {
-                                            if barcode.isEmpty {
-                                                NSSound.beep()
-                                                extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
-                                                return
-                                            } else {
-                                                let resultItem = viewModel.promoteOrInsertResult(
-                                                    text: barcode,
-                                                    sourceBundleID: item.sourceBundleID,
-                                                    isOCRResult: true
-                                                )
-                                                viewModel.setPasteboard(to: resultItem)
-                                                return
-                                            }
-                                        }
-
-                                        // No cached barcode yet: perform detection
-                                        do {
-                                            var resolvedImage: NSImage?
-                                            switch imgContent.source {
-                                            case .memory(let img): resolvedImage = img
-                                            case .file(let url):
-                                                if let data = viewModel.imageData(at: url) { resolvedImage = NSImage(data: data) }
-                                            }
-                                            guard let imageToProcess = resolvedImage else { throw OCRService.OCRError.imageProcessingFailed }
-
-                                            let code = try await ocrService.extractBarcode(from: imageToProcess)
-                                            let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
-                                            guard !trimmed.isEmpty else {
-                                                // Cache negative result to avoid re-running unnecessarily
-                                                viewModel.updateImageItemCache(item, cachedText: nil, cachedId: nil, cachedBarcode: "")
-                                                NSSound.beep()
-                                                extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
-                                                return
-                                            }
-                                            viewModel.updateImageItemCache(item, cachedText: nil, cachedId: code, cachedBarcode: code)
-                                            let resultItem = viewModel.promoteOrInsertResult(
-                                                text: code,
-                                                sourceBundleID: item.sourceBundleID,
-                                                isOCRResult: true
-                                            )
-                                            viewModel.setPasteboard(to: resultItem)
-                                        } catch {
-                                            NSSound.beep()
-                                            if let ocrError = error as? OCRService.OCRError {
-                                                switch ocrError {
-                                                case .noBarcodeFound:
-                                                    // Cache negative result for next time
-                                                    viewModel.updateImageItemCache(item, cachedText: nil, cachedId: nil, cachedBarcode: "")
-                                                    extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
-                                                case .imageProcessingFailed, .visionRequestFailed:
-                                                    extractionAlert = ExtractionAlert(message: "Failed to detect barcode in the image.")
-                                                case .noTextFound:
-                                                    break
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            },
+                            isListFocused: !windowState.previewOpen || windowState.pane == .list,
+                            onExtractText: { item in extractText(item) },
+                            onExtractBarcode: { item in extractCode(item) },
                             onExcludeApp: { bundleID in
                                 confirmExclude(bundleID: bundleID)
                             },
@@ -401,16 +311,19 @@ struct ContentView: View {
                             onEditImage: { item in
                                 openImageEditor(for: item)
                             },
-                            onCopyOnly: { item in
-                                viewModel.setPasteboard(to: item)
-                                NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
-                            },
+                            onCopyOnly: { item in copyOnly(item) },
                             onPreview: { item in
                                 selectedIndex = index
                                 onPreview(item)
                             }
                         )
                         .id(item.id)
+                        // An upper row draws over the row under it, so its action tip is not hidden.
+                        .zIndex(Double(items.count - index))
+                        .background(GeometryReader { proxy in
+                            Color.clear.preference(key: SelectedRowFrameKey.self,
+                                                   value: index == selectedIndex ? proxy.frame(in: .global) : nil)
+                        })
                     }
                 }
                 .padding(.horizontal, 8)
@@ -427,19 +340,10 @@ struct ContentView: View {
                     }
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionUp)) { _ in moveSelection(-1) }
-            .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionDown)) { _ in moveSelection(1) }
-            .onReceive(NotificationCenter.default.publisher(for: .overlaySelectCurrentItem)) { _ in selectCurrent() }
-            .onReceive(NotificationCenter.default.publisher(for: .overlayDeleteSelectedItem)) { _ in
-                let items = viewModel.filteredItems
-                guard items.indices.contains(selectedIndex) else { return }
-                remove(items[selectedIndex], at: selectedIndex)
+            .onReceive(NotificationCenter.default.publisher(for: .overlayCommand)) { note in
+                if let command = note.object as? ClipCommand { perform(command) }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .overlayTogglePreview)) { _ in
-                let items = viewModel.filteredItems
-                guard items.indices.contains(selectedIndex) else { return }
-                onTogglePreview(items[selectedIndex])
-            }
+            .onPreferenceChange(SelectedRowFrameKey.self) { selectedRowFrame = $0 }
             .onChange(of: selectedIndex) { _ in
                 let items = viewModel.filteredItems
                 guard items.indices.contains(selectedIndex) else { return }
@@ -461,6 +365,211 @@ struct ContentView: View {
         }
     }
 
+    /// The keys from Settings that work in any app, for the shortcuts panel.
+    private var globalKeyRows: [ShortcutRow] {
+        var rows = [ShortcutRow(label: "Open MaClip",
+                                keys: [HotkeyUtils.description(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)])]
+        if settings.extractTextHotkeyEnabled {
+            rows.append(ShortcutRow(label: "Paste text from image",
+                                    keys: [HotkeyUtils.description(keyCode: settings.extractTextKeyCode, modifiers: settings.extractTextModifiers)]))
+        }
+        if settings.extractCodeHotkeyEnabled {
+            rows.append(ShortcutRow(label: "Paste code from image",
+                                    keys: [HotkeyUtils.description(keyCode: settings.extractCodeKeyCode, modifiers: settings.extractCodeModifiers)]))
+        }
+        return rows
+    }
+
+    /// Runs a key of the clip window. A key that does not fit the selected clip beeps,
+    /// for example ⌘O on a text clip.
+    private func perform(_ command: ClipCommand) {
+        let items = viewModel.filteredItems
+        switch command {
+        case .moveUp: moveSelection(-1)
+        case .moveDown: moveSelection(1)
+        case .pageUp: moveSelection(-8)
+        case .pageDown: moveSelection(8)
+        case .moveFirst: if !items.isEmpty { selectedIndex = 0 }
+        case .moveLast: if !items.isEmpty { selectedIndex = items.count - 1 }
+        case .clearHistory: isShowingClearConfirm = true
+        case .pasteClip(let number):
+            guard items.indices.contains(number - 1) else { return NSSound.beep() }
+            onSelect(items[number - 1])
+        default:
+            guard items.indices.contains(selectedIndex) else { return NSSound.beep() }
+            let item = items[selectedIndex]
+            if !run(command, on: item) { NSSound.beep() }
+        }
+    }
+
+    /// Returns false when the command does not fit the clip.
+    private func run(_ command: ClipCommand, on item: ClipboardItem) -> Bool {
+        switch (command, item.content) {
+        case (.paste, _): onSelect(item)
+        case (.copyOnly, _): copyOnly(item)
+        case (.togglePreview, _): onTogglePreview(item)
+        case (.edit, .image): openImageEditor(for: item)
+        case (.edit, _): onEdit(item)
+        case (.showActions, _): onShowActions(menuActions(for: item), selectedRowFrame)
+        case (.delete, _): remove(item, at: selectedIndex)
+        case (.excludeApp, _):
+            guard let bundleID = item.sourceBundleID else { return false }
+            confirmExclude(bundleID: bundleID)
+        case (.revealConcealed, _):
+            guard item.isConcealed else { return false }
+            NotificationCenter.default.post(name: .overlayRevealItem, object: item.id)
+        case (.open, .url(let url)): openLink(url)
+        case (.open, .file): openFile(item)
+        case (.revealInFinder, .file): revealInFinder(item)
+        case (.copyPath, .file): copyFilePath(item)
+        case (.extractText, .image): extractText(item)
+        case (.extractCode, .image): extractCode(item)
+        default: return false
+        }
+        return true
+    }
+
+    /// The ⌘K menu: the same actions as the context menu, with their keys.
+    private func menuActions(for item: ClipboardItem) -> [ClipMenuAction] {
+        var actions = [
+            ClipMenuAction(title: "Paste", key: KeyCombo(.returnKey)) { onSelect(item) },
+            ClipMenuAction(title: "Copy Only", key: .command("c")) { copyOnly(item) },
+            ClipMenuAction(title: "Preview", key: KeyCombo(.space)) { onTogglePreview(item) },
+        ]
+        switch item.content {
+        case .url(let url):
+            actions.append(ClipMenuAction(title: "Open Link", key: .command("o")) { openLink(url) })
+        case .file:
+            actions.append(ClipMenuAction(title: "Open", key: .command("o")) { openFile(item) })
+            actions.append(ClipMenuAction(title: "Reveal in Finder", key: .command("r")) { revealInFinder(item) })
+            actions.append(ClipMenuAction(title: "Copy Path", key: KeyCombo(.character("c"), [.option, .command])) { copyFilePath(item) })
+        case .image:
+            actions.append(ClipMenuAction(title: "Extract Text", key: .command("t")) { extractText(item) })
+            actions.append(ClipMenuAction(title: "Extract Code", key: .command("b")) { extractCode(item) })
+        case .text:
+            break
+        }
+        if item.isConcealed {
+            actions.append(ClipMenuAction(title: "Show for 5 Seconds", key: .command("u")) {
+                NotificationCenter.default.post(name: .overlayRevealItem, object: item.id)
+            })
+        }
+        actions.append(ClipMenuAction(title: "Edit\u{2026}", key: .command("e")) {
+            if case .image = item.content { openImageEditor(for: item) } else { onEdit(item) }
+        })
+        actions.append(.separator)
+        if let bundleID = item.sourceBundleID {
+            let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+            actions.append(ClipMenuAction(title: "Don\u{2019}t Save Clips from \(name)\u{2026}",
+                                          key: KeyCombo(.delete, [.option, .command])) { confirmExclude(bundleID: bundleID) })
+            actions.append(.separator)
+        }
+        let index = selectedIndex
+        actions.append(ClipMenuAction(title: "Delete", key: KeyCombo(.delete, .command)) { remove(item, at: index) })
+        return actions
+    }
+
+    /// Reads the text in an image clip, then copies it as a new text clip at the top.
+    /// A result is cached on the clip, also an empty result.
+    private func extractText(_ item: ClipboardItem) {
+        Task { @MainActor in
+            guard case .image(let imgContent) = item.content else { return }
+            if let cachedText = imgContent.cachedText {
+                guard !cachedText.isEmpty else {
+                    NSSound.beep()
+                    extractionAlert = ExtractionAlert(message: "No text found in the image.")
+                    return
+                }
+                copyResult(cachedText, from: item)
+                return
+            }
+            do {
+                guard let image = image(of: imgContent) else { throw OCRService.OCRError.imageProcessingFailed }
+                let text = try await ocrService.extractText(from: image)
+                guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    viewModel.updateImageItemCache(item, cachedText: "", cachedId: nil, cachedBarcode: nil)
+                    NSSound.beep()
+                    extractionAlert = ExtractionAlert(message: "No text found in the image.")
+                    return
+                }
+                viewModel.updateImageItemCache(item, cachedText: text, cachedId: text, cachedBarcode: nil)
+                copyResult(text, from: item)
+            } catch {
+                NSSound.beep()
+                switch error as? OCRService.OCRError {
+                case .noTextFound:
+                    viewModel.updateImageItemCache(item, cachedText: "", cachedId: nil, cachedBarcode: nil)
+                    extractionAlert = ExtractionAlert(message: "No text found in the image.")
+                case .imageProcessingFailed, .visionRequestFailed:
+                    extractionAlert = ExtractionAlert(message: "Failed to extract text from the image.")
+                case .noBarcodeFound, nil:
+                    break
+                }
+            }
+        }
+    }
+
+    /// Reads the QR code or barcode in an image clip, then copies its value as a new text clip.
+    private func extractCode(_ item: ClipboardItem) {
+        Task { @MainActor in
+            guard case .image(let imgContent) = item.content else { return }
+            if let barcode = imgContent.cachedBarcode {
+                guard !barcode.isEmpty else {
+                    NSSound.beep()
+                    extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
+                    return
+                }
+                copyResult(barcode, from: item)
+                return
+            }
+            do {
+                guard let image = image(of: imgContent) else { throw OCRService.OCRError.imageProcessingFailed }
+                let code = try await ocrService.extractBarcode(from: image)
+                guard !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    viewModel.updateImageItemCache(item, cachedText: nil, cachedId: nil, cachedBarcode: "")
+                    NSSound.beep()
+                    extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
+                    return
+                }
+                viewModel.updateImageItemCache(item, cachedText: nil, cachedId: code, cachedBarcode: code)
+                copyResult(code, from: item)
+            } catch {
+                NSSound.beep()
+                switch error as? OCRService.OCRError {
+                case .noBarcodeFound:
+                    viewModel.updateImageItemCache(item, cachedText: nil, cachedId: nil, cachedBarcode: "")
+                    extractionAlert = ExtractionAlert(message: "No barcode detected in the image.")
+                case .imageProcessingFailed, .visionRequestFailed:
+                    extractionAlert = ExtractionAlert(message: "Failed to detect barcode in the image.")
+                case .noTextFound, nil:
+                    break
+                }
+            }
+        }
+    }
+
+    private func image(of content: ImageContent) -> NSImage? {
+        switch content.source {
+        case .memory(let image): return image
+        case .file(let url): return viewModel.imageData(at: url).flatMap(NSImage.init(data:))
+        }
+    }
+
+    private func copyResult(_ text: String, from item: ClipboardItem) {
+        let result = viewModel.promoteOrInsertResult(text: text, sourceBundleID: item.sourceBundleID, isOCRResult: true)
+        viewModel.setPasteboard(to: result)
+    }
+
+    private func copyOnly(_ item: ClipboardItem) {
+        viewModel.setPasteboard(to: item)
+        NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+    }
+
+    private func openLink(_ url: URL) {
+        NSWorkspace.shared.open(url)
+        NotificationCenter.default.post(name: .overlayCloseRequested, object: nil)
+    }
+
     private func moveSelection(_ delta: Int) {
         let items = viewModel.filteredItems
         selectedIndex = max(0, min(items.count - 1, selectedIndex + delta))
@@ -478,12 +587,6 @@ struct ContentView: View {
         }
         selectedIndex = next
         onSelectionChange(items[next])
-    }
-
-    private func selectCurrent() {
-        let items = viewModel.filteredItems
-        guard items.indices.contains(selectedIndex) else { return }
-        onSelect(items[selectedIndex])
     }
 
     private func openFile(_ item: ClipboardItem) {
@@ -528,5 +631,13 @@ struct ContentView: View {
                 viewModel.purgeItems(matchingBundleID: bundleID)
             }
         }
+    }
+}
+
+/// The frame of the selected row in the window, for the ⌘K menu.
+private struct SelectedRowFrameKey: PreferenceKey {
+    static var defaultValue: CGRect? = nil
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = value ?? nextValue()
     }
 }

@@ -17,6 +17,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         }
     }
 
+    /// ⌘1 to ⌘4, in the order of the tabs.
+    var shortcut: String {
+        "\u{2318}\((Self.allCases.firstIndex(of: self) ?? 0) + 1)"
+    }
+
     var symbol: String {
         switch self {
         case .general: return "gearshape"
@@ -31,6 +36,9 @@ struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject var viewModel: ClipboardListViewModel
     @State private var tab: SettingsTab = .general
+    @ObservedObject private var focus = SettingsFocusState.shared
+    /// The focusable controls of the visible tab, in order.
+    @State private var controlIDs: [String] = []
     @State private var isCapturingHotkey = false
     /// The extract shortcut that waits for new keys, or nil.
     @State private var extractCapture: ExtractKind?
@@ -39,6 +47,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             tabBar
             Rectangle().fill(Theme.line).frame(height: 1)
+            ScrollViewReader { proxy in
             ScrollView {
                 Group {
                     switch tab {
@@ -59,10 +68,23 @@ struct SettingsView: View {
                 .padding(.horizontal, 28)
                 .padding(.vertical, 20)
             }
+            .onPreferenceChange(SettingsFocusIDsKey.self) { controlIDs = $0 }
+            .onChange(of: focus.focused) { id in
+                guard let id else { return }
+                withAnimation(.easeInOut(duration: 0.12)) { proxy.scrollTo(id, anchor: .center) }
+            }
+            }
         }
         .frame(width: 640, height: 600)
+        .shortcutsPanel(.settings, title: "Settings", note: "A ring shows the control that takes the keys.") {
+            [SettingsKeyMap.table.groups()]
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsCommand)) { note in
+            if let command = note.object as? SettingsCommand { perform(command) }
+        }
         .onAppear { setWindowTitle() }
         .onChange(of: tab) { _ in
+            focus.focused = nil
             isCapturingHotkey = false
             extractCapture = nil
             setWindowTitle()
@@ -99,8 +121,11 @@ struct SettingsView: View {
                         Text(item.title)
                             .font(.system(size: 11))
                             .foregroundColor(tab == item ? .primary : .secondary)
+                        Text(item.shortcut)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
                     }
-                    .frame(width: 76, height: 48)
+                    .frame(width: 76, height: 60)
                     .background(
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(tab == item ? Theme.tileFill : Color.clear)
@@ -108,6 +133,7 @@ struct SettingsView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .help("\(item.title) (\(item.shortcut))")
                 .accessibilityLabel(item.title)
                 .accessibilityAddTraits(tab == item ? .isSelected : [])
             }
@@ -115,6 +141,42 @@ struct SettingsView: View {
         .padding(.top, 4)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
+        .overlay(alignment: .trailing) {
+            ShortcutsButton(scope: .settings).padding(.trailing, 12)
+        }
+    }
+
+    private func perform(_ command: SettingsCommand) {
+        switch command {
+        case .tab(let selected):
+            tab = selected
+        case .nextControl:
+            focus.focused = SettingsFocus.move(in: controlIDs, from: focus.focused, by: 1)
+        case .previousControl:
+            focus.focused = SettingsFocus.move(in: controlIDs, from: focus.focused, by: -1)
+        case .activate:
+            send(.activate)
+        case .stepBack:
+            send(.step(-1))
+        case .stepForward:
+            send(.step(1))
+        case .removeSelectedApp:
+            guard let id = focus.focused, id.hasPrefix("app:") else {
+                // No app has the focus: remove the app that a click selected.
+                NotificationCenter.default.post(name: .settingsRemoveSelectedApp, object: nil)
+                return
+            }
+            let next = SettingsFocus.afterRemoving(id, from: controlIDs)
+            send(.remove)
+            focus.focused = next
+        case .close, .showShortcuts:
+            break
+        }
+    }
+
+    private func send(_ action: SettingsControlAction) {
+        guard let id = focus.focused else { return NSSound.beep() }
+        NotificationCenter.default.post(name: .settingsControlAction, object: SettingsControlEvent(id: id, action: action))
     }
 
     private func setWindowTitle() {
@@ -198,6 +260,7 @@ private struct GeneralTab: View {
                     .labelsHidden()
                     .pickerStyle(.segmented)
                     .fixedSize()
+                    .settingsFocus("theme", choice: $settings.theme, values: [AppTheme.system, .light, .dark])
                     .onChange(of: settings.theme) { newTheme in
                         applyTheme(newTheme)
                         NotificationCenter.default.post(name: .themeChanged, object: nil)
@@ -208,16 +271,19 @@ private struct GeneralTab: View {
             SettingsSection(title: "Pasting") {
                 SettingsRow(title: "Paste on selection", caption: "Paste the clip into the app that you used before.") {
                     SettingsSwitch(label: "Paste on selection", isOn: $settings.pasteOnClick)
+                        .settingsFocus("pasteOnClick", toggle: $settings.pasteOnClick)
                 }
                 AccessibilityRow()
                 SettingsRow(title: "Move clip to top on selection") {
                     SettingsSwitch(label: "Move clip to top on selection", isOn: $settings.moveTopOnClick)
+                        .settingsFocus("moveTopOnClick", toggle: $settings.moveTopOnClick)
                 }
             }
 
             SettingsSection(title: "Clip window") {
                 SettingsRow(title: "Close when idle", caption: "Close the window when you do not type, click or scroll in it.") {
                     SettingsSwitch(label: "Close when idle", isOn: $settings.autoDismissOverlayEnabled)
+                        .settingsFocus("closeWhenIdle", toggle: $settings.autoDismissOverlayEnabled)
                 }
                 SettingsRow(title: "Close after") {
                     Picker("Close after", selection: $settings.autoDismissOverlayTimeout) {
@@ -230,6 +296,8 @@ private struct GeneralTab: View {
                     .labelsHidden()
                     .fixedSize()
                     .disabled(!settings.autoDismissOverlayEnabled)
+                    .settingsFocus("closeAfter", enabled: settings.autoDismissOverlayEnabled,
+                                   choice: $settings.autoDismissOverlayTimeout, values: [5, 10, 20, 30, 60])
                 }
             }
         }
@@ -255,6 +323,9 @@ private struct AccessibilityRow: View {
             Spacer(minLength: 12)
             if !access.isGranted {
                 Button("Allow\u{2026}") {
+                    AccessibilityPromptWindowController.shared.show(afterCopy: false)
+                }
+                .settingsFocus("allowAccessibility") {
                     AccessibilityPromptWindowController.shared.show(afterCopy: false)
                 }
             }
@@ -283,6 +354,10 @@ private struct ShortcutsTab: View {
                         extractCapture = nil
                         isCapturingHotkey = true
                     }
+                    .settingsFocus("openShortcut") {
+                        extractCapture = nil
+                        isCapturingHotkey = true
+                    }
                 }
             }
 
@@ -297,19 +372,19 @@ private struct ShortcutsTab: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("In the clip window")
                     .font(.system(size: 13, weight: .semibold))
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())], spacing: 8) {
-                    keyRow("Move", "\u{2191} \u{2193}")
-                    keyRow("Paste", "\u{21A9}")
-                    keyRow("Preview", "space")
-                    keyRow("Close", "esc")
-                    keyRow("Search", "\u{2318}F")
-                    keyRow("Settings", "\u{2318},")
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                ShortcutColumnsView(columns: ClipKeyMap.listColumns(globalKeys: []))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                Text("Press \u{2318}/ in any MaClip window to see its keys. In Settings, \u{21E5} moves between the controls, and space turns a switch on or off.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            // The list of keys is the last focus stop of the tab, so ↓ and ⇥ scroll to it.
+            // It has no action.
+            .settingsFocus("clipWindowKeys") { _ in }
         }
     }
 
@@ -317,6 +392,7 @@ private struct ShortcutsTab: View {
                             keyCode: UInt32, modifiers: UInt32) -> some View {
         HStack(spacing: 12) {
             SettingsSwitch(label: title, isOn: enabled)
+                .settingsFocus("\(kind)Enabled", toggle: enabled)
             Text(title)
                 .foregroundColor(enabled.wrappedValue ? .primary : .secondary)
             Spacer(minLength: 12)
@@ -326,17 +402,13 @@ private struct ShortcutsTab: View {
                 isCapturingHotkey = false
                 extractCapture = kind
             }
+            .settingsFocus("\(kind)Shortcut", enabled: enabled.wrappedValue) {
+                isCapturingHotkey = false
+                extractCapture = kind
+            }
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 44)
-    }
-
-    private func keyRow(_ label: String, _ key: String) -> some View {
-        HStack {
-            Text(label).foregroundColor(.secondary)
-            Spacer()
-            KeyLabel(key: key)
-        }
     }
 }
 
@@ -345,8 +417,61 @@ private struct ShortcutsTab: View {
 private struct StorageTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: ClipboardListViewModel
+    @ObservedObject private var focus = SettingsFocusState.shared
+    @FocusState private var isNumberFocused: Bool
+    /// The number in the field. It takes effect only on Apply or ↩.
+    @State private var draftMaxItems: Int?
     @State private var failure: String?
     @State private var isShowingClearConfirm = false
+
+    private static let numberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.allowsFloats = false
+        return formatter
+    }()
+
+    private var draft: Int { draftMaxItems ?? settings.maxItems }
+
+    private var draftBinding: Binding<Int> {
+        Binding(get: { draft }, set: { draftMaxItems = $0 })
+    }
+
+    private var canApply: Bool { MaxItemsDraft.canApply(draft: draft, saved: settings.maxItems) }
+
+    /// Without a change, the caption says what the limit does. With a change, it says what Apply does.
+    private var maxItemsNote: (text: String, isWarning: Bool) {
+        guard let note = MaxItemsDraft.note(draft: draft, saved: settings.maxItems, count: viewModel.items.count) else {
+            return ("MaClip deletes the oldest clip when the list is full.", false)
+        }
+        return (note.text, note.isWarning)
+    }
+
+    private func applyMaxItems() {
+        guard canApply else { return }
+        viewModel.setMaxItems(draft)
+        draftMaxItems = nil
+    }
+
+    private var encryption: Binding<Bool> {
+        Binding(
+            get: { settings.encryptHistory },
+            set: { enabled in
+                if !viewModel.setHistoryEncryption(enabled) {
+                    failure = enabled
+                        ? "MaClip could not read or create the encryption key. Your history did not change."
+                        : "MaClip could not read the encryption key. Your history stays encrypted."
+                }
+            }
+        )
+    }
+
+    private func restoreEarlierClips() {
+        if viewModel.restoreEncryptedHistory() {
+            settings.encryptedHistoryNoticeDismissed = true
+        } else {
+            failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
+        }
+    }
 
     /// 0 means Never.
     private var cleanDays: Binding<Int> {
@@ -363,16 +488,30 @@ private struct StorageTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             SettingsSection(title: "History") {
-                SettingsRow(title: "Keep up to") {
+                SettingsRow(title: "Keep up to", caption: maxItemsNote.text, captionIsWarning: maxItemsNote.isWarning) {
                     HStack(spacing: 6) {
-                        TextField("Clips", value: $settings.maxItems, formatter: NumberFormatter())
+                        TextField("Clips", value: draftBinding, formatter: Self.numberFormatter, onCommit: applyMaxItems)
                             .textFieldStyle(.roundedBorder)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 60)
-                            .onChange(of: settings.maxItems) { newValue in
-                                viewModel.applyMaxItems(newValue)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(Theme.accent, lineWidth: draft != settings.maxItems ? 1.5 : 0)
+                            )
+                            .focused($isNumberFocused)
+                            // ⇥ to the field puts the cursor in it. ⇥ again takes it out.
+                            .settingsFocus("maxItems") { action in
+                                if action == .activate { isNumberFocused = true }
                             }
+                            .onChange(of: focus.focused) { id in isNumberFocused = id == "maxItems" }
                         Text("clips").foregroundColor(.secondary)
+                        Button("Apply", action: applyMaxItems)
+                            .buttonStyle(AccentButtonStyle())
+                            .opacity(canApply ? 1 : 0.4)
+                            .disabled(!canApply)
+                            .padding(.leading, 4)
+                            .help("Keep up to \(draft) clips (\u{21A9})")
+                            .settingsFocus("applyMaxItems", enabled: canApply, press: applyMaxItems)
                     }
                 }
                 SettingsRow(title: "Delete clips older than") {
@@ -384,33 +523,21 @@ private struct StorageTab: View {
                     }
                     .labelsHidden()
                     .fixedSize()
+                    .settingsFocus("deleteOlderThan", choice: cleanDays, values: [0, 1, 7, 30])
                 }
             }
 
             SettingsSection(title: "Encryption") {
                 SettingsRow(title: "Encrypt history on disk",
                             caption: "MaClip keeps the key in your login Keychain. macOS can ask for your password after each MaClip update.") {
-                    SettingsSwitch(label: "Encrypt history on disk", isOn: Binding(
-                        get: { settings.encryptHistory },
-                        set: { enabled in
-                            if !viewModel.setHistoryEncryption(enabled) {
-                                failure = enabled
-                                    ? "MaClip could not read or create the encryption key. Your history did not change."
-                                    : "MaClip could not read the encryption key. Your history stays encrypted."
-                            }
-                        }
-                    ))
+                    SettingsSwitch(label: "Encrypt history on disk", isOn: encryption)
+                        .settingsFocus("encryptHistory", toggle: encryption)
                 }
                 if viewModel.hasEncryptedHistoryToRestore {
                     SettingsRow(title: "Earlier encrypted clips",
                                 caption: "From MaClip 1.9 to 1.11. macOS asks for your password one time.") {
-                        Button("Restore\u{2026}") {
-                            if viewModel.restoreEncryptedHistory() {
-                                settings.encryptedHistoryNoticeDismissed = true
-                            } else {
-                                failure = "MaClip could not read the encryption key. Your earlier clips are still on disk. Try again, and click Allow when macOS asks."
-                            }
-                        }
+                        Button("Restore\u{2026}", action: restoreEarlierClips)
+                            .settingsFocus("restoreEarlierClips", press: restoreEarlierClips)
                     }
                 }
             }
@@ -421,6 +548,7 @@ private struct StorageTab: View {
                     Button("Clear History\u{2026}") { isShowingClearConfirm = true }
                         .foregroundColor(.red)
                         .disabled(viewModel.items.isEmpty)
+                        .settingsFocus("clearHistory", enabled: !viewModel.items.isEmpty) { isShowingClearConfirm = true }
                 }
             }
         }
@@ -477,6 +605,7 @@ private struct PrivacyTab: View {
                             Image(systemName: "plus").frame(width: 28, height: 24).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .settingsFocus("addApp", press: addApplicationViaPicker)
                         .help("Add an app")
                         .accessibilityLabel("Add an app")
                         Rectangle().fill(Theme.line).frame(width: 1, height: 16)
@@ -485,6 +614,7 @@ private struct PrivacyTab: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(selection == nil)
+                        .settingsFocus("removeApp", enabled: selection != nil, press: removeSelected)
                         .help("Remove the selected app")
                         .accessibilityLabel("Remove the selected app")
                         Spacer()
@@ -500,10 +630,32 @@ private struct PrivacyTab: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
             }
 
+            SettingsSection(title: "MaClip") {
+                HStack(spacing: 12) {
+                    AppIconView().frame(width: 24, height: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Save clips that you copy in MaClip")
+                        Text(settings.saveMaClipClips
+                             ? "Text that you copy in the clip editor, and screenshots that you take while MaClip is open, become clips."
+                             : "Off: text that you copy in the clip editor, and screenshots that you take while MaClip is open, are not saved.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 12)
+                    SettingsSwitch(label: "Save clips that you copy in MaClip", isOn: $settings.saveMaClipClips)
+                        .settingsFocus("saveMaClipClips", toggle: $settings.saveMaClipClips)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .frame(minHeight: 44)
+            }
+
             SettingsSection(title: "Concealed clips") {
                 SettingsRow(title: "Don\u{2019}t save concealed clips",
                             caption: "Password managers mark passwords as concealed when you copy them.") {
                     SettingsSwitch(label: "Don\u{2019}t save concealed clips", isOn: $settings.skipConcealedItems)
+                        .settingsFocus("skipConcealed", toggle: $settings.skipConcealedItems)
                 }
                 SettingsRow(title: "Delete concealed clips after") {
                     Picker("Delete concealed clips after", selection: $settings.concealedClearTimeout) {
@@ -522,14 +674,19 @@ private struct PrivacyTab: View {
                     .labelsHidden()
                     .fixedSize()
                     .disabled(settings.skipConcealedItems)
+                    .settingsFocus("concealedTimeout", enabled: !settings.skipConcealedItems,
+                                   choice: $settings.concealedClearTimeout,
+                                   values: [5, 10, 20, 30, 60, 120, 300, 600, 900, 1800, -1])
                 }
             }
 
             HStack {
                 Spacer()
                 Button("Restore Defaults\u{2026}") { showingRestoreConfirm = true }
+                    .settingsFocus("restoreDefaults") { showingRestoreConfirm = true }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsRemoveSelectedApp)) { _ in removeSelected() }
         .alert("Restore the privacy defaults?", isPresented: $showingRestoreConfirm) {
             Button("Cancel", role: .cancel) { }
             Button("Restore", role: .destructive) {
@@ -537,7 +694,7 @@ private struct PrivacyTab: View {
                 selection = nil
             }
         } message: {
-            Text("This sets the app list to the default password managers, saves concealed clips again, and deletes them after 5 minutes.")
+            Text("This sets the app list to the default password managers, turns off Save clips that you copy in MaClip, saves concealed clips again, and deletes them after 5 minutes.")
         }
     }
 
@@ -572,6 +729,18 @@ private struct PrivacyTab: View {
         .contentShape(Rectangle())
         .onTapGesture { selection = isSelected ? nil : bundleID }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // Each app takes the focus in turn. ⌫ removes the focused app, and space selects it.
+        .settingsFocus("app:\(bundleID)") { action in
+            switch action {
+            case .remove:
+                settings.excludedBundleIDs.removeAll { $0 == bundleID }
+                if selection == bundleID { selection = nil }
+            case .activate:
+                selection = isSelected ? nil : bundleID
+            case .step:
+                break
+            }
+        }
     }
 
     /// Names of the default password managers, for when the app is not installed.
@@ -582,7 +751,6 @@ private struct PrivacyTab: View {
         "com.apple.keychainaccess": "Keychain Access",
         "com.dashlane.dashlanephonefinal": "Dashlane",
         "com.lastpass.LastPassMacDesktop": "LastPass",
-        "com.jokot.MacClipboard": "MaClip",
     ]
 
     private func removeSelected() {
@@ -613,19 +781,42 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         window.initialFirstResponder = window.contentView
 
-        // Local monitor: catch Escape or Command+, while Settings is key and close
+        // The keys of Settings, from `SettingsKeyMap`, while Settings is the key window.
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self, self.window?.isKeyWindow == true else { return event }
-            if event.keyCode == 53 {   // Escape
-                self.window?.close()
+            guard let self, let window = self.window, window.isKeyWindow,
+                  let combo = KeyCombo(event: event) else { return event }
+            // While a shortcut field records new keys, every key goes to it.
+            if let recorder = window.firstResponder as? HotkeyView, recorder.isCapturing { return event }
+            let panel = ShortcutsPanelState.shared
+            if panel.isVisible(.settings) {
+                if combo == KeyCombo(.escape) || combo == .command("/") { panel.hide(.settings) }
                 return nil
             }
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
-                self.window?.close()
-                return nil
+            // The number field takes the typing keys. Esc takes the cursor out of it.
+            if (window.firstResponder as? NSTextView)?.isFieldEditor == true {
+                if combo == KeyCombo(.escape) {
+                    window.makeFirstResponder(nil)
+                    return nil
+                }
+                guard SettingsKeyMap.worksInTextField(combo) else { return event }
             }
-            return event
+            switch SettingsKeyMap.table.command(for: combo) {
+            case .close:
+                window.close()
+            case .showShortcuts:
+                panel.toggle(.settings)
+            case .some(let command):
+                NotificationCenter.default.post(name: .settingsCommand, object: command)
+            case nil:
+                return event
+            }
+            return nil
         }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        ShortcutsPanelState.shared.hide(.settings)
+        SettingsFocusState.shared.focused = nil
     }
 
     required init?(coder: NSCoder) {

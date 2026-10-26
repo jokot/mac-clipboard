@@ -782,6 +782,23 @@ final class ClipboardListViewModelTests: XCTestCase {
         XCTAssertEqual(repo.savedItems.map(\.id), [fresh.id], "the change is saved")
     }
 
+    @MainActor
+    func test_setMaxItemsKeepsTheNewestClipsAndSavesThem() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        defer { AppSettings.shared.maxItems = 10 }
+        let clips = (0..<4).map { ClipboardItem(date: Date(timeIntervalSinceNow: -Double($0) * 60), content: .text("clip \($0)")) }
+        let repo = MockRepo()
+        repo.savedItems = clips
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        vm.setMaxItems(2)
+
+        XCTAssertEqual(AppSettings.shared.maxItems, 2)
+        XCTAssertEqual(vm.items.map(\.id), [clips[0].id, clips[1].id], "the newest clips stay")
+        XCTAssertEqual(repo.savedItems.map(\.id), [clips[0].id, clips[1].id], "the shorter list is saved")
+    }
+
     // MARK: - History encryption
 
     @MainActor

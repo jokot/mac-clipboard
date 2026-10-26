@@ -26,6 +26,7 @@ struct AccessibilityPromptView: View {
         }
         .padding(20)
         .frame(width: 400)
+        .shortcutsPanel(.accessibility, title: "Accessibility access") { [PromptKeyMap.table.groups()] }
         .onReceive(poll) { _ in
             let wasGranted = access.isGranted
             access.refresh()
@@ -55,6 +56,7 @@ struct AccessibilityPromptView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
+                ShortcutsButton(scope: .accessibility)
                 if settings.pasteOnClick {
                     Button("Turn Off Paste on Selection") {
                         settings.pasteOnClick = false
@@ -66,6 +68,7 @@ struct AccessibilityPromptView: View {
                 Spacer()
                 Button("Not Now") { onClose() }
                     .keyboardShortcut(.cancelAction)
+                    .help("Not Now (esc)")
                 Button("Continue") {
                     access.requestSystemPrompt()
                     askedSystem = true
@@ -114,9 +117,11 @@ struct AccessibilityPromptView: View {
                     .foregroundColor(.secondary)
             }
             HStack(spacing: 8) {
+                ShortcutsButton(scope: .accessibility)
                 Spacer()
                 Button("Not Now") { onClose() }
                     .keyboardShortcut(.cancelAction)
+                    .help("Not Now (esc)")
                 Button("Open System Settings") { access.openSettings() }
                     .buttonStyle(AccentButtonStyle())
                     .keyboardShortcut(.defaultAction)
@@ -153,6 +158,7 @@ final class AccessibilityPromptWindowController: NSObject, NSWindowDelegate {
 
     private var window: NSWindow?
     private var onDismiss: (() -> Void)?
+    private var keyMonitor: Any?
 
     /// `onDismiss` runs when the window closes, for example to give focus back to
     /// the app that the user worked in.
@@ -171,6 +177,25 @@ final class AccessibilityPromptWindowController: NSObject, NSWindowDelegate {
             window.level = .floating
             window.delegate = self
             self.window = window
+            // The keys of the prompt, from `PromptKeyMap`. The buttons take ↩ and esc themselves.
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let window = self?.window, window.isKeyWindow,
+                      let combo = KeyCombo(event: event) else { return event }
+                let panel = ShortcutsPanelState.shared
+                if panel.isVisible(.accessibility) {
+                    if combo == KeyCombo(.escape) || combo == .command("/") { panel.hide(.accessibility) }
+                    return nil
+                }
+                switch PromptKeyMap.table.command(for: combo) {
+                case .notNow where combo == .command("w"):
+                    window.close()
+                case .showShortcuts:
+                    panel.toggle(.accessibility)
+                default:
+                    return event
+                }
+                return nil
+            }
         }
         guard let window else { return }
         // Size the window to the view before center(), or the window can open
@@ -184,6 +209,7 @@ final class AccessibilityPromptWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        ShortcutsPanelState.shared.hide(.accessibility)
         let dismiss = onDismiss
         onDismiss = nil
         dismiss?()

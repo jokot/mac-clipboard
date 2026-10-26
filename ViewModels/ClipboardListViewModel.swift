@@ -284,6 +284,13 @@ final class ClipboardListViewModel: ObservableObject {
         repository.readImageData(at: url)
     }
 
+    /// Apply in Settings: saves the new limit, deletes the oldest clips over it, and saves the list.
+    func setMaxItems(_ limit: Int) {
+        AppSettings.shared.maxItems = limit
+        applyMaxItems(limit)
+        repository.saveToDiskAsync(items: items)
+    }
+
     func applyMaxItems(_ limit: Int) {
         if items.count > limit {
             items.removeLast(items.count - limit)
