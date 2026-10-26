@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One clip in the clip window: the kind icon with the source app icon, the content,
-/// and at the right the age. On hover, the row actions replace the age.
+/// and at the right the age. On hover and on the selected row, the row actions replace the age.
 struct ClipboardItemRow: View {
     let item: ClipboardItem
     let onSelect: (ClipboardItem) -> Void
@@ -134,7 +134,7 @@ struct ClipboardItemRow: View {
                              isConcealed: item.isConcealed && !isRevealed,
                              loadImageData: loadImageData)
                     .overlay(alignment: .topTrailing) {
-                        if isHovered { imageActions.padding(8) }
+                        if showsActions { imageActions.padding(8) }
                     }
                 trailing(actions: { EmptyView() })
             }
@@ -177,10 +177,10 @@ struct ClipboardItemRow: View {
         }
     }
 
-    /// The age, or the clear countdown of a concealed clip. On hover, the actions.
+    /// The age, or the clear countdown of a concealed clip. On hover or selection, the actions.
     @ViewBuilder
     private func trailing<A: View>(@ViewBuilder actions: () -> A) -> some View {
-        if isHovered && !(A.self == EmptyView.self) {
+        if showsActions && !(A.self == EmptyView.self) {
             HStack(spacing: 2) { actions() }
         } else if item.isConcealed, let expiresAt = item.concealedExpiresAt, expiresAt < .distantFuture {
             TimelineView(.periodic(from: Date(), by: 1)) { context in
@@ -195,6 +195,15 @@ struct ClipboardItemRow: View {
                     .foregroundColor(isSelected ? .primary.opacity(0.7) : .secondary)
             }
         }
+    }
+
+    /// The arrow keys select a row, so the selected row shows the same actions as a hovered row.
+    static func showsActions(isHovered: Bool, isSelected: Bool) -> Bool {
+        isHovered || isSelected
+    }
+
+    private var showsActions: Bool {
+        Self.showsActions(isHovered: isHovered, isSelected: isSelected)
     }
 
     static func countdown(until date: Date, now: Date) -> String {

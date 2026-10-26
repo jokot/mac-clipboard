@@ -70,6 +70,12 @@ final class ClipListTextTests: XCTestCase {
         XCTAssertEqual(ClipSelection.index(afterRemoving: 4, selected: 1, newCount: 5), 1)
     }
 
+    func test_rowActionsShowOnHoverAndOnTheSelectedRow() {
+        XCTAssertTrue(ClipboardItemRow.showsActions(isHovered: true, isSelected: false))
+        XCTAssertTrue(ClipboardItemRow.showsActions(isHovered: false, isSelected: true))
+        XCTAssertFalse(ClipboardItemRow.showsActions(isHovered: false, isSelected: false))
+    }
+
     func test_deleteOnlyClipSelectsNothing() {
         XCTAssertNil(ClipSelection.index(afterRemoving: 0, selected: 0, newCount: 0))
     }
