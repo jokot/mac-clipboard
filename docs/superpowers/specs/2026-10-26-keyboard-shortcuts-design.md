@@ -23,6 +23,9 @@ The clip window stays the key window. MaClip sends each key to the side with foc
 - A click on a side gives focus to that side.
 - In the search field, ← → switch sides only when the field is empty.
   When the field has text, ← → move the text cursor.
+- ↑ and ↓ take the cursor out of the search field. The search text stays, and the list takes the keys.
+  Space then opens the preview. A typed letter goes back to the search. ⌫ in the list deletes the last letter of the search.
+- Space in the search field types a space only after text. In an empty field, Space opens the preview.
 
 Esc goes back one step at a time:
 

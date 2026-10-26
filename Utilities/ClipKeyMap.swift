@@ -8,6 +8,8 @@ enum ClipPane: Equatable {
 enum ClipCommand: Hashable {
     case moveUp, moveDown, moveFirst, moveLast, pageUp, pageDown
     case focusSearch, focusPreview, focusList
+    /// ⌫ in the list: delete the last letter of the search.
+    case deleteSearchLetter
     /// Esc: end the edit, else close the preview, else clear the search, else close the window.
     case back
     case paste, pasteClip(Int), copyOnly, togglePreview, edit, showActions
@@ -52,6 +54,8 @@ enum ClipKeyMap {
             KeyBinding(command: .pageDown, label: "Page down", group: "Move", keys: [KeyCombo(.pageDown)], listed: false),
             KeyBinding(command: .focusSearch, label: "Search", group: "Move", keys: [.command("f")]),
             KeyBinding(command: nil, label: "Filter by typing", group: "Move", keys: [], display: ["a\u{2013}z"]),
+            KeyBinding(command: .deleteSearchLetter, label: "Delete a search letter", group: "Move",
+                       keys: [KeyCombo(.delete)], listed: false),
             KeyBinding(command: nil, label: "List or preview", group: "Move", keys: [], display: ["\u{2190}", "\u{2192}"]),
             KeyBinding(command: .focusPreview, label: "Preview side", group: "Move", keys: [KeyCombo(.right)], listed: false),
             KeyBinding(command: .back, label: "Back, then close", group: "Move", keys: [KeyCombo(.escape)]),
@@ -142,8 +146,12 @@ enum ClipKeyMap {
         if state.searchFocused {
             let hasText = !state.searchText.isEmpty
             switch combo {
-            case KeyCombo(.space):
+            // ⌫ deletes the letter in the field itself.
+            case KeyCombo(.delete):
                 return nil
+            // A space between two words is text. A space in an empty field opens the preview.
+            case KeyCombo(.space):
+                if hasText { return nil }
             case KeyCombo(.left), KeyCombo(.right),
                  KeyCombo(.delete, .command), KeyCombo(.forwardDelete, .command):
                 if hasText { return nil }
@@ -155,7 +163,17 @@ enum ClipKeyMap {
         }
         guard let command = list.command(for: combo) else { return nil }
         if command == .focusPreview && !state.previewOpen { return nil }
+        if command == .deleteSearchLetter && state.searchText.isEmpty { return nil }
         return command
+    }
+
+    /// Commands that take the cursor out of the search field. The search text stays, and the
+    /// list takes the keys, so Space opens the preview. A typed letter goes back to the search.
+    static func leavesSearchField(_ command: ClipCommand) -> Bool {
+        switch command {
+        case .moveUp, .moveDown, .moveFirst, .moveLast, .pageUp, .pageDown: return true
+        default: return false
+        }
     }
 
     // MARK: - Panels

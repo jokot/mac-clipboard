@@ -88,6 +88,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .overlayFocusSearch)) { _ in
             isSearchFocused = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .overlayLeaveSearch)) { _ in
+            isSearchFocused = false
+        }
         .alert(item: $extractionAlert) { alert in
             Alert(title: Text("No Result"), message: Text(alert.message), dismissButton: .default(Text("OK")))
         }

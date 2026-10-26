@@ -6,6 +6,8 @@ extension Notification.Name {
     static let overlayCloseRequested = Notification.Name("OverlayCloseRequested")
     static let overlayDidShow = Notification.Name("OverlayDidShow")
     static let overlayFocusSearch = Notification.Name("OverlayFocusSearch")
+    /// Take the cursor out of the search field. The search text stays.
+    static let overlayLeaveSearch = Notification.Name("OverlayLeaveSearch")
     /// A key in the clip window for the selected clip. The object is the `ClipCommand`.
     static let overlayCommand = Notification.Name("OverlayCommand")
     /// ⌘U: show the concealed clip with this id (the object) for 5 seconds.

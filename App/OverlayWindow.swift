@@ -34,7 +34,7 @@ final class OverlayWindowController: NSObject {
         paneObserver = windowState.$pane.sink { [weak self] pane in
             guard pane == .preview, let window = self?.window,
                   (window.firstResponder as? NSTextView)?.isFieldEditor == true else { return }
-            window.makeFirstResponder(nil)
+            self?.leaveSearchField()
         }
     }
 
@@ -77,7 +77,8 @@ final class OverlayWindowController: NSObject {
         windowState.pane = .list
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(nil)
+        // The list takes the keys first. Space opens the preview, and a letter starts a search.
+        leaveSearchField()
         NotificationCenter.default.post(name: .overlayDidShow, object: nil)
 
         if keyMonitor == nil {
@@ -220,6 +221,13 @@ final class OverlayWindowController: NSObject {
         }
     }
 
+    /// Takes the cursor out of the search field and keeps its text. SwiftUI clears its focus
+    /// state too, so the next "focus the search" moves the cursor back.
+    private func leaveSearchField() {
+        NotificationCenter.default.post(name: .overlayLeaveSearch, object: nil)
+        window?.makeFirstResponder(nil)
+    }
+
     @objc private func closeRequested() {
         hideImmediatelyRefocusOnly()
     }
@@ -272,6 +280,9 @@ private extension OverlayWindowController {
               let combo = KeyCombo(event: event) else { return event }
         let state = keyState(for: event)
         if let command = ClipKeyMap.command(for: combo, state: state) {
+            if state.searchFocused && ClipKeyMap.leavesSearchField(command) {
+                leaveSearchField()
+            }
             perform(command)
             return nil
         }
@@ -320,6 +331,8 @@ private extension OverlayWindowController {
         case .focusSearch:
             focusList()
             NotificationCenter.default.post(name: .overlayFocusSearch, object: nil)
+        case .deleteSearchLetter:
+            if !viewModel.searchText.isEmpty { viewModel.searchText.removeLast() }
         case .scrollUp: scrollPreview(.line(-40))
         case .scrollDown: scrollPreview(.line(40))
         case .scrollPageUp: scrollPreview(.page(-1))

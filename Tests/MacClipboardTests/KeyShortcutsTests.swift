@@ -132,8 +132,27 @@ final class KeyShortcutsTests: XCTestCase {
         }
     }
 
-    func test_searchFieldKeepsSpaceForTyping() {
-        XCTAssertNil(search(KeyCombo(.space)))
+    func test_searchFieldKeepsSpaceForTypingAfterText() {
+        XCTAssertNil(search(KeyCombo(.space), text: "room"), "a search can have two words")
+    }
+
+    func test_spaceInAnEmptySearchFieldOpensThePreview() {
+        XCTAssertEqual(search(KeyCombo(.space)), .togglePreview)
+    }
+
+    func test_spaceAfterTheArrowsOpensThePreview() {
+        // ↑ ↓ take the cursor out of the search field. The search text stays.
+        XCTAssertTrue(ClipKeyMap.leavesSearchField(.moveDown))
+        XCTAssertTrue(ClipKeyMap.leavesSearchField(.moveFirst))
+        XCTAssertTrue(ClipKeyMap.leavesSearchField(.pageDown))
+        XCTAssertFalse(ClipKeyMap.leavesSearchField(.paste))
+        XCTAssertEqual(list(KeyCombo(.space)) { $0.searchText = "inv" }, .togglePreview)
+    }
+
+    func test_deleteInTheListEditsTheSearch() {
+        XCTAssertEqual(list(KeyCombo(.delete)) { $0.searchText = "inv" }, .deleteSearchLetter)
+        XCTAssertNil(list(KeyCombo(.delete)), "no search text, nothing to delete")
+        XCTAssertNil(search(KeyCombo(.delete), text: "inv"), "the search field deletes the letter itself")
     }
 
     func test_searchFieldStillMovesAndPastes() {
