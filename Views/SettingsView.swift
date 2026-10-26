@@ -596,7 +596,7 @@ private struct PrivacyTab: View {
                     .font(.system(size: 13, weight: .semibold))
                 VStack(spacing: 0) {
                     ScrollView {
-                        VStack(spacing: 1) {
+                        VStack(spacing: Self.rowGap) {
                             ForEach(settings.excludedBundleIDs, id: \.self) { bundleID in
                                 appRow(bundleID)
                             }
@@ -609,7 +609,7 @@ private struct PrivacyTab: View {
                         }
                         .padding(4)
                     }
-                    .frame(height: 190)
+                    .frame(height: Self.listHeight)
                     Rectangle().fill(Theme.line).frame(height: 1)
                     HStack(spacing: 0) {
                         Button(action: addApplicationViaPicker) {
@@ -720,7 +720,7 @@ private struct PrivacyTab: View {
         }
         .foregroundColor(isSelected ? .white : .primary)
         .padding(.horizontal, 10)
-        .frame(height: 32)
+        .frame(height: Self.rowHeight)
         .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(isSelected ? Theme.accent : Color.clear))
         .contentShape(Rectangle())
         .onTapGesture { selection = isSelected ? nil : bundleID }
@@ -738,6 +738,11 @@ private struct PrivacyTab: View {
             }
         }
     }
+
+    private static let rowHeight: CGFloat = 32
+    private static let rowGap: CGFloat = 1
+    /// Tall enough for the 6 default apps. The list scrolls with more than 6 apps.
+    private static let listHeight = 6 * rowHeight + 5 * rowGap + 2 * 4
 
     /// Names of the default password managers, for when the app is not installed.
     private static let knownNames: [String: String] = [
