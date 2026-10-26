@@ -5,8 +5,8 @@ import Carbon.HIToolbox
 
 @MainActor
 final class OverlayWindowController: NSObject {
-    /// The size of the clip window. With the 408 pt preview beside it, the two are 1,020 pt wide.
-    static let windowSize = CGSize(width: 600, height: 680)
+    /// The size of the clip window. With the 408 pt preview beside it, the two are 980 pt wide.
+    static let windowSize = CGSize(width: 560, height: 640)
 
     private var window: NSWindow?
     private let viewModel: ClipboardListViewModel
