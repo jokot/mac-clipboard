@@ -12,8 +12,8 @@ struct ContentView: View {
     /// Opens the preview for a clip. `onTogglePreview` opens or closes it for the selected clip.
     var onPreview: (ClipboardItem) -> Void = { _ in }
     var onTogglePreview: (ClipboardItem) -> Void = { _ in }
-    /// The selected clip changed. An open preview then shows the new clip.
-    var onSelectionChange: (ClipboardItem) -> Void = { _ in }
+    /// The selected clip changed. An open preview then shows the new clip, or closes when nil.
+    var onSelectionChange: (ClipboardItem?) -> Void = { _ in }
     @State private var isShowingClearConfirm: Bool = false
     @State private var selectedIndex: Int = 0
     @FocusState private var isSearchFocused: Bool
@@ -33,7 +33,7 @@ struct ContentView: View {
          onEditImage: @escaping (ClipboardItem, NSImage) -> Void = { _, _ in },
          onPreview: @escaping (ClipboardItem) -> Void = { _ in },
          onTogglePreview: @escaping (ClipboardItem) -> Void = { _ in },
-         onSelectionChange: @escaping (ClipboardItem) -> Void = { _ in }) {
+         onSelectionChange: @escaping (ClipboardItem?) -> Void = { _ in }) {
         self.viewModel = viewModel
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
@@ -252,7 +252,7 @@ struct ContentView: View {
                         ClipboardItemRow(
                             item: item,
                             onSelect: onSelect,
-                            onRemove: { viewModel.remove(item) },
+                            onRemove: { remove(item, at: index) },
                             isSelected: index == selectedIndex,
                             onExtractText: { item in
                                 Task { @MainActor in
@@ -425,6 +425,11 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionUp)) { _ in moveSelection(-1) }
             .onReceive(NotificationCenter.default.publisher(for: .overlayMoveSelectionDown)) { _ in moveSelection(1) }
             .onReceive(NotificationCenter.default.publisher(for: .overlaySelectCurrentItem)) { _ in selectCurrent() }
+            .onReceive(NotificationCenter.default.publisher(for: .overlayDeleteSelectedItem)) { _ in
+                let items = viewModel.filteredItems
+                guard items.indices.contains(selectedIndex) else { return }
+                remove(items[selectedIndex], at: selectedIndex)
+            }
             .onReceive(NotificationCenter.default.publisher(for: .overlayTogglePreview)) { _ in
                 let items = viewModel.filteredItems
                 guard items.indices.contains(selectedIndex) else { return }
@@ -454,6 +459,20 @@ struct ContentView: View {
     private func moveSelection(_ delta: Int) {
         let items = viewModel.filteredItems
         selectedIndex = max(0, min(items.count - 1, selectedIndex + delta))
+    }
+
+    /// Deletes a clip. The selection stays on the same clip, or moves to the clip below the
+    /// deleted one, and an open preview follows it.
+    private func remove(_ item: ClipboardItem, at index: Int) {
+        viewModel.remove(item)
+        let items = viewModel.filteredItems
+        guard let next = ClipSelection.index(afterRemoving: index, selected: selectedIndex, newCount: items.count) else {
+            selectedIndex = 0
+            onSelectionChange(nil)
+            return
+        }
+        selectedIndex = next
+        onSelectionChange(items[next])
     }
 
     private func selectCurrent() {

@@ -159,7 +159,7 @@ final class OverlayWindowController: NSObject {
             if self.previewedItemID != nil { self.closePreview() } else { self.showPreview(item) }
         }, onSelectionChange: { [weak self] item in
             guard let self, self.previewedItemID != nil else { return }
-            self.showPreview(item)
+            if let item { self.showPreview(item) } else { self.closePreview() }
         })
         .background(ESCKeyCatcher())
 
