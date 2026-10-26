@@ -25,6 +25,7 @@ final class ShortcutsPanelState: ObservableObject {
 
 /// The shortcuts card: a title, the groups in columns, and a note.
 struct ShortcutsCard: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let title: String
     let columns: [[ShortcutGroup]]
     var note: String? = nil
@@ -98,6 +99,7 @@ struct ShortcutsCard: View {
 
 /// Groups of shortcut lines in columns. Settings shows it on the Shortcuts tab too.
 struct ShortcutColumnsView: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let columns: [[ShortcutGroup]]
 
     var body: some View {
@@ -109,7 +111,7 @@ struct ShortcutColumnsView: View {
                             Text(group.title.uppercased())
                                 .font(.system(size: 10.5, weight: .semibold))
                                 .tracking(0.6)
-                                .foregroundColor(group.highlight ? Theme.accent : .secondary)
+                                .foregroundColor(group.highlight ? Theme.accentText : .secondary)
                                 .frame(height: 20)
                             ForEach(group.rows, id: \.label) { row in
                                 HStack(spacing: 8) {

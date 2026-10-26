@@ -3,10 +3,31 @@ import AppKit
 
 /// Colors and sizes of the 2.0 design. See the "Foundations" artboard of the design canvas.
 /// The fills use `Color.primary` with opacity, so they work in light and dark appearance.
+/// The accent colors come from `AccentStore`. A view that draws them observes the store.
 enum Theme {
-    /// Indigo, #5E5CE6.
-    static let accent = Color(red: 94 / 255, green: 92 / 255, blue: 230 / 255)
-    static let selectedFill = accent.opacity(0.22)
+    /// The accent color of Settings → Appearance. Indigo, #5E5CE6, by default.
+    static var accent: Color { Color(nsColor: NSColor(hex: AccentStore.shared.choice.hex)) }
+    /// Text on the accent, for example on the Paste button: white or near black.
+    static var onAccent: Color {
+        AccentColor.usesWhiteText(on: AccentStore.shared.choice.hex)
+            ? .white
+            : Color(nsColor: NSColor(hex: "#1C1C1E"))
+    }
+    /// Colored text, for example a link: the accent with 4.5:1 contrast in light and dark appearance.
+    static var accentText: Color {
+        let hex = AccentStore.shared.choice.hex
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return NSColor(hex: AccentColor.textTint(hex, background: isDark ? "#1C1C1E" : "#FFFFFF", isDark: isDark))
+        })
+    }
+    /// The selected clip: the accent at 22% in dark appearance, 16% in light appearance.
+    static var selectedFill: Color {
+        let base = NSColor(hex: AccentStore.shared.choice.hex)
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            base.withAlphaComponent(appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? 0.22 : 0.16)
+        })
+    }
     /// The selected row while the preview has focus.
     static let inactiveSelectedFill = Color.primary.opacity(0.1)
     static let hoverFill = Color.primary.opacity(0.06)
@@ -159,14 +180,38 @@ struct KeyLabel: View {
 /// its color in a panel that is not the key window, such as the preview panel.
 struct AccentButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
+        AccentButtonBody(configuration: configuration)
+    }
+}
+
+/// A view, so that it can observe the accent color.
+private struct AccentButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @ObservedObject private var accentStore = AccentStore.shared
+
+    var body: some View {
         configuration.label
             .font(.system(size: 13, weight: .semibold))
-            .foregroundColor(.white)
+            .foregroundColor(Theme.onAccent)
             .padding(.horizontal, 14)
             .frame(height: 26)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Theme.accent.opacity(configuration.isPressed ? 0.8 : 1))
             )
+    }
+}
+
+extension NSColor {
+    /// An sRGB color from "#RRGGBB".
+    convenience init(hex: String) {
+        let c = AccentColor.rgb(hex)
+        self.init(srgbRed: c.r, green: c.g, blue: c.b, alpha: 1)
+    }
+
+    /// "#RRGGBB" in sRGB.
+    var hexString: String {
+        let c = usingColorSpace(.sRGB) ?? self
+        return AccentColor.hex(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent))
     }
 }

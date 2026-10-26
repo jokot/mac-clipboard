@@ -22,6 +22,14 @@ final class AppSettings: ObservableObject {
     @Published var theme: AppTheme {
         didSet { AppEnvironment.defaults.set(theme.rawValue, forKey: Keys.theme) }
     }
+    /// A preset name ("indigo") or a custom color ("#2BB673"). Read it with `AccentChoice(stored:)`.
+    @Published var accentColor: String {
+        didSet { AppEnvironment.defaults.set(accentColor, forKey: Keys.accentColor) }
+    }
+    /// The newest custom accent colors, at most 4.
+    @Published var recentAccentColors: [String] {
+        didSet { AppEnvironment.defaults.set(recentAccentColors, forKey: Keys.recentAccentColors) }
+    }
     @Published var maxItems: Int {
         didSet { AppEnvironment.defaults.set(maxItems, forKey: Keys.maxItems) }
     }
@@ -95,6 +103,8 @@ final class AppSettings: ObservableObject {
         static let hotkeyKeyCode = "settings.hotkey.keycode"
         static let hotkeyModifiers = "settings.hotkey.modifiers"
         static let theme = "settings.theme"
+        static let accentColor = "settings.accentColor"
+        static let recentAccentColors = "settings.recentAccentColors"
         static let maxItems = "settings.maxItems"
         static let autoCleanEnabled = "settings.autoClean"
         static let autoCleanDays = "settings.autoClean.days"
@@ -129,9 +139,12 @@ final class AppSettings: ObservableObject {
     static let maClipBundleID = "com.jokot.MacClipboard"
 
     /// True when MaClip does not save a clip that this app copied.
-    static func skipsClip(from bundleID: String?, excluded: [String], saveMaClipClips: Bool) -> Bool {
+    /// The MaClip switch applies to text, links and files only. MaClip never puts an image on the
+    /// clipboard without skipping it itself, so an image while MaClip is in front is a screenshot.
+    static func skipsClip(from bundleID: String?, excluded: [String], saveMaClipClips: Bool,
+                          isImage: Bool = false) -> Bool {
         guard let bundleID else { return false }
-        if bundleID == maClipBundleID { return !saveMaClipClips }
+        if bundleID == maClipBundleID { return !saveMaClipClips && !isImage }
         return excluded.contains(bundleID)
     }
 
@@ -150,6 +163,10 @@ final class AppSettings: ObservableObject {
     }
 
     static let defaultMaxItems = 50
+
+    /// Control-Command-V.
+    static let defaultHotkeyKeyCode = UInt32(kVK_ANSI_V)
+    static let defaultHotkeyModifiers = UInt32(controlKey | cmdKey)
 
     /// Control-Option-Command, the overlay modifiers plus Option.
     static let defaultExtractModifiers = UInt32(controlKey | optionKey | cmdKey)
@@ -186,6 +203,28 @@ final class AppSettings: ObservableObject {
         try? Data().write(to: url, options: .atomic)
     }
 
+    /// Restore Defaults in Settings → General. It keeps the clips, the clip limit and encryption:
+    /// a lower limit would delete clips, and encryption changes the files and needs the Keychain.
+    func restoreDefaultSettings() {
+        theme = .system
+        accentColor = AccentChoice.default.stored
+        pasteOnClick = true
+        moveTopOnClick = true
+        autoDismissOverlayEnabled = true
+        autoDismissOverlayTimeout = 20
+        hotkeyKeyCode = Self.defaultHotkeyKeyCode
+        hotkeyModifiers = Self.defaultHotkeyModifiers
+        extractTextHotkeyEnabled = true
+        extractTextKeyCode = Self.defaultExtractTextKeyCode
+        extractTextModifiers = Self.defaultExtractModifiers
+        extractCodeHotkeyEnabled = true
+        extractCodeKeyCode = Self.defaultExtractCodeKeyCode
+        extractCodeModifiers = Self.defaultExtractModifiers
+        autoCleanEnabled = false
+        autoCleanDays = 7
+        restorePrivacyDefaults()
+    }
+
     func restorePrivacyDefaults() {
         excludedBundleIDs = AppSettings.defaultSeedExclusions
         saveMaClipClips = false
@@ -195,8 +234,8 @@ final class AppSettings: ObservableObject {
 
     private init() {
         let defaults = AppEnvironment.defaults
-        let defaultKeyCode: UInt32 = UInt32(kVK_ANSI_V)
-        let defaultModifiers: UInt32 = UInt32(controlKey | cmdKey)
+        let defaultKeyCode = Self.defaultHotkeyKeyCode
+        let defaultModifiers = Self.defaultHotkeyModifiers
 
         var initialKeyCode = UInt32(defaults.integer(forKey: Keys.hotkeyKeyCode))
         if initialKeyCode == 0 { initialKeyCode = defaultKeyCode }
@@ -226,6 +265,9 @@ final class AppSettings: ObservableObject {
         self.hotkeyKeyCode = initialKeyCode
         self.hotkeyModifiers = initialModifiers
         self.theme = initialTheme
+        self.accentColor = AccentChoice(stored: defaults.string(forKey: Keys.accentColor) ?? "").stored
+        self.recentAccentColors = (defaults.stringArray(forKey: Keys.recentAccentColors) ?? [])
+            .compactMap(AccentColor.normalizedHex)
         self.maxItems = initialMax
         self.autoCleanEnabled = initialAutoClean
         // Before 2.0, auto-clean always used 7 days.

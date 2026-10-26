@@ -93,6 +93,7 @@ enum ClipEdit {
 /// The panel beside the clip window that shows one clip in full. Space opens and closes it.
 /// In edit mode, the panel shows the clip in a text editor with Cancel and Save.
 struct ClipPreviewView: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let item: ClipboardItem
     @ObservedObject var windowState: ClipWindowState
     var loadImageData: (URL) -> Data?
@@ -116,7 +117,7 @@ struct ClipPreviewView: View {
                         Text("List")
                     }
                     .font(.system(size: 11))
-                    .foregroundColor(Theme.accent)
+                    .foregroundColor(Theme.accentText)
                     .help("Press \u{2190} to go back to the list")
                 }
                 SourceAppBadge(bundleID: item.sourceBundleID)
@@ -239,7 +240,7 @@ struct ClipPreviewView: View {
             case .url(let url):
                 VStack(alignment: .leading, spacing: 10) {
                     Text(url.absoluteString)
-                        .foregroundColor(Theme.accent)
+                        .foregroundColor(Theme.accentText)
                         .textSelection(.enabled)
                     Button("Open Link") {
                         NSWorkspace.shared.open(url)
@@ -292,6 +293,7 @@ struct ClipPreviewView: View {
 
 /// The edit mode of the preview panel. Esc cancels. Command-Return and Command-S save.
 private struct ClipEditorView: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let item: ClipboardItem
     let onCancel: () -> Void
     let onSave: (ClipboardItemContent) -> Void

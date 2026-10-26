@@ -212,6 +212,61 @@ final class AppSettingsTests: XCTestCase {
     }
 }
 
+final class RestoreDefaultSettingsTests: XCTestCase {
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        try XCTSkipUnless(AppEnvironment.isRunningTests, "test storage isolation is not active")
+    }
+
+    func test_restoreSetsEverySettingBackToItsDefault() {
+        let s = AppSettings.shared
+        s.theme = .dark
+        s.accentColor = "#2BB673"
+        s.pasteOnClick = false
+        s.moveTopOnClick = false
+        s.autoDismissOverlayEnabled = false
+        s.autoDismissOverlayTimeout = 60
+        s.hotkeyKeyCode = 1
+        s.extractTextHotkeyEnabled = false
+        s.extractCodeKeyCode = 2
+        s.autoCleanEnabled = true
+        s.autoCleanDays = 30
+        s.excludedBundleIDs = ["com.foo.bar"]
+        s.saveMaClipClips = true
+        s.skipConcealedItems = true
+
+        s.restoreDefaultSettings()
+
+        XCTAssertEqual(s.theme, .system)
+        XCTAssertEqual(s.accentColor, "indigo")
+        XCTAssertTrue(s.pasteOnClick)
+        XCTAssertTrue(s.moveTopOnClick)
+        XCTAssertTrue(s.autoDismissOverlayEnabled)
+        XCTAssertEqual(s.autoDismissOverlayTimeout, 20, accuracy: 0.001)
+        XCTAssertEqual(s.hotkeyKeyCode, AppSettings.defaultHotkeyKeyCode)
+        XCTAssertEqual(s.hotkeyModifiers, AppSettings.defaultHotkeyModifiers)
+        XCTAssertTrue(s.extractTextHotkeyEnabled)
+        XCTAssertEqual(s.extractCodeKeyCode, AppSettings.defaultExtractCodeKeyCode)
+        XCTAssertFalse(s.autoCleanEnabled)
+        XCTAssertEqual(s.autoCleanDays, 7)
+        XCTAssertEqual(s.excludedBundleIDs, AppSettings.defaultSeedExclusions)
+        XCTAssertFalse(s.saveMaClipClips)
+        XCTAssertFalse(s.skipConcealedItems)
+    }
+
+    func test_restoreKeepsTheClipLimitAndEncryption() {
+        let s = AppSettings.shared
+        s.maxItems = 120
+        s.encryptHistory = true
+        defer { s.maxItems = 50; s.encryptHistory = false }
+
+        s.restoreDefaultSettings()
+
+        XCTAssertEqual(s.maxItems, 120, "a lower limit would delete clips")
+        XCTAssertTrue(s.encryptHistory, "encryption changes the files and needs the Keychain")
+    }
+}
+
 final class MaClipClipsTests: XCTestCase {
     private let own = "com.jokot.MacClipboard"
 
@@ -222,6 +277,14 @@ final class MaClipClipsTests: XCTestCase {
     func test_clipsFromMaClipAreSkippedWhileTheSwitchIsOff() {
         XCTAssertTrue(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: false))
         XCTAssertFalse(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: true))
+    }
+
+    func test_aScreenshotWhileMaClipIsInFrontIsSaved() {
+        // MaClip never puts an image on the clipboard without skipping it itself. An image
+        // while MaClip is in front comes from the screenshot tool.
+        XCTAssertFalse(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: false, isImage: true))
+        XCTAssertTrue(AppSettings.skipsClip(from: "com.bitwarden.desktop", excluded: ["com.bitwarden.desktop"],
+                                            saveMaClipClips: false, isImage: true), "the list still skips images")
     }
 
     func test_otherAppsFollowTheList() {

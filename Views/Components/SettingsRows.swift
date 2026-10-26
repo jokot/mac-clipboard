@@ -68,6 +68,7 @@ struct SettingsRow<Control: View>: View {
 
 /// A switch in the accent color, for a Settings row.
 struct SettingsSwitch: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let label: String
     @Binding var isOn: Bool
 
@@ -96,6 +97,7 @@ struct StatusBadge: View {
 
 /// A field that shows a shortcut. A click starts to record new keys.
 struct ShortcutField: View {
+    @ObservedObject private var accentStore = AccentStore.shared
     let shortcut: String
     let isRecording: Bool
     var isEnabled: Bool = true
@@ -157,6 +159,7 @@ struct SettingsFocusIDsKey: PreferenceKey {
 }
 
 private struct SettingsFocusable: ViewModifier {
+    @ObservedObject private var accentStore = AccentStore.shared
     let id: String
     let enabled: Bool
     let handle: (SettingsControlAction) -> Void

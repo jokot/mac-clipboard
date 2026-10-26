@@ -246,7 +246,9 @@ final class KeyShortcutsTests: XCTestCase {
 
     func test_settingsKeys() {
         XCTAssertEqual(SettingsKeyMap.table.command(for: .command("1")), .tab(.general))
-        XCTAssertEqual(SettingsKeyMap.table.command(for: .command("4")), .tab(.privacy))
+        XCTAssertEqual(SettingsKeyMap.table.command(for: .command("2")), .tab(.appearance))
+        XCTAssertEqual(SettingsKeyMap.table.command(for: .command("4")), .tab(.storage))
+        XCTAssertEqual(SettingsKeyMap.table.command(for: .command("5")), .tab(.privacy))
         XCTAssertEqual(SettingsKeyMap.table.command(for: .command("w")), .close)
         XCTAssertEqual(SettingsKeyMap.table.command(for: KeyCombo(.delete)), .removeSelectedApp)
     }
