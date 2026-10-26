@@ -39,6 +39,11 @@ final class AppSettings: ObservableObject {
             }
         }
     }
+    /// Off by default: MaClip does not save what you copy in MaClip, for example text in the clip
+    /// editor or a screenshot taken while the clip window is open.
+    @Published var saveMaClipClips: Bool {
+        didSet { AppEnvironment.defaults.set(saveMaClipClips, forKey: Keys.saveMaClipClips) }
+    }
     @Published var skipConcealedItems: Bool {
         didSet { AppEnvironment.defaults.set(skipConcealedItems, forKey: Keys.skipConcealedItems) }
     }
@@ -97,6 +102,7 @@ final class AppSettings: ObservableObject {
         static let moveTopOnClick = "settings.moveTopOnClick"
         static let excludedBundleIDs = "settings.excludedBundleIDs"
         static let skipConcealedItems = "settings.skipConcealedItems"
+        static let saveMaClipClips = "settings.saveMaClipClips"
         static let concealedClearTimeout = "settings.concealedClearTimeout"
         static let autoDismissOverlayEnabled = "settings.autoDismissOverlay.enabled"
         static let autoDismissOverlayTimeout = "settings.autoDismissOverlay.timeout"
@@ -117,8 +123,23 @@ final class AppSettings: ObservableObject {
         "com.apple.keychainaccess",
         "com.dashlane.dashlanephonefinal",
         "com.lastpass.LastPassMacDesktop",
-        "com.jokot.MacClipboard",
     ]
+
+    /// MaClip has its own switch, `saveMaClipClips`, so it is not in the list of apps.
+    static let maClipBundleID = "com.jokot.MacClipboard"
+
+    /// True when MaClip does not save a clip that this app copied.
+    static func skipsClip(from bundleID: String?, excluded: [String], saveMaClipClips: Bool) -> Bool {
+        guard let bundleID else { return false }
+        if bundleID == maClipBundleID { return !saveMaClipClips }
+        return excluded.contains(bundleID)
+    }
+
+    /// Before 2.2, MaClip was in the list of apps. On the first launch of 2.2, MaClip leaves
+    /// the list, and the switch keeps the rule: on only when the person removed MaClip from the list.
+    static func migrateMaClipExclusion(_ stored: [String]) -> (list: [String], saveMaClipClips: Bool) {
+        (stored.filter { $0 != maClipBundleID }, !stored.contains(maClipBundleID))
+    }
 
     static let defaultMaxItems = 50
 
@@ -159,6 +180,7 @@ final class AppSettings: ObservableObject {
 
     func restorePrivacyDefaults() {
         excludedBundleIDs = AppSettings.defaultSeedExclusions
+        saveMaClipClips = false
         skipConcealedItems = false
         concealedClearTimeout = 300
     }
@@ -175,7 +197,17 @@ final class AppSettings: ObservableObject {
         let initialTheme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? AppTheme.system.rawValue) ?? .system
         let initialMax = AppSettings.initialMaxItems(stored: defaults.integer(forKey: Keys.maxItems))
         let initialAutoClean = defaults.object(forKey: Keys.autoCleanEnabled) as? Bool ?? false
-        let initialExcluded = AppSettings.makeInitialExcludedBundleIDs()
+        var initialExcluded = AppSettings.makeInitialExcludedBundleIDs()
+        let initialSaveMaClipClips: Bool
+        if let stored = defaults.object(forKey: Keys.saveMaClipClips) as? Bool {
+            initialSaveMaClipClips = stored
+        } else {
+            let upgraded = AppSettings.migrateMaClipExclusion(initialExcluded)
+            // A new install has no saved list, and the seed list has no MaClip. The switch then stays off.
+            let hadList = defaults.data(forKey: Keys.excludedBundleIDs) != nil
+            initialExcluded = upgraded.list
+            initialSaveMaClipClips = hadList && upgraded.saveMaClipClips
+        }
         let initialSkipConcealed = defaults.object(forKey: Keys.skipConcealedItems) as? Bool ?? false
         let initialConcealedTimeout = (defaults.object(forKey: Keys.concealedClearTimeout) as? Double) ?? 300
         let initialPasteOnClick = defaults.object(forKey: Keys.pasteOnClick) as? Bool ?? true
@@ -196,6 +228,7 @@ final class AppSettings: ObservableObject {
         // Before 2.0, auto-clean always used 7 days.
         self.autoCleanDays = (defaults.object(forKey: Keys.autoCleanDays) as? Int).flatMap { $0 > 0 ? $0 : nil } ?? 7
         self.excludedBundleIDs = initialExcluded
+        self.saveMaClipClips = initialSaveMaClipClips
         self.skipConcealedItems = initialSkipConcealed
         self.concealedClearTimeout = initialConcealedTimeout
         self.pasteOnClick = initialPasteOnClick

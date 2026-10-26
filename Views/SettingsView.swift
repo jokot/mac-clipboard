@@ -416,8 +416,38 @@ private struct StorageTab: View {
     @ObservedObject var viewModel: ClipboardListViewModel
     @ObservedObject private var focus = SettingsFocusState.shared
     @FocusState private var isNumberFocused: Bool
+    /// The number in the field. It takes effect only on Apply or ↩.
+    @State private var draftMaxItems: Int?
     @State private var failure: String?
     @State private var isShowingClearConfirm = false
+
+    private static let numberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.allowsFloats = false
+        return formatter
+    }()
+
+    private var draft: Int { draftMaxItems ?? settings.maxItems }
+
+    private var draftBinding: Binding<Int> {
+        Binding(get: { draft }, set: { draftMaxItems = $0 })
+    }
+
+    private var canApply: Bool { MaxItemsDraft.canApply(draft: draft, saved: settings.maxItems) }
+
+    /// Without a change, the caption says what the limit does. With a change, it says what Apply does.
+    private var maxItemsNote: (text: String, isWarning: Bool) {
+        guard let note = MaxItemsDraft.note(draft: draft, saved: settings.maxItems, count: viewModel.items.count) else {
+            return ("MaClip deletes the oldest clip when the list is full.", false)
+        }
+        return (note.text, note.isWarning)
+    }
+
+    private func applyMaxItems() {
+        guard canApply else { return }
+        viewModel.setMaxItems(draft)
+        draftMaxItems = nil
+    }
 
     private var encryption: Binding<Bool> {
         Binding(
@@ -455,22 +485,30 @@ private struct StorageTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             SettingsSection(title: "History") {
-                SettingsRow(title: "Keep up to") {
+                SettingsRow(title: "Keep up to", caption: maxItemsNote.text, captionIsWarning: maxItemsNote.isWarning) {
                     HStack(spacing: 6) {
-                        TextField("Clips", value: $settings.maxItems, formatter: NumberFormatter())
+                        TextField("Clips", value: draftBinding, formatter: Self.numberFormatter, onCommit: applyMaxItems)
                             .textFieldStyle(.roundedBorder)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 60)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(Theme.accent, lineWidth: draft != settings.maxItems ? 1.5 : 0)
+                            )
                             .focused($isNumberFocused)
-                            .onChange(of: settings.maxItems) { newValue in
-                                viewModel.applyMaxItems(newValue)
-                            }
                             // ⇥ to the field puts the cursor in it. ⇥ again takes it out.
                             .settingsFocus("maxItems") { action in
                                 if action == .activate { isNumberFocused = true }
                             }
                             .onChange(of: focus.focused) { id in isNumberFocused = id == "maxItems" }
                         Text("clips").foregroundColor(.secondary)
+                        Button("Apply", action: applyMaxItems)
+                            .buttonStyle(AccentButtonStyle())
+                            .opacity(canApply ? 1 : 0.4)
+                            .disabled(!canApply)
+                            .padding(.leading, 4)
+                            .help("Keep up to \(draft) clips (\u{21A9})")
+                            .settingsFocus("applyMaxItems", enabled: canApply, press: applyMaxItems)
                     }
                 }
                 SettingsRow(title: "Delete clips older than") {
@@ -589,6 +627,27 @@ private struct PrivacyTab: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
             }
 
+            SettingsSection(title: "MaClip") {
+                HStack(spacing: 12) {
+                    AppIconView().frame(width: 24, height: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Save clips that you copy in MaClip")
+                        Text(settings.saveMaClipClips
+                             ? "Text that you copy in the clip editor, and screenshots that you take while MaClip is open, become clips."
+                             : "Off: text that you copy in the clip editor, and screenshots that you take while MaClip is open, are not saved.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 12)
+                    SettingsSwitch(label: "Save clips that you copy in MaClip", isOn: $settings.saveMaClipClips)
+                        .settingsFocus("saveMaClipClips", toggle: $settings.saveMaClipClips)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .frame(minHeight: 44)
+            }
+
             SettingsSection(title: "Concealed clips") {
                 SettingsRow(title: "Don\u{2019}t save concealed clips",
                             caption: "Password managers mark passwords as concealed when you copy them.") {
@@ -632,7 +691,7 @@ private struct PrivacyTab: View {
                 selection = nil
             }
         } message: {
-            Text("This sets the app list to the default password managers, saves concealed clips again, and deletes them after 5 minutes.")
+            Text("This sets the app list to the default password managers, turns off Save clips that you copy in MaClip, saves concealed clips again, and deletes them after 5 minutes.")
         }
     }
 
@@ -689,7 +748,6 @@ private struct PrivacyTab: View {
         "com.apple.keychainaccess": "Keychain Access",
         "com.dashlane.dashlanephonefinal": "Dashlane",
         "com.lastpass.LastPassMacDesktop": "LastPass",
-        "com.jokot.MacClipboard": "MaClip",
     ]
 
     private func removeSelected() {

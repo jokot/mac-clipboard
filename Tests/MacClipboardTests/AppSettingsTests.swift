@@ -18,7 +18,6 @@ final class AppSettingsTests: XCTestCase {
         "com.apple.keychainaccess",
         "com.dashlane.dashlanephonefinal",
         "com.lastpass.LastPassMacDesktop",
-        "com.jokot.MacClipboard",
     ]
 
     private static func sentinelURL() -> URL? {
@@ -193,20 +192,81 @@ final class AppSettingsTests: XCTestCase {
         AppEnvironment.defaults.removeObject(forKey: autoDismissTimeoutKey)
     }
 
-    func test_restorePrivacyDefaultsResetsAllThree() {
+    func test_restorePrivacyDefaultsResetsAllFour() {
         AppSettings.shared.excludedBundleIDs = ["com.foo.bar"]
         AppSettings.shared.skipConcealedItems = true
         AppSettings.shared.concealedClearTimeout = 60
+        AppSettings.shared.saveMaClipClips = true
 
         AppSettings.shared.restorePrivacyDefaults()
 
         XCTAssertEqual(Set(AppSettings.shared.excludedBundleIDs), Self.seedExclusions)
         XCTAssertFalse(AppSettings.shared.skipConcealedItems)
         XCTAssertEqual(AppSettings.shared.concealedClearTimeout, 300, accuracy: 0.001)
+        XCTAssertFalse(AppSettings.shared.saveMaClipClips)
+        AppEnvironment.defaults.removeObject(forKey: "settings.saveMaClipClips")
 
         AppEnvironment.defaults.removeObject(forKey: excludedKey)
         AppEnvironment.defaults.removeObject(forKey: skipConcealedKey)
         AppEnvironment.defaults.removeObject(forKey: concealedTimeoutKey)
+    }
+}
+
+final class MaClipClipsTests: XCTestCase {
+    private let own = "com.jokot.MacClipboard"
+
+    func test_maClipIsNotInTheDefaultAppList() {
+        XCTAssertFalse(AppSettings.defaultSeedExclusions.contains(own))
+    }
+
+    func test_clipsFromMaClipAreSkippedWhileTheSwitchIsOff() {
+        XCTAssertTrue(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: false))
+        XCTAssertFalse(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: true))
+    }
+
+    func test_otherAppsFollowTheList() {
+        XCTAssertTrue(AppSettings.skipsClip(from: "com.bitwarden.desktop", excluded: ["com.bitwarden.desktop"], saveMaClipClips: true))
+        XCTAssertFalse(AppSettings.skipsClip(from: "com.apple.Notes", excluded: ["com.bitwarden.desktop"], saveMaClipClips: false))
+        XCTAssertFalse(AppSettings.skipsClip(from: nil, excluded: ["com.bitwarden.desktop"], saveMaClipClips: false))
+    }
+
+    func test_upgradeTakesMaClipOutOfTheListAndKeepsItsRule() {
+        let upgraded = AppSettings.migrateMaClipExclusion(["com.bitwarden.desktop", own])
+        XCTAssertEqual(upgraded.list, ["com.bitwarden.desktop"])
+        XCTAssertFalse(upgraded.saveMaClipClips, "MaClip was in the list, so its clips stay unsaved")
+    }
+
+    func test_upgradeTurnsTheSwitchOnWhenMaClipWasRemovedFromTheList() {
+        let upgraded = AppSettings.migrateMaClipExclusion(["com.bitwarden.desktop"])
+        XCTAssertEqual(upgraded.list, ["com.bitwarden.desktop"])
+        XCTAssertTrue(upgraded.saveMaClipClips, "the person chose to save clips from MaClip")
+    }
+}
+
+final class MaxItemsDraftTests: XCTestCase {
+    func test_noNoteWhenTheNumberDidNotChange() {
+        XCTAssertNil(MaxItemsDraft.note(draft: 50, saved: 50, count: 44))
+        XCTAssertFalse(MaxItemsDraft.canApply(draft: 50, saved: 50))
+    }
+
+    func test_aLowerNumberWarnsAboutTheDeletedClips() {
+        XCTAssertEqual(MaxItemsDraft.note(draft: 30, saved: 50, count: 44),
+                       MaxItemsDraft.Note(text: "Apply deletes the 14 oldest clips. You cannot undo this.", isWarning: true))
+        XCTAssertEqual(MaxItemsDraft.note(draft: 43, saved: 50, count: 44)?.text,
+                       "Apply deletes the oldest clip. You cannot undo this.")
+        XCTAssertTrue(MaxItemsDraft.canApply(draft: 30, saved: 50))
+    }
+
+    func test_aNumberThatKeepsEveryClipSaysWhatApplyDoes() {
+        XCTAssertEqual(MaxItemsDraft.note(draft: 60, saved: 50, count: 44),
+                       MaxItemsDraft.Note(text: "Press Apply or \u{21A9} to keep up to 60 clips.", isWarning: false))
+    }
+
+    func test_aNumberOutOfRangeCannotBeApplied() {
+        XCTAssertFalse(MaxItemsDraft.canApply(draft: 0, saved: 50))
+        XCTAssertFalse(MaxItemsDraft.canApply(draft: 1001, saved: 50))
+        XCTAssertEqual(MaxItemsDraft.note(draft: 0, saved: 50, count: 44),
+                       MaxItemsDraft.Note(text: "Enter a number from 1 to 1000.", isWarning: true))
     }
 }
 

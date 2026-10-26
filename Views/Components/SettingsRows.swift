@@ -42,6 +42,8 @@ private struct DividedRows: _VariadicView_MultiViewRoot {
 struct SettingsRow<Control: View>: View {
     let title: String
     var caption: String? = nil
+    /// Orange caption text, for a change that deletes something.
+    var captionIsWarning = false
     @ViewBuilder let control: Control
 
     var body: some View {
@@ -51,7 +53,7 @@ struct SettingsRow<Control: View>: View {
                 if let caption {
                     Text(caption)
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(captionIsWarning ? Theme.warning : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

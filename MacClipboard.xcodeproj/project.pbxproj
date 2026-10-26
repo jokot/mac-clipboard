@@ -31,6 +31,7 @@
 		555F6BBF25ECA30746ED5533 /* AccessibilityAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9802CBE5E4DA709DF25406 /* AccessibilityAccessTests.swift */; };
 		571B862018FC471035814617 /* URLUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */; };
 		59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F4194F31C555F3F3166BDA /* OCRService.swift */; };
+		6B3F52FFFF63F304101C006D /* MaxItemsDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E1A98A9409F221718C10FB5 /* MaxItemsDraft.swift */; };
 		6D63E92309F2D1CA637A99EB /* MenuBarIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 42329943E61EA51FA9377AE9 /* MenuBarIcon@2x.png */; };
 		7170F47F267388BAF4517709 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7F2BCE8886027192AD2307 /* Notifications.swift */; };
 		757DEF736A5B201C9CBFA93E /* ClipListTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */; };
@@ -124,6 +125,7 @@
 		668DB323E10EDCA899DDC163 /* AppFocusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFocusService.swift; sourceTree = "<group>"; };
 		69E101E8162A86E28FAB8158 /* ClipboardItemRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItemRepositoryTests.swift; sourceTree = "<group>"; };
 		6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLUtils.swift; sourceTree = "<group>"; };
+		6E1A98A9409F221718C10FB5 /* MaxItemsDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaxItemsDraft.swift; sourceTree = "<group>"; };
 		701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorSheet.swift; sourceTree = "<group>"; };
 		72305A678DEF1D5E247BFC8C /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		7422559F8C0D95AA23979A71 /* MacClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -252,6 +254,7 @@
 				C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */,
 				33EFD2074486FADCBD667A8D /* ImageCompositor.swift */,
 				0292CF77B1F1E1872C0C520D /* KeyShortcuts.swift */,
+				6E1A98A9409F221718C10FB5 /* MaxItemsDraft.swift */,
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
 				2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */,
 				1AF81986603D19912EF59AD1 /* TextPreview.swift */,
@@ -480,6 +483,7 @@
 				E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */,
 				112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */,
 				D9677C720DDEED857A4B195D /* KeyShortcuts.swift in Sources */,
+				6B3F52FFFF63F304101C006D /* MaxItemsDraft.swift in Sources */,
 				7170F47F267388BAF4517709 /* Notifications.swift in Sources */,
 				59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */,
 				831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */,
