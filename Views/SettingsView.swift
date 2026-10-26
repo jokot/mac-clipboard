@@ -382,6 +382,9 @@ private struct ShortcutsTab: View {
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            // The list of keys is the last focus stop of the tab, so ↓ and ⇥ scroll to it.
+            // It has no action.
+            .settingsFocus("clipWindowKeys") { _ in }
         }
     }
 
