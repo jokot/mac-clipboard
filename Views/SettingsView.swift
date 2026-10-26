@@ -647,8 +647,8 @@ private struct PrivacyTab: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Save clips that you copy in MaClip")
                         Text(settings.saveMaClipClips
-                             ? "Text that you copy in the clip editor, and screenshots that you take while MaClip is open, become clips."
-                             : "Off: text that you copy in the clip editor, and screenshots that you take while MaClip is open, are not saved.")
+                             ? "Text that you copy in MaClip, for example in the clip editor, becomes a clip."
+                             : "Off: text that you copy in MaClip, for example in the clip editor, is not saved. Screenshots are always saved.")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -764,7 +764,7 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// is shorter, with room for the title bar and a margin, and the tab scrolls.
     static var contentSize: CGSize {
         let screen = NSScreen.main?.visibleFrame.height ?? 900
-        return CGSize(width: 680, height: min(720, screen - 68))
+        return CGSize(width: 680, height: min(656, screen - 68))
     }
 
     init() {

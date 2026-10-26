@@ -45,7 +45,6 @@ struct AppearanceTab: View {
                     .settingsFocus("previewView", choice: $previewView, values: AppearancePreviewView.allCases)
                 }
                 AppearancePreview(view: previewView)
-                    .frame(height: 340)
                     .colorScheme(settings.theme.colorScheme)
                 Text(previewNote)
                     .font(.system(size: 11))
@@ -455,6 +454,7 @@ enum AppearancePreviewView: CaseIterable {
 
 /// A preview that draws the real MaClip views in the chosen theme and accent color. It takes no clicks.
 private struct AppearancePreview: View {
+    static let height: CGFloat = 340
     let view: AppearancePreviewView
     @ObservedObject private var accentStore = AccentStore.shared
 
@@ -465,13 +465,17 @@ private struct AppearancePreview: View {
             case .preview: PreviewSample()
             case .controls: ControlsSample()
             case .shortcuts:
+                // The card is taller than the box. It takes its own size, and the scale fits it in.
                 ShortcutsCard(title: "Preview", columns: ClipKeyMap.previewColumns(),
                               note: "Every clip key of the list works here too.") {}
-                    .scaleEffect(0.82)
+                    .fixedSize()
+                    .scaleEffect(0.8)
             }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // A fixed height: a view inside cannot make the box taller and draw over the tab.
+        .frame(maxWidth: .infinity)
+        .frame(height: Self.height)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .underPageBackgroundColor)))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

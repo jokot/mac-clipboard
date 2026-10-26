@@ -139,9 +139,12 @@ final class AppSettings: ObservableObject {
     static let maClipBundleID = "com.jokot.MacClipboard"
 
     /// True when MaClip does not save a clip that this app copied.
-    static func skipsClip(from bundleID: String?, excluded: [String], saveMaClipClips: Bool) -> Bool {
+    /// The MaClip switch applies to text, links and files only. MaClip never puts an image on the
+    /// clipboard without skipping it itself, so an image while MaClip is in front is a screenshot.
+    static func skipsClip(from bundleID: String?, excluded: [String], saveMaClipClips: Bool,
+                          isImage: Bool = false) -> Bool {
         guard let bundleID else { return false }
-        if bundleID == maClipBundleID { return !saveMaClipClips }
+        if bundleID == maClipBundleID { return !saveMaClipClips && !isImage }
         return excluded.contains(bundleID)
     }
 

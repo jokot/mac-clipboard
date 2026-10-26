@@ -279,6 +279,14 @@ final class MaClipClipsTests: XCTestCase {
         XCTAssertFalse(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: true))
     }
 
+    func test_aScreenshotWhileMaClipIsInFrontIsSaved() {
+        // MaClip never puts an image on the clipboard without skipping it itself. An image
+        // while MaClip is in front comes from the screenshot tool.
+        XCTAssertFalse(AppSettings.skipsClip(from: own, excluded: [], saveMaClipClips: false, isImage: true))
+        XCTAssertTrue(AppSettings.skipsClip(from: "com.bitwarden.desktop", excluded: ["com.bitwarden.desktop"],
+                                            saveMaClipClips: false, isImage: true), "the list still skips images")
+    }
+
     func test_otherAppsFollowTheList() {
         XCTAssertTrue(AppSettings.skipsClip(from: "com.bitwarden.desktop", excluded: ["com.bitwarden.desktop"], saveMaClipClips: true))
         XCTAssertFalse(AppSettings.skipsClip(from: "com.apple.Notes", excluded: ["com.bitwarden.desktop"], saveMaClipClips: false))

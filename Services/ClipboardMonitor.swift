@@ -39,10 +39,13 @@ final class ClipboardMonitor: ClipboardMonitorProtocol {
         let frontmost = NSWorkspace.shared.frontmostApplication
         let sourceBundleID = frontmost?.bundleIdentifier
 
-        // The list of apps, and the MaClip switch.
+        // The list of apps, and the MaClip switch. A file copy can carry an icon image, so a
+        // clip with file URLs is not an image here.
+        let isImage = pb.availableType(from: [.png, .tiff]) != nil && (readFileURLs(from: pb)?.isEmpty ?? true)
         if AppSettings.skipsClip(from: sourceBundleID,
                                  excluded: AppSettings.shared.excludedBundleIDs,
-                                 saveMaClipClips: AppSettings.shared.saveMaClipClips) {
+                                 saveMaClipClips: AppSettings.shared.saveMaClipClips,
+                                 isImage: isImage) {
             return
         }
 
