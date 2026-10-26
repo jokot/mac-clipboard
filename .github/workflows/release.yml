@@ -6,8 +6,8 @@
 #    the result as the "release-pr-build" check on the release PR.
 # 2. A merge of the release PR leaves it labeled "autorelease: pending".
 #    find-release sees that PR. release builds the DMG from the merge commit,
-#    then publish.sh makes a hidden draft, attaches both files, and publishes
-#    it. Only the publish creates the tag. If any step fails, nothing is
+#    then publish.sh makes a hidden draft, attaches the DMG, its .sha256 and
+#    a copy named MaClip.dmg (for the website link), and publishes it. Only the publish creates the tag. If any step fails, nothing is
 #    public, and a re-run of the failed job continues.
 # PRs to main run pr-build, which uploads the DMG as a workflow artifact.
 # The website in site/ is not part of the app. release-please skips commits
