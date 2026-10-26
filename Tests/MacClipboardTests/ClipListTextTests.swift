@@ -53,4 +53,24 @@ final class ClipListTextTests: XCTestCase {
         XCTAssertEqual(ClipListSummary.text(total: 24, limit: 50, matches: 1), "1 match")
         XCTAssertEqual(ClipListSummary.text(total: 24, limit: 50, matches: 0), "No matches")
     }
+
+    func test_deleteSelectedClipSelectsTheNextClip() {
+        XCTAssertEqual(ClipSelection.index(afterRemoving: 2, selected: 2, newCount: 5), 2)
+    }
+
+    func test_deleteLastClipSelectsTheNewLastClip() {
+        XCTAssertEqual(ClipSelection.index(afterRemoving: 4, selected: 4, newCount: 4), 3)
+    }
+
+    func test_deleteClipAboveSelectionKeepsTheSameClipSelected() {
+        XCTAssertEqual(ClipSelection.index(afterRemoving: 1, selected: 3, newCount: 5), 2)
+    }
+
+    func test_deleteClipBelowSelectionKeepsTheIndex() {
+        XCTAssertEqual(ClipSelection.index(afterRemoving: 4, selected: 1, newCount: 5), 1)
+    }
+
+    func test_deleteOnlyClipSelectsNothing() {
+        XCTAssertNil(ClipSelection.index(afterRemoving: 0, selected: 0, newCount: 0))
+    }
 }

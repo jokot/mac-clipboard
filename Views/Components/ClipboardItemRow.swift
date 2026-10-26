@@ -104,6 +104,7 @@ struct ClipboardItemRow: View {
             Divider()
         }
         Button("Delete", role: .destructive) { onRemove() }
+            .keyboardShortcut(.delete, modifiers: .command)
     }
 
     // MARK: - Edit helpers
@@ -305,7 +306,7 @@ struct ClipboardItemRow: View {
         if canEdit(item.content) {
             RowActionButton(label: "Edit", systemImage: "pencil") { enterEditMode() }
         }
-        RowActionButton(label: "Delete", systemImage: "trash", action: onRemove)
+        RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", action: onRemove)
     }
 
     /// Image actions float on the image, so the image keeps its full width.
@@ -326,7 +327,7 @@ struct ClipboardItemRow: View {
             if let onEditImage {
                 RowActionButton(label: "Edit Image", systemImage: "pencil", tint: .primary) { onEditImage(item) }
             }
-            RowActionButton(label: "Delete", systemImage: "trash", tint: .primary, action: onRemove)
+            RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", tint: .primary, action: onRemove)
         }
         .padding(2)
         .background(

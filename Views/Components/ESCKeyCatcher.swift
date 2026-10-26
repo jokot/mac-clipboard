@@ -37,6 +37,9 @@ final class KeyCatcherView: NSView {
                 NotificationCenter.default.post(name: .overlaySelectCurrentItem, object: nil)
             case 49 where event.modifierFlags.intersection([.command, .control, .option]).isEmpty: // Space
                 NotificationCenter.default.post(name: .overlayTogglePreview, object: nil)
+            case 51 where event.modifierFlags.contains(.command), // Command-Delete
+                 117 where event.modifierFlags.contains(.command): // Command-Forward Delete
+                NotificationCenter.default.post(name: .overlayDeleteSelectedItem, object: nil)
             default:
                 if event.modifierFlags.contains(.command), let chars = event.charactersIgnoringModifiers {
                     if chars == "," {

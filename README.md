@@ -45,8 +45,9 @@ https://github.com/user-attachments/assets/55cb6c86-be5d-4175-98f1-ddbddc5ded3d
 1. Press <kbd>⌃</kbd> <kbd>⌘</kbd> <kbd>V</kbd> to open MaClip.
 2. Type to search. Use <kbd>↑</kbd> and <kbd>↓</kbd> to move.
 3. Press <kbd>Return</kbd> or click a clip to paste it. Press <kbd>Esc</kbd> to close.
-4. Right-click a clip to edit it or to exclude its app.
-5. Press <kbd>⌘</kbd> <kbd>,</kbd> to open Settings.
+4. Press <kbd>⌘</kbd> <kbd>⌫</kbd> to delete the selected clip.
+5. Right-click a clip to edit it or to exclude its app.
+6. Press <kbd>⌘</kbd> <kbd>,</kbd> to open Settings.
 
 ## Build from source
 Requires Xcode and Homebrew.

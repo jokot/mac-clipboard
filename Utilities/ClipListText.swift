@@ -36,3 +36,14 @@ enum ClipListSummary {
         }
     }
 }
+
+/// The selected row in the clip window after a clip is deleted.
+enum ClipSelection {
+    /// The selected clip stays selected. When it was the deleted clip, the clip below it
+    /// is selected, or the new last clip. Nil when the list is empty.
+    static func index(afterRemoving removed: Int, selected: Int, newCount: Int) -> Int? {
+        guard newCount > 0 else { return nil }
+        let index = removed < selected ? selected - 1 : selected
+        return min(index, newCount - 1)
+    }
+}

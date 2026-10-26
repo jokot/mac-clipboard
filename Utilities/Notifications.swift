@@ -12,6 +12,8 @@ extension Notification.Name {
     static let overlayFocusSearch = Notification.Name("OverlayFocusSearch")
     /// Space in the clip window: open or close the preview of the selected clip.
     static let overlayTogglePreview = Notification.Name("OverlayTogglePreview")
+    /// Command-Delete in the clip window: delete the selected clip.
+    static let overlayDeleteSelectedItem = Notification.Name("OverlayDeleteSelectedItem")
     /// Edit… in the preview: the row with this clip id (the object) opens its text editor.
     static let overlayEditItem = Notification.Name("OverlayEditItem")
 
