@@ -7,6 +7,8 @@ struct ClipboardItemRow: View {
     let onSelect: (ClipboardItem) -> Void
     let onRemove: () -> Void
     var isSelected: Bool = false
+    /// False while the preview has focus. The selected row is then gray, like an inactive selection.
+    var isListFocused: Bool = true
 
     var onExtractText: ((ClipboardItem) -> Void)? = nil
     var onExtractBarcode: ((ClipboardItem) -> Void)? = nil
@@ -35,12 +37,16 @@ struct ClipboardItemRow: View {
             .frame(minHeight: Theme.rowHeight)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? Theme.selectedFill : (isHovered ? Theme.hoverFill : Color.clear))
+                    .fill(isSelected ? (isListFocused ? Theme.selectedFill : Theme.inactiveSelectedFill)
+                                     : (isHovered ? Theme.hoverFill : Color.clear))
             )
             .contentShape(Rectangle())
             .onTapGesture { onSelect(item) }
             .onHover { isHovered = $0 }
             .contextMenu { contextMenu }
+            .onReceive(NotificationCenter.default.publisher(for: .overlayRevealItem)) { note in
+                if (note.object as? UUID) == item.id, item.isConcealed { reveal() }
+            }
     }
 
     // MARK: - Context menu
@@ -48,30 +54,52 @@ struct ClipboardItemRow: View {
     @ViewBuilder
     private var contextMenu: some View {
         Button("Paste") { onSelect(item) }
+            .keyboardShortcut(.return, modifiers: [])
         Button("Copy Only") { onCopyOnly?(item) }
-        if let onPreview { Button("Preview") { onPreview(item) } }
+            .keyboardShortcut("c", modifiers: .command)
+        if let onPreview {
+            Button("Preview") { onPreview(item) }
+                .keyboardShortcut(.space, modifiers: [])
+        }
         switch item.content {
         case .url(let url):
             Button("Open Link") { openLink(url) }
+                .keyboardShortcut("o", modifiers: .command)
         case .file:
             Button("Open") { onOpenFile?(item) }
+                .keyboardShortcut("o", modifiers: .command)
             Button("Reveal in Finder") { onRevealInFinder?(item) }
+                .keyboardShortcut("r", modifiers: .command)
             Button("Copy Path") { onCopyPath?(item) }
+                .keyboardShortcut("c", modifiers: [.option, .command])
         case .image:
-            if let onExtractText { Button("Copy Text from Image") { onExtractText(item) } }
-            if let onExtractBarcode { Button("Copy QR Code or Barcode") { onExtractBarcode(item) } }
+            if let onExtractText {
+                Button("Extract Text") { onExtractText(item) }
+                    .keyboardShortcut("t", modifiers: .command)
+            }
+            if let onExtractBarcode {
+                Button("Extract Code") { onExtractBarcode(item) }
+                    .keyboardShortcut("b", modifiers: .command)
+            }
         case .text:
             EmptyView()
         }
+        if item.isConcealed {
+            Button("Show for 5 Seconds") { reveal() }
+                .keyboardShortcut("u", modifiers: .command)
+        }
         if ClipEdit.canEdit(item.content), let onEdit {
             Button("Edit…") { onEdit(item) }
+                .keyboardShortcut("e", modifiers: .command)
         } else if case .image = item.content, let onEditImage {
             Button("Edit…") { onEditImage(item) }
+                .keyboardShortcut("e", modifiers: .command)
         }
         Divider()
         if let bundleID = item.sourceBundleID, let onExcludeApp {
             let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
             Button("Don\u{2019}t Save Clips from \(name)\u{2026}") { onExcludeApp(bundleID) }
+                .keyboardShortcut(.delete, modifiers: [.option, .command])
             Divider()
         }
         Button("Delete", role: .destructive) { onRemove() }
@@ -217,18 +245,18 @@ struct ClipboardItemRow: View {
             RowActionButton(label: "Preview (space)", systemImage: "eye") { onPreview(item) }
         }
         if item.isConcealed {
-            RowActionButton(label: "Show for 5 Seconds", systemImage: "lock.open", action: reveal)
+            RowActionButton(label: "Show for 5 Seconds (\u{2318}U)", systemImage: "lock.open", action: reveal)
         }
         switch item.content {
         case .url(let url):
-            RowActionButton(label: "Open Link", systemImage: "arrow.up.right") { openLink(url) }
+            RowActionButton(label: "Open Link (\u{2318}O)", systemImage: "arrow.up.right") { openLink(url) }
         case .file:
-            RowActionButton(label: "Reveal in Finder", systemImage: "folder") { onRevealInFinder?(item) }
+            RowActionButton(label: "Reveal in Finder (\u{2318}R)", systemImage: "folder") { onRevealInFinder?(item) }
         default:
             EmptyView()
         }
         if ClipEdit.canEdit(item.content), let onEdit {
-            RowActionButton(label: "Edit", systemImage: "pencil") { onEdit(item) }
+            RowActionButton(label: "Edit (\u{2318}E)", systemImage: "pencil") { onEdit(item) }
         }
         RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", action: onRemove)
     }
@@ -240,16 +268,16 @@ struct ClipboardItemRow: View {
                 RowActionButton(label: "Preview (space)", systemImage: "eye", tint: .primary) { onPreview(item) }
             }
             if item.isConcealed {
-                RowActionButton(label: "Show for 5 Seconds", systemImage: "lock.open", tint: .primary, action: reveal)
+                RowActionButton(label: "Show for 5 Seconds (\u{2318}U)", systemImage: "lock.open", tint: .primary, action: reveal)
             }
             if let onExtractText {
-                RowActionButton(label: "Copy Text from Image", systemImage: "text.viewfinder", tint: .primary) { onExtractText(item) }
+                RowActionButton(label: "Extract Text (\u{2318}T)", systemImage: "text.viewfinder", tint: .primary) { onExtractText(item) }
             }
             if let onExtractBarcode {
-                RowActionButton(label: "Copy QR Code or Barcode", systemImage: "qrcode.viewfinder", tint: .primary) { onExtractBarcode(item) }
+                RowActionButton(label: "Extract Code (\u{2318}B)", systemImage: "qrcode.viewfinder", tint: .primary) { onExtractBarcode(item) }
             }
             if let onEditImage {
-                RowActionButton(label: "Edit Image", systemImage: "pencil", tint: .primary) { onEditImage(item) }
+                RowActionButton(label: "Edit Image (\u{2318}E)", systemImage: "pencil", tint: .primary) { onEditImage(item) }
             }
             RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", tint: .primary, action: onRemove)
         }

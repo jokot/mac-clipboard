@@ -94,6 +94,7 @@ enum ClipEdit {
 /// In edit mode, the panel shows the clip in a text editor with Cancel and Save.
 struct ClipPreviewView: View {
     let item: ClipboardItem
+    @ObservedObject var windowState: ClipWindowState
     var loadImageData: (URL) -> Data?
     let onPaste: () -> Void
     let onCopyOnly: () -> Void
@@ -109,6 +110,15 @@ struct ClipPreviewView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
+                if isFocused && !isEditing {
+                    HStack(spacing: 5) {
+                        KeyLabel(key: "\u{2190}")
+                        Text("List")
+                    }
+                    .font(.system(size: 11))
+                    .foregroundColor(Theme.accent)
+                    .help("Press \u{2190} to go back to the list")
+                }
                 SourceAppBadge(bundleID: item.sourceBundleID)
                 Text(headerText)
                     .font(.system(size: 12))
@@ -139,10 +149,10 @@ struct ClipPreviewView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
                 HStack(spacing: 8) {
-                    Button("Edit\u{2026}", action: onEdit)
-                    Button("Copy Only", action: onCopyOnly)
+                    Button(action: onEdit) { buttonLabel("Edit\u{2026}", key: "\u{2318}E") }
+                    Button(action: onCopyOnly) { buttonLabel("Copy Only", key: "\u{2318}C") }
                     Spacer()
-                    Button("Paste", action: onPaste)
+                    Button(action: onPaste) { buttonLabel("Paste", key: "\u{21A9}", onAccent: true) }
                         .buttonStyle(AccentButtonStyle())
                 }
                 .padding(.horizontal, 16)
@@ -151,9 +161,40 @@ struct ClipPreviewView: View {
         }
         .frame(width: 408)
         .ignoresSafeArea(.container, edges: .top)
+        .overlay {
+            if isFocused {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Theme.accent, lineWidth: 2)
+                    .padding(3)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+        }
+        .simultaneousGesture(TapGesture().onEnded { windowState.pane = .preview })
+        .shortcutsPanel(.preview, title: isEditing ? "Editing a clip" : "Preview",
+                        note: isEditing ? "While you edit, \u{2190} \u{2192} move the cursor."
+                                        : "Every clip key of the list works here too.") {
+            isEditing ? ClipKeyMap.editingColumns() : ClipKeyMap.previewColumns()
+        }
         .onChange(of: item.id) { _ in
             image = nil
             isRevealed = false
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .overlayRevealItem)) { note in
+            guard (note.object as? UUID) == item.id, item.isConcealed else { return }
+            isRevealed = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { isRevealed = false }
+        }
+    }
+
+    private var isFocused: Bool { windowState.previewOpen && windowState.pane == .preview }
+
+    private func buttonLabel(_ title: String, key: String, onAccent: Bool = false) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+            Text(key)
+                .font(.system(size: 11))
+                .foregroundColor(onAccent ? .white.opacity(0.75) : .secondary)
         }
     }
 
@@ -249,7 +290,7 @@ struct ClipPreviewView: View {
     }
 }
 
-/// The edit mode of the preview panel. Esc cancels and Command-Return saves.
+/// The edit mode of the preview panel. Esc cancels. Command-Return and Command-S save.
 private struct ClipEditorView: View {
     let item: ClipboardItem
     let onCancel: () -> Void
@@ -257,7 +298,6 @@ private struct ClipEditorView: View {
 
     @State private var text: String
     @State private var error: String?
-    @State private var keyMonitor: Any?
 
     init(item: ClipboardItem, onCancel: @escaping () -> Void, onSave: @escaping (ClipboardItemContent) -> Void) {
         self.item = item
@@ -285,7 +325,7 @@ private struct ClipEditorView: View {
             }
 
             HStack(spacing: 8) {
-                Text("esc cancels \u{00B7} \u{2318}\u{21A9} saves")
+                Text("esc cancels \u{00B7} \u{2318}\u{21A9} or \u{2318}S saves")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -296,26 +336,14 @@ private struct ClipEditorView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        // ponytail: a local key monitor runs before OverlayWindow.escMonitor (newest first),
-        // so Esc cancels the edit and does not close the clip window. Command-Return saves,
-        // because TextEditor takes a plain Return.
-        .onAppear {
-            prepareTextView()
-            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                if event.keyCode == 53 { // Escape
-                    onCancel()
-                    return nil
-                }
-                if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Command-Return
-                    save()
-                    return nil
-                }
-                return event
+        // The clip window key handler sends Esc, ⌘↩ and ⌘S here, so the shortcuts panel can take Esc first.
+        .onAppear { prepareTextView() }
+        .onReceive(NotificationCenter.default.publisher(for: .previewEditCommand)) { note in
+            switch note.object as? PreviewEditAction {
+            case .save: save()
+            case .cancel: onCancel()
+            case nil: break
             }
-        }
-        .onDisappear {
-            if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
-            keyMonitor = nil
         }
     }
 

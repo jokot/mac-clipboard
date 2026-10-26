@@ -49,28 +49,29 @@ struct ImageEditorSheet: View {
         } message: {
             Text("MaClip could not write the edited image. Make sure that the disk has free space, then try again. Your edits are still open.")
         }
+        .shortcutsPanel(.imageEditor, title: "Image editor",
+                        note: "Drawing, crop and text placement need the pointer. Tool keys are off while you type text.") {
+            EditorKeyMap.columns()
+        }
         .onAppear { installKeyMonitor() }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
+            ShortcutsPanelState.shared.hide(.imageEditor)
         }
     }
 
     private var toolbar: some View {
         HStack(spacing: 12) {
             HStack(spacing: 2) {
-                ToolbarIconButton(label: "Rotate Left", systemImage: "rotate.left") {
-                    vm.mutate { $0.rotationQuarterTurns = (($0.rotationQuarterTurns - 1) % 4 + 4) % 4 }
-                }
-                ToolbarIconButton(label: "Rotate Right", systemImage: "rotate.right") {
-                    vm.mutate { $0.rotationQuarterTurns = ($0.rotationQuarterTurns + 1) % 4 }
-                }
+                ToolbarIconButton(label: "Rotate Left (\u{2318}L)", systemImage: "rotate.left") { rotate(by: -1) }
+                ToolbarIconButton(label: "Rotate Right (\u{2318}R)", systemImage: "rotate.right") { rotate(by: 1) }
             }
 
             separator
 
             HStack(spacing: 2) {
                 ForEach(EditTool.allCases, id: \.self) { t in
-                    ToolbarIconButton(label: name(for: t), systemImage: symbol(for: t), isSelected: tool == t) {
+                    ToolbarIconButton(label: "\(t.title) (\(t.key.uppercased()))", systemImage: symbol(for: t), isSelected: tool == t) {
                         tool = t
                     }
                 }
@@ -109,25 +110,24 @@ struct ImageEditorSheet: View {
             HStack(spacing: 2) {
                 ToolbarIconButton(label: "Undo (\u{2318}Z)", systemImage: "arrow.uturn.backward") { vm.undo() }
                     .disabled(!vm.canUndo)
-                    .keyboardShortcut("z", modifiers: .command)
                 ToolbarIconButton(label: "Redo (\u{21E7}\u{2318}Z)", systemImage: "arrow.uturn.forward") { vm.redo() }
                     .disabled(!vm.canRedo)
-                    .keyboardShortcut("z", modifiers: [.command, .shift])
             }
 
             // ponytail: fixedSize + layoutPriority so the packed left cluster
             // can't squeeze the action buttons to ellipsis / zero width.
-            // While text is typed, Return and Esc belong to the text field.
-            let typing = vm.textDraft != nil
-            let canSave = vm.state.isDirty || vm.hasPendingText
+            // The key monitor runs ↩, ⌘S, ⇧⌘S and Esc. While text is typed, ↩ and Esc belong to the text field.
             HStack(spacing: 8) {
-                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction, enabled: !typing)
-                Button("Save as New") { commit(.asNew) }.disabled(!canSave)
+                Button("Cancel", action: onCancel)
+                    .help("Cancel (esc)")
+                Button("Save as New") { commit(.asNew) }
+                    .disabled(!canSave)
+                    .help("Save as a new clip (\u{21E7}\u{2318}S)")
                 Button("Save") { commit(.inPlace) }
                     .buttonStyle(AccentButtonStyle())
                     .opacity(canSave ? 1 : 0.45)
                     .disabled(!canSave)
-                    .keyboardShortcut(.defaultAction, enabled: !typing)
+                    .help("Save (\u{21A9} or \u{2318}S)")
             }
             .fixedSize()
             .layoutPriority(1)
@@ -144,23 +144,19 @@ struct ImageEditorSheet: View {
             Spacer()
             Text(EditorStatus.editsText(for: vm.state))
             Text(EditorStatus.sizeText(for: baseImage))
+            Button { ShortcutsPanelState.shared.toggle(.imageEditor) } label: {
+                HStack(spacing: 5) {
+                    KeyLabel(key: "\u{2318}/")
+                    Text("Shortcuts")
+                }
+            }
+            .buttonStyle(.plain)
+            .help("Keyboard Shortcuts (\u{2318}/)")
         }
         .font(.system(size: 11))
         .foregroundColor(.secondary)
         .padding(.horizontal, 14)
         .frame(height: 30)
-    }
-
-    private func name(for tool: EditTool) -> String {
-        switch tool {
-        case .crop: return "Crop"
-        case .arrow: return "Arrow"
-        case .rectangle: return "Rectangle"
-        case .oval: return "Oval"
-        case .text: return "Text"
-        case .pen: return "Pen"
-        case .redact: return "Redact"
-        }
     }
 
     private func symbol(for tool: EditTool) -> String {
@@ -175,6 +171,36 @@ struct ImageEditorSheet: View {
         }
     }
 
+    private var canSave: Bool { vm.state.isDirty || vm.hasPendingText }
+
+    private func rotate(by quarterTurns: Int) {
+        vm.mutate { $0.rotationQuarterTurns = (($0.rotationQuarterTurns + quarterTurns) % 4 + 4) % 4 }
+    }
+
+    /// The next line width in `widths`, thinner or thicker. A width not in the list moves to the nearest one.
+    private func stepWidth(_ step: Int) {
+        let nearest = Self.widths.enumerated().min { abs($0.element - stroke.width) < abs($1.element - stroke.width) }?.offset ?? 0
+        let index = min(max(0, nearest + step), Self.widths.count - 1)
+        stroke.width = Self.widths[index]
+    }
+
+    private func perform(_ command: EditorCommand) {
+        switch command {
+        case .tool(let t): tool = t
+        case .color(let n): stroke.color = Self.colorPresets[n - 1]
+        case .thinner: stepWidth(-1)
+        case .thicker: stepWidth(1)
+        case .rotateLeft: rotate(by: -1)
+        case .rotateRight: rotate(by: 1)
+        case .undo: vm.undo()
+        case .redo: vm.redo()
+        case .save: if canSave { commit(.inPlace) } else { NSSound.beep() }
+        case .saveAsNew: if canSave { commit(.asNew) } else { NSSound.beep() }
+        case .cancel: onCancel()
+        case .showShortcuts: ShortcutsPanelState.shared.toggle(.imageEditor)
+        }
+    }
+
     private func commit(_ mode: SaveMode) {
         vm.commitText(color: stroke.color, fontSize: fontSize)
         guard let data = ImageCompositor.compose(vm.state), onCommit(data, mode) else {
@@ -185,21 +211,26 @@ struct ImageEditorSheet: View {
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            // Local monitors see keys for every MaClip window. Only take 1-8 in
-            // the editor, and not while the text tool's field is being typed in.
+            // Local monitors see keys for every MaClip window. Only take keys in the editor.
             guard event.window?.identifier == ImageEditorWindowController.windowIdentifier,
-                  !(event.window?.firstResponder is NSTextView) else { return event }
-            if event.keyCode == 53, vm.isDrawing {  // Esc mid-drag cancels only the shape
+                  let combo = KeyCombo(event: event) else { return event }
+            let panel = ShortcutsPanelState.shared
+            if panel.isVisible(.imageEditor) {
+                if combo == KeyCombo(.escape) || combo == .command("/") { panel.hide(.imageEditor) }
+                return nil
+            }
+            if combo == KeyCombo(.escape), vm.isDrawing {  // Esc mid-drag cancels only the shape
                 vm.cancelDrawing()
                 return nil
             }
-            if event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
-               let chars = event.charactersIgnoringModifiers,
-               let n = Int(chars), (1...8).contains(n) {
-                stroke.color = Self.colorPresets[n - 1]
-                return nil
+            guard let command = EditorKeyMap.table.command(for: combo) else { return event }
+            // The text tool's field takes letters, digits, ↩ and Esc. Only ⌘S, ⇧⌘S and ⌘/ still work.
+            if event.window?.firstResponder is NSTextView {
+                let worksWhileTyping: Set<EditorCommand> = [.save, .saveAsNew, .showShortcuts]
+                guard combo.modifiers.contains(.command), worksWhileTyping.contains(command) else { return event }
             }
-            return event
+            perform(command)
+            return nil
         }
     }
 }
@@ -260,12 +291,5 @@ enum EditorStatus {
         let width = rep?.pixelsWide ?? Int(image.size.width)
         let height = rep?.pixelsHigh ?? Int(image.size.height)
         return "\(width) \u{00D7} \(height) px"
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func keyboardShortcut(_ shortcut: KeyboardShortcut, enabled: Bool) -> some View {
-        if enabled { keyboardShortcut(shortcut) } else { self }
     }
 }

@@ -32,6 +32,7 @@ struct InfoView: View {
                     Spacer()
                     Button(viewModel.isCheckingUpdate ? "Checking\u{2026}" : "Check Now", action: viewModel.checkForUpdates)
                         .disabled(viewModel.isCheckingUpdate)
+                        .keyboardShortcut(.defaultAction)
                 }
                 .padding(.horizontal, 12)
                 .frame(minHeight: 52)
@@ -57,11 +58,14 @@ struct InfoView: View {
             Text("Made by jokot \u{00B7} MIT License")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .trailing) { ShortcutsButton(scope: .about) }
         }
         .padding(.horizontal, 28)
         .padding(.top, 8)
         .padding(.bottom, 20)
         .frame(width: 340)
+        .shortcutsPanel(.about, title: "About MaClip") { [AboutKeyMap.table.groups()] }
         .onAppear {
             startRefreshTimer()
         }
@@ -114,6 +118,7 @@ struct InfoView: View {
     }
 }
 
+@MainActor
 final class InfoWindowController: NSObject {
     private var window: NSWindow?
 
@@ -134,27 +139,36 @@ final class InfoWindowController: NSObject {
             window.level = .floating
             self.window = window
 
-            // Local monitor: catch Escape or Command+I while Info is key and close
+            // The keys of About, from `AboutKeyMap`, while About is the key window.
             NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                guard let self = self, self.window?.isKeyWindow == true else { return event }
-                if event.keyCode == 53 {   // Escape
-                    self.window?.close()
+                guard let window = self?.window, window.isKeyWindow,
+                      let combo = KeyCombo(event: event) else { return event }
+                let panel = ShortcutsPanelState.shared
+                if panel.isVisible(.about) {
+                    if combo == KeyCombo(.escape) || combo == .command("/") { panel.hide(.about) }
                     return nil
                 }
-                if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "i" {
-                    self.window?.close()
-                    return nil
+                switch AboutKeyMap.table.command(for: combo) {
+                case .close:
+                    panel.hide(.about)
+                    window.close()
+                case .showShortcuts:
+                    panel.toggle(.about)
+                case nil:
+                    return event
                 }
-                return event
+                return nil
             }
         }
         guard let window else { return }
+        ShortcutsPanelState.shared.hide(.about)
         window.center()
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
 }
 
+@MainActor
 enum InfoWindow {
     private static var controller = InfoWindowController()
     static func show() { controller.show() }

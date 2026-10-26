@@ -17,6 +17,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         }
     }
 
+    /// ⌘1 to ⌘4, in the order of the tabs.
+    var shortcut: String {
+        "\u{2318}\((Self.allCases.firstIndex(of: self) ?? 0) + 1)"
+    }
+
     var symbol: String {
         switch self {
         case .general: return "gearshape"
@@ -61,6 +66,13 @@ struct SettingsView: View {
             }
         }
         .frame(width: 640, height: 600)
+        .shortcutsPanel(.settings, title: "Settings",
+                        note: "\u{21E5} reaches every control when Keyboard navigation is on in System Settings \u{2192} Keyboard.") {
+            [SettingsKeyMap.table.groups()]
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsSelectTab)) { note in
+            if let selected = note.object as? SettingsTab { tab = selected }
+        }
         .onAppear { setWindowTitle() }
         .onChange(of: tab) { _ in
             isCapturingHotkey = false
@@ -99,8 +111,11 @@ struct SettingsView: View {
                         Text(item.title)
                             .font(.system(size: 11))
                             .foregroundColor(tab == item ? .primary : .secondary)
+                        Text(item.shortcut)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
                     }
-                    .frame(width: 76, height: 48)
+                    .frame(width: 76, height: 60)
                     .background(
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(tab == item ? Theme.tileFill : Color.clear)
@@ -108,6 +123,7 @@ struct SettingsView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .help("\(item.title) (\(item.shortcut))")
                 .accessibilityLabel(item.title)
                 .accessibilityAddTraits(tab == item ? .isSelected : [])
             }
@@ -115,6 +131,9 @@ struct SettingsView: View {
         .padding(.top, 4)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
+        .overlay(alignment: .trailing) {
+            ShortcutsButton(scope: .settings).padding(.trailing, 12)
+        }
     }
 
     private func setWindowTitle() {
@@ -297,18 +316,15 @@ private struct ShortcutsTab: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("In the clip window")
                     .font(.system(size: 13, weight: .semibold))
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())], spacing: 8) {
-                    keyRow("Move", "\u{2191} \u{2193}")
-                    keyRow("Paste", "\u{21A9}")
-                    keyRow("Preview", "space")
-                    keyRow("Close", "esc")
-                    keyRow("Search", "\u{2318}F")
-                    keyRow("Settings", "\u{2318},")
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                ShortcutColumnsView(columns: ClipKeyMap.listColumns(globalKeys: []))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.hoverFill))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                Text("Press \u{2318}/ in any MaClip window to see its keys. To reach every button and switch with \u{21E5}, turn on Keyboard navigation in System Settings \u{2192} Keyboard.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -329,14 +345,6 @@ private struct ShortcutsTab: View {
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 44)
-    }
-
-    private func keyRow(_ label: String, _ key: String) -> some View {
-        HStack {
-            Text(label).foregroundColor(.secondary)
-            Spacer()
-            KeyLabel(key: key)
-        }
     }
 }
 
@@ -530,6 +538,7 @@ private struct PrivacyTab: View {
                 Button("Restore Defaults\u{2026}") { showingRestoreConfirm = true }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsRemoveSelectedApp)) { _ in removeSelected() }
         .alert("Restore the privacy defaults?", isPresented: $showingRestoreConfirm) {
             Button("Cancel", role: .cancel) { }
             Button("Restore", role: .destructive) {
@@ -613,19 +622,35 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         window.initialFirstResponder = window.contentView
 
-        // Local monitor: catch Escape or Command+, while Settings is key and close
+        // The keys of Settings, from `SettingsKeyMap`, while Settings is the key window.
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self, self.window?.isKeyWindow == true else { return event }
-            if event.keyCode == 53 {   // Escape
-                self.window?.close()
+            guard let self, let window = self.window, window.isKeyWindow,
+                  let combo = KeyCombo(event: event) else { return event }
+            // While a shortcut field records new keys, every key goes to it.
+            if let recorder = window.firstResponder as? HotkeyView, recorder.isCapturing { return event }
+            let panel = ShortcutsPanelState.shared
+            if panel.isVisible(.settings) {
+                if combo == KeyCombo(.escape) || combo == .command("/") { panel.hide(.settings) }
                 return nil
             }
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
-                self.window?.close()
-                return nil
+            switch SettingsKeyMap.table.command(for: combo) {
+            case .tab(let tab):
+                NotificationCenter.default.post(name: .settingsSelectTab, object: tab)
+            case .removeSelectedApp:
+                NotificationCenter.default.post(name: .settingsRemoveSelectedApp, object: nil)
+            case .close:
+                window.close()
+            case .showShortcuts:
+                panel.toggle(.settings)
+            case nil:
+                return event
             }
-            return event
+            return nil
         }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        ShortcutsPanelState.shared.hide(.settings)
     }
 
     required init?(coder: NSCoder) {

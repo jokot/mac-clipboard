@@ -7,6 +7,8 @@ enum Theme {
     /// Indigo, #5E5CE6.
     static let accent = Color(red: 94 / 255, green: 92 / 255, blue: 230 / 255)
     static let selectedFill = accent.opacity(0.22)
+    /// The selected row while the preview has focus.
+    static let inactiveSelectedFill = Color.primary.opacity(0.1)
     static let hoverFill = Color.primary.opacity(0.06)
     static let fieldFill = Color.primary.opacity(0.07)
     static let tileFill = Color.primary.opacity(0.08)
