@@ -270,7 +270,10 @@ final class KeyShortcutsTests: XCTestCase {
         XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.space)))
         XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.left)))
         XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.delete)))
-        XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.down)))
+        XCTAssertFalse(SettingsKeyMap.worksInTextField(KeyCombo(.returnKey)), "↩ in the field applies the number")
+        // A one-line field does nothing with ↑ ↓, so they move the focus, as in the rest of Settings.
+        XCTAssertTrue(SettingsKeyMap.worksInTextField(KeyCombo(.down)))
+        XCTAssertTrue(SettingsKeyMap.worksInTextField(KeyCombo(.up)))
     }
 
     func test_settingsFocusMovesInOrderAndWraps() {

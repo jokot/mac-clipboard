@@ -101,9 +101,13 @@ enum SettingsKeyMap {
             KeyBinding(command: .showShortcuts, label: "This list", group: "Window", keys: [.command("/")], listed: false),
         ])
 
-    /// While the number field has the cursor, the field takes every key except ⇥, ⇧⇥ and ⌘ keys.
+    /// While the number field has the cursor, the field takes every key except ⇥, ⇧⇥, ↑, ↓ and ⌘ keys.
+    /// ↑ and ↓ move the focus, because a one-line field does nothing with them.
     static func worksInTextField(_ combo: KeyCombo) -> Bool {
-        combo.key == .tab || combo.modifiers.contains(.command)
+        switch combo.key {
+        case .tab, .up, .down: return true
+        default: return combo.modifiers.contains(.command)
+        }
     }
 }
 
