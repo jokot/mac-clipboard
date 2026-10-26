@@ -14,8 +14,6 @@ extension Notification.Name {
     static let overlayTogglePreview = Notification.Name("OverlayTogglePreview")
     /// Command-Delete in the clip window: delete the selected clip.
     static let overlayDeleteSelectedItem = Notification.Name("OverlayDeleteSelectedItem")
-    /// Edit… in the preview: the row with this clip id (the object) opens its text editor.
-    static let overlayEditItem = Notification.Name("OverlayEditItem")
 
     // Theme change
     static let themeChanged = Notification.Name("ThemeChanged")

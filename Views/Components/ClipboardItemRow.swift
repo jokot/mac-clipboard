@@ -17,7 +17,8 @@ struct ClipboardItemRow: View {
     var onOpenFile: ((ClipboardItem) -> Void)? = nil
     var onRevealInFinder: ((ClipboardItem) -> Void)? = nil
     var onCopyPath: ((ClipboardItem) -> Void)? = nil
-    var onEdit: ((ClipboardItem, ClipboardItemContent) -> Void)? = nil
+    /// Opens the preview panel in edit mode for a text, link or file clip.
+    var onEdit: ((ClipboardItem) -> Void)? = nil
     var onEditImage: ((ClipboardItem) -> Void)? = nil
     /// Puts the clip on the pasteboard without pasting it.
     var onCopyOnly: ((ClipboardItem) -> Void)? = nil
@@ -25,51 +26,21 @@ struct ClipboardItemRow: View {
     var onPreview: ((ClipboardItem) -> Void)? = nil
 
     @State private var isHovered: Bool = false
-    @State private var isEditing: Bool = false
-    @State private var editText: String = ""
-    @State private var editError: String? = nil
     @State private var revealedUntil: Date? = nil
 
     var body: some View {
-        Group {
-            if isEditing {
-                HStack(alignment: .top, spacing: 12) {
-                    KindTile(systemImage: kindSymbol, tint: kindTint, bundleID: item.sourceBundleID)
-                    EditorView(
-                        text: $editText,
-                        error: $editError,
-                        onCancel: { isEditing = false },
-                        onSave: { commitEdit() }
-                    )
-                }
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.hoverFill))
-            } else {
-                content
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: Theme.rowHeight)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(isSelected ? Theme.selectedFill : (isHovered ? Theme.hoverFill : Color.clear))
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture { onSelect(item) }
-                    .onHover { isHovered = $0 }
-                    .contextMenu { contextMenu }
-            }
-        }
-        .onChange(of: item.id) { _ in
-            isEditing = false
-            editError = nil
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .overlayDidShow)) { _ in
-            isEditing = false
-            editError = nil
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .overlayEditItem)) { note in
-            if (note.object as? UUID) == item.id, canEdit(item.content) { enterEditMode() }
-        }
+        content
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(minHeight: Theme.rowHeight)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? Theme.selectedFill : (isHovered ? Theme.hoverFill : Color.clear))
+            )
+            .contentShape(Rectangle())
+            .onTapGesture { onSelect(item) }
+            .onHover { isHovered = $0 }
+            .contextMenu { contextMenu }
     }
 
     // MARK: - Context menu
@@ -92,8 +63,8 @@ struct ClipboardItemRow: View {
         case .text:
             EmptyView()
         }
-        if canEdit(item.content) {
-            Button("Edit…") { enterEditMode() }
+        if ClipEdit.canEdit(item.content), let onEdit {
+            Button("Edit…") { onEdit(item) }
         } else if case .image = item.content, let onEditImage {
             Button("Edit…") { onEditImage(item) }
         }
@@ -105,62 +76,6 @@ struct ClipboardItemRow: View {
         }
         Button("Delete", role: .destructive) { onRemove() }
             .keyboardShortcut(.delete, modifiers: .command)
-    }
-
-    // MARK: - Edit helpers
-
-    private func canEdit(_ content: ClipboardItemContent) -> Bool {
-        switch content {
-        case .text, .url, .file: return true
-        case .image:             return false
-        }
-    }
-
-    private func enterEditMode() {
-        editText = currentContentAsText(item.content)
-        editError = nil
-        isEditing = true
-    }
-
-    private func currentContentAsText(_ content: ClipboardItemContent) -> String {
-        switch content {
-        case .text(let s):  return s
-        case .url(let u):   return u.absoluteString
-        case .file(let us): return us.map(\.path).joined(separator: "\n")
-        case .image:        return ""
-        }
-    }
-
-    private func commitEdit() {
-        switch item.content {
-        case .text:
-            onEdit?(item, .text(editText))
-            isEditing = false
-        case .url:
-            let trimmed = editText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let u = URL(string: trimmed),
-                  let scheme = u.scheme, !scheme.isEmpty,
-                  let host = u.host, !host.isEmpty else {
-                editError = "Not a valid URL"
-                return
-            }
-            onEdit?(item, .url(u))
-            isEditing = false
-        case .file:
-            let urls = editText
-                .split(whereSeparator: \.isNewline)
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-                .map { URL(fileURLWithPath: $0) }
-            guard !urls.isEmpty else {
-                editError = "Need at least one path"
-                return
-            }
-            onEdit?(item, .file(urls))
-            isEditing = false
-        case .image:
-            isEditing = false
-        }
     }
 
     // MARK: - Content
@@ -303,8 +218,8 @@ struct ClipboardItemRow: View {
         default:
             EmptyView()
         }
-        if canEdit(item.content) {
-            RowActionButton(label: "Edit", systemImage: "pencil") { enterEditMode() }
+        if ClipEdit.canEdit(item.content), let onEdit {
+            RowActionButton(label: "Edit", systemImage: "pencil") { onEdit(item) }
         }
         RowActionButton(label: "Delete (\u{2318}\u{232B})", systemImage: "trash", action: onRemove)
     }
@@ -444,87 +359,3 @@ private enum ColorParser {
         return Color(red: r, green: g, blue: b, opacity: a)
     }
 }
-
-private struct EditorView: View {
-    @Binding var text: String
-    @Binding var error: String?
-    let onCancel: () -> Void
-    let onSave: () -> Void
-    @State private var keyMonitor: Any?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextEditor(text: $text)
-                .font(.body)
-                .frame(minHeight: 76, maxHeight: 240)
-                .padding(4)
-                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color(nsColor: .textBackgroundColor)))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Theme.accent, lineWidth: 1)
-                )
-            if let error = error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-            }
-            HStack(spacing: 8) {
-                Text("esc cancels \u{00B7} \u{2318}\u{21A9} saves")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Cancel", action: onCancel)
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: onSave)
-                    .buttonStyle(AccentButtonStyle())
-                    .keyboardShortcut(.defaultAction)
-            }
-        }
-        // ponytail: local key monitor beats OverlayWindow.escMonitor (newest-first)
-        // so Esc cancels edit instead of closing overlay; Cmd+Return commits save
-        // even though TextEditor swallows plain Return.
-        .onAppear {
-            disableSmartSubstitutions()
-            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                if event.keyCode == 53 { // Escape
-                    onCancel()
-                    return nil
-                }
-                if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Cmd+Return
-                    onSave()
-                    return nil
-                }
-                return event
-            }
-        }
-        .onDisappear {
-            if let m = keyMonitor {
-                NSEvent.removeMonitor(m)
-                keyMonitor = nil
-            }
-        }
-    }
-
-    // ponytail: walk key window for the NSTextView SwiftUI attached and turn off
-    // smart quotes/dashes so JSON edits survive round-trip. Deferred to next tick
-    // because TextEditor's NSTextView isn't in the tree at .onAppear yet.
-    private func disableSmartSubstitutions() {
-        DispatchQueue.main.async {
-            guard let root = NSApp.keyWindow?.contentView else { return }
-            for tv in Self.findTextViews(in: root) {
-                tv.isAutomaticQuoteSubstitutionEnabled = false
-                tv.isAutomaticDashSubstitutionEnabled = false
-                tv.isAutomaticTextReplacementEnabled = false
-                tv.smartInsertDeleteEnabled = false
-            }
-        }
-    }
-
-    private static func findTextViews(in view: NSView) -> [NSTextView] {
-        var result: [NSTextView] = []
-        if let tv = view as? NSTextView { result.append(tv) }
-        for sub in view.subviews { result.append(contentsOf: findTextViews(in: sub)) }
-        return result
-    }
-}
-

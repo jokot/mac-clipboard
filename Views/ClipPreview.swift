@@ -40,7 +40,58 @@ enum ClipPreviewInfo {
     }
 }
 
+/// The text in the editor for a text, link or file clip, and the clip that the edited text makes.
+enum ClipEdit {
+    enum Outcome {
+        case save(ClipboardItemContent)
+        /// The text does not make a clip of the same kind. The message tells why.
+        case invalid(String)
+    }
+
+    static func canEdit(_ content: ClipboardItemContent) -> Bool {
+        if case .image = content { return false }
+        return true
+    }
+
+    /// A link as its address, files as one path on each line.
+    static func text(for content: ClipboardItemContent) -> String {
+        switch content {
+        case .text(let s):  return s
+        case .url(let u):   return u.absoluteString
+        case .file(let us): return us.map(\.path).joined(separator: "\n")
+        case .image:        return ""
+        }
+    }
+
+    /// Text is saved as typed. A link must have a scheme and a host. Files need one path or more.
+    static func outcome(of text: String, editing original: ClipboardItemContent) -> Outcome {
+        switch original {
+        case .text:
+            return .save(.text(text))
+        case .url:
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let u = URL(string: trimmed),
+                  let scheme = u.scheme, !scheme.isEmpty,
+                  let host = u.host, !host.isEmpty else {
+                return .invalid("Not a valid URL")
+            }
+            return .save(.url(u))
+        case .file:
+            let urls = text
+                .split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .map { URL(fileURLWithPath: $0) }
+            guard !urls.isEmpty else { return .invalid("Need at least one path") }
+            return .save(.file(urls))
+        case .image:
+            return .invalid("Edit an image in the image editor")
+        }
+    }
+}
+
 /// The panel beside the clip window that shows one clip in full. Space opens and closes it.
+/// In edit mode, the panel shows the clip in a text editor with Cancel and Save.
 struct ClipPreviewView: View {
     let item: ClipboardItem
     var loadImageData: (URL) -> Data?
@@ -48,6 +99,9 @@ struct ClipPreviewView: View {
     let onCopyOnly: () -> Void
     let onEdit: () -> Void
     let onClose: () -> Void
+    var isEditing: Bool = false
+    var onSave: (ClipboardItemContent) -> Void = { _ in }
+    var onCancelEdit: () -> Void = {}
 
     @State private var image: NSImage?
     @State private var isRevealed = false
@@ -76,18 +130,24 @@ struct ClipPreviewView: View {
             .padding(.top, 14)
             .padding(.bottom, 10)
 
-            body(for: item)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            if isEditing && ClipEdit.canEdit(item.content) {
+                // A new id for each clip, so the editor starts from the text of this clip.
+                ClipEditorView(item: item, onCancel: onCancelEdit, onSave: onSave)
+                    .id(item.id)
+            } else {
+                body(for: item)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-            HStack(spacing: 8) {
-                Button("Edit\u{2026}", action: onEdit)
-                Button("Copy Only", action: onCopyOnly)
-                Spacer()
-                Button("Paste", action: onPaste)
-                    .buttonStyle(AccentButtonStyle())
+                HStack(spacing: 8) {
+                    Button("Edit\u{2026}", action: onEdit)
+                    Button("Copy Only", action: onCopyOnly)
+                    Spacer()
+                    Button("Paste", action: onPaste)
+                        .buttonStyle(AccentButtonStyle())
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
         .frame(width: 408)
         .ignoresSafeArea(.container, edges: .top)
@@ -186,5 +246,111 @@ struct ClipPreviewView: View {
         case .memory(let image): return image
         case .file(let url): return loadImageData(url).flatMap(NSImage.init(data:))
         }
+    }
+}
+
+/// The edit mode of the preview panel. Esc cancels and Command-Return saves.
+private struct ClipEditorView: View {
+    let item: ClipboardItem
+    let onCancel: () -> Void
+    let onSave: (ClipboardItemContent) -> Void
+
+    @State private var text: String
+    @State private var error: String?
+    @State private var keyMonitor: Any?
+
+    init(item: ClipboardItem, onCancel: @escaping () -> Void, onSave: @escaping (ClipboardItemContent) -> Void) {
+        self.item = item
+        self.onCancel = onCancel
+        self.onSave = onSave
+        _text = State(initialValue: ClipEdit.text(for: item.content))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TextEditor(text: $text)
+                .font(isCode ? .system(size: 12, design: .monospaced) : .body)
+                .padding(6)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(nsColor: .textBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Theme.accent, lineWidth: 1))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 16)
+
+            if let error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
+
+            HStack(spacing: 8) {
+                Text("esc cancels \u{00B7} \u{2318}\u{21A9} saves")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Cancel", action: onCancel)
+                Button("Save", action: save)
+                    .buttonStyle(AccentButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        // ponytail: a local key monitor runs before OverlayWindow.escMonitor (newest first),
+        // so Esc cancels the edit and does not close the clip window. Command-Return saves,
+        // because TextEditor takes a plain Return.
+        .onAppear {
+            prepareTextView()
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                if event.keyCode == 53 { // Escape
+                    onCancel()
+                    return nil
+                }
+                if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Command-Return
+                    save()
+                    return nil
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+            keyMonitor = nil
+        }
+    }
+
+    private var isCode: Bool {
+        let tag = ContentTagDetector.primaryTag(for: item)
+        return tag == .code || tag == .json || tag == .diff
+    }
+
+    private func save() {
+        switch ClipEdit.outcome(of: text, editing: item.content) {
+        case .save(let content): onSave(content)
+        case .invalid(let message): error = message
+        }
+    }
+
+    // ponytail: TextEditor's NSTextView is not in the view tree at onAppear, so wait one
+    // tick. Then put the cursor in it, and turn off smart quotes and dashes, so a JSON
+    // edit keeps its quotes. The panel is the key window by then.
+    private func prepareTextView() {
+        DispatchQueue.main.async {
+            guard let window = NSApp.keyWindow, let root = window.contentView,
+                  let textView = Self.findTextView(in: root) else { return }
+            textView.isAutomaticQuoteSubstitutionEnabled = false
+            textView.isAutomaticDashSubstitutionEnabled = false
+            textView.isAutomaticTextReplacementEnabled = false
+            textView.smartInsertDeleteEnabled = false
+            window.makeFirstResponder(textView)
+        }
+    }
+
+    private static func findTextView(in view: NSView) -> NSTextView? {
+        if let textView = view as? NSTextView, textView.isEditable { return textView }
+        for sub in view.subviews {
+            if let found = findTextView(in: sub) { return found }
+        }
+        return nil
     }
 }

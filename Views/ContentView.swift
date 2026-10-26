@@ -9,6 +9,8 @@ struct ContentView: View {
     var onSelect: (ClipboardItem) -> Void = { _ in }
     var onOpenSettings: () -> Void = {}
     var onEditImage: (ClipboardItem, NSImage) -> Void = { _, _ in }
+    /// Opens the preview of a text, link or file clip in edit mode.
+    var onEdit: (ClipboardItem) -> Void = { _ in }
     /// Opens the preview for a clip. `onTogglePreview` opens or closes it for the selected clip.
     var onPreview: (ClipboardItem) -> Void = { _ in }
     var onTogglePreview: (ClipboardItem) -> Void = { _ in }
@@ -31,6 +33,7 @@ struct ContentView: View {
          onSelect: @escaping (ClipboardItem) -> Void = { _ in },
          onOpenSettings: @escaping () -> Void = {},
          onEditImage: @escaping (ClipboardItem, NSImage) -> Void = { _, _ in },
+         onEdit: @escaping (ClipboardItem) -> Void = { _ in },
          onPreview: @escaping (ClipboardItem) -> Void = { _ in },
          onTogglePreview: @escaping (ClipboardItem) -> Void = { _ in },
          onSelectionChange: @escaping (ClipboardItem?) -> Void = { _ in }) {
@@ -38,6 +41,7 @@ struct ContentView: View {
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
         self.onEditImage = onEditImage
+        self.onEdit = onEdit
         self.onPreview = onPreview
         self.onTogglePreview = onTogglePreview
         self.onSelectionChange = onSelectionChange
@@ -390,8 +394,9 @@ struct ContentView: View {
                             onOpenFile: { item in openFile(item) },
                             onRevealInFinder: { item in revealInFinder(item) },
                             onCopyPath: { item in copyFilePath(item) },
-                            onEdit: { item, newContent in
-                                viewModel.replaceContent(of: item, with: newContent)
+                            onEdit: { item in
+                                selectedIndex = index
+                                onEdit(item)
                             },
                             onEditImage: { item in
                                 openImageEditor(for: item)
