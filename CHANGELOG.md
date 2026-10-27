@@ -3,6 +3,19 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [2.2.0](https://github.com/jokot/mac-clipboard/compare/v2.1.0...v2.2.0) (2026-10-27)
+
+
+### Features
+
+* **clip-window:** Esc ends the edit, closes the preview and clears the search before it closes the window ([3a239a7](https://github.com/jokot/mac-clipboard/commit/3a239a7186ad9617184cff732692c6b487d04dc5))
+* **clip-window:** move the focus between the list and the preview with ← and → ([3a239a7](https://github.com/jokot/mac-clipboard/commit/3a239a7186ad9617184cff732692c6b487d04dc5))
+* **clip-window:** show the actions of the selected clip with ⌘K ([3a239a7](https://github.com/jokot/mac-clipboard/commit/3a239a7186ad9617184cff732692c6b487d04dc5))
+* **image-editor:** select the tools with C A R O T P X, and save with ⌘S ([3a239a7](https://github.com/jokot/mac-clipboard/commit/3a239a7186ad9617184cff732692c6b487d04dc5))
+* **settings:** add an Appearance tab with accent colors and a live preview ([#50](https://github.com/jokot/mac-clipboard/issues/50)) ([c855de7](https://github.com/jokot/mac-clipboard/commit/c855de7e3619a7176152b72532142c3be3df7e7e))
+* **settings:** select the tabs with ⌘1 to ⌘4 ([3a239a7](https://github.com/jokot/mac-clipboard/commit/3a239a7186ad9617184cff732692c6b487d04dc5))
+* use every MaClip window with the keyboard, and see the keys of each window with ⌘/ ([3a239a7](https://github.com/jokot/mac-clipboard/commit/3a239a7186ad9617184cff732692c6b487d04dc5))
+
 ## [2.1.0](https://github.com/jokot/mac-clipboard/compare/v2.0.1...v2.1.0) (2026-10-26)
 
 
