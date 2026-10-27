@@ -3,6 +3,13 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [2.2.1](https://github.com/jokot/mac-clipboard/compare/v2.2.0...v2.2.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **image-editor:** put the edited image on the clipboard after Save ([#53](https://github.com/jokot/mac-clipboard/issues/53)) ([7468711](https://github.com/jokot/mac-clipboard/commit/7468711f6cc163b83d096204562eba38140d62b6))
+
 ## [2.2.0](https://github.com/jokot/mac-clipboard/compare/v2.1.0...v2.2.0) (2026-10-27)
 
 
