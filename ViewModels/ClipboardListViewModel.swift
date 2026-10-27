@@ -255,6 +255,8 @@ final class ClipboardListViewModel: ObservableObject {
         applyMaxItems(AppSettings.shared.maxItems)
         repository.saveToDiskAsync(items: items)
         ContentTagDetector.clearCache()
+        // ⌘V in another app then pastes the edited image, not the image before the edit.
+        setPasteboard(to: item)
         return true
     }
 
@@ -265,10 +267,12 @@ final class ClipboardListViewModel: ObservableObject {
         guard let url = repository.saveImage(pngData: pngData) else { return false }
         let newImg = ImageContent(source: .file(url), cachedText: nil, cachedId: nil, cachedBarcode: nil)
         let oldContent = item.content
-        guard replaceContent(of: item, with: .image(newImg)) != nil else {
+        guard let updated = replaceContent(of: item, with: .image(newImg)) else {
             repository.deleteImage(at: url)
             return false
         }
+        // ⌘V in another app then pastes the edited image, not the image before the edit.
+        setPasteboard(to: updated)
         // Clean up prior encrypted file if it was file-backed and different.
         if case .image(let old) = oldContent,
            case .file(let oldURL) = old.source,

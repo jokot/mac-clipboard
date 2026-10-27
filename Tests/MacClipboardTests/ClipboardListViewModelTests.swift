@@ -82,6 +82,73 @@ final class ClipboardListViewModelTests: XCTestCase {
         XCTAssertEqual(pasted?.first?.path, url.path)
     }
 
+    /// A PNG of `width` × 1 pixels.
+    private func png(width: Int) -> Data {
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: 1, bitsPerSample: 8,
+                                   samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                   bytesPerRow: 0, bitsPerPixel: 32)!
+        return rep.representation(using: .png, properties: [:])!
+    }
+
+    /// The width in pixels of the image on the clipboard.
+    private func clipboardImageWidth() -> Int? {
+        guard let data = NSPasteboard.general.data(forType: .tiff) else { return nil }
+        return NSBitmapImageRep(data: data)?.pixelsWide
+    }
+
+    /// Runs `body` and gives the person's clipboard back after it.
+    private func keepingTheClipboard(_ body: () -> Void) {
+        let pasteboard = NSPasteboard.general
+        let saved = (pasteboard.pasteboardItems ?? []).map { item -> NSPasteboardItem in
+            let copy = NSPasteboardItem()
+            for type in item.types { if let data = item.data(forType: type) { copy.setData(data, forType: type) } }
+            return copy
+        }
+        defer {
+            pasteboard.clearContents()
+            pasteboard.writeObjects(saved)
+        }
+        body()
+    }
+
+    @MainActor
+    func test_saveEditedImagePutsTheEditedImageOnTheClipboard() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let monitor = MockMonitor()
+        let original = ClipboardItem(date: Date(), content: .image(ImageContent(source: .file(repo.saveImage(pngData: png(width: 3))!))))
+        repo.savedItems = [original]
+        let vm = ClipboardListViewModel(repository: repo, monitor: monitor)
+
+        keepingTheClipboard {
+            vm.setPasteboard(to: original)
+            XCTAssertEqual(clipboardImageWidth(), 3)
+            let ignoredBefore = monitor.ignoreCallCount
+
+            XCTAssertTrue(vm.saveEditedImage(replacing: original, pngData: png(width: 7)))
+
+            XCTAssertEqual(clipboardImageWidth(), 7, "⌘V pastes the edited image")
+            XCTAssertEqual(monitor.ignoreCallCount, ignoredBefore + 1, "the edited image does not come back as a new clip")
+        }
+    }
+
+    @MainActor
+    func test_saveAsNewPutsTheNewImageOnTheClipboard() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        let original = ClipboardItem(date: Date(), content: .image(ImageContent(source: .file(repo.saveImage(pngData: png(width: 3))!))))
+        repo.savedItems = [original]
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        keepingTheClipboard {
+            XCTAssertTrue(vm.insertImage(pngData: png(width: 9), from: original))
+            XCTAssertEqual(clipboardImageWidth(), 9)
+            XCTAssertEqual(vm.items.count, 2)
+        }
+    }
+
     @MainActor
     func test_setPasteboard_callsIgnoreCurrentChangeCountOnce() {
         let repo = MockRepo()
