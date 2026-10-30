@@ -1,6 +1,6 @@
 # MaClip: open tasks
 
-Last update: 2026-10-25. Latest release: v1.13.0 (build 18).
+Last update: 2026-10-30. Latest release: v2.2.1.
 
 Older lists: `docs/superpowers/todo-1.11.0.md` (archived).
 
@@ -16,17 +16,9 @@ These steps need a person. They show macOS dialogs or need System Settings.
 
 ## 2. Landing page at maclip.jokot.dev
 
-Goal: one public page for MaClip at `https://maclip.jokot.dev`.
+The page is live at `https://maclip.jokot.dev` on Cloudflare Pages. The Download button downloads `MaClip.dmg` from the latest release.
 
-- [ ] Write the page: what MaClip does, screenshots or the demo video from the README, the feature list, and a download button.
-- [ ] The download button opens the newest DMG. Use `https://github.com/jokot/mac-clipboard/releases/latest`, so the page does not change for each release.
-- [ ] Show the install steps ("Open Anyway" and the `xattr` command). MaClip is not notarized, so each new user sees the Gatekeeper dialog.
-- [ ] Choose the host. Both are free for a static page:
-  - GitHub Pages from this repository, for example from a `site/` folder with a workflow.
-  - Cloudflare Pages. The DNS of `jokot.dev` is already on Cloudflare (`kristin.ns.cloudflare.com`, `walt.ns.cloudflare.com`).
-- [ ] Add the DNS record for `maclip.jokot.dev` in Cloudflare. GitHub Pages needs a CNAME record to `jokot.github.io`. Cloudflare Pages adds its record when you connect the domain.
-- [ ] Turn on HTTPS for the domain, and check `https://maclip.jokot.dev` on a phone and on a Mac.
-- [ ] Add the link to the README and to the GitHub repository "Website" field.
+- [ ] Add `https://maclip.jokot.dev` to the GitHub repository "Website" field.
 
 ## 3. Code
 
@@ -43,6 +35,31 @@ Goal: one public page for MaClip at `https://maclip.jokot.dev`.
 ## 5. Later
 
 - [ ] GitHub shows that `googleapis/release-please-action@v4` uses Node 20, which is deprecated. The action still works. Update the action when a version for Node 24 is available.
+
+## 6. Features for IT people
+
+Goal: make MaClip the clipboard app for developers and IT people. Make a design before each feature, and send each feature as a separate PR.
+
+### First: in this order
+
+- [ ] **Secret detection.** Find secrets in text clips: AWS keys (`AKIA…`), GitHub tokens (`ghp_…`, `github_pat_…`), Slack tokens (`xox…`), JWTs, private key blocks (`-----BEGIN … PRIVATE KEY-----`) and `.env` lines such as `API_KEY=…`. Hide these clips in the list and delete them automatically after some minutes, as MaClip does for concealed clips. Add a switch in Settings → Privacy.
+- [ ] **Transform actions in ⌘K.** Format or minify JSON. Encode or decode Base64 and URL text. Decode a JWT and show the header, the payload and the expiry date. Convert a Unix time to an ISO date and back. Change the case. Sort lines and remove repeated lines. Remove spaces at the start and end. Paste the result, or save it as a new clip.
+- [ ] **Pinned clips and snippets.** Pin a clip, for example an SSH command, an IP address, a kubectl command or an SQL query. Pinned clips stay at the top, and the "Keep up to" limit does not delete them. Give a pinned clip a short keyword to find it.
+- [ ] **Safe paste into a terminal.** When the target app is Terminal, iTerm or another terminal, remove a `$ ` prompt at the start of a command. Remove the last newline, so that the command does not run before you press Return. Show a warning before MaClip pastes more than 1 line.
+
+### Second
+
+- [ ] **More content tags:** `tag:ip`, `tag:uuid`, `tag:hash`, `tag:timestamp`, `tag:sql`, `tag:shell`, `tag:path` and `tag:log` (stack traces and log lines).
+- [ ] **Better previews.** Code with syntax colors and the name of the language. JSON as a tree. A diff with colors. A timestamp as a date. An IP or CIDR clip with its range. A cron expression with its next run times.
+- [ ] **Compare two clips.** Select two clips and show the diff of the two texts, for example two config files or two API responses.
+- [ ] **Paste queue.** Copy some values, then paste them in order with one key, for example to fill a form.
+- [ ] **`maclip` command-line tool.** `cat log.txt | maclip` adds a clip. `maclip get 3` prints clip 3. `maclip search "kubectl"` finds clips.
+
+### Later
+
+- [ ] **Snippet templates.** A snippet such as `ssh {{user}}@{{host}}`. MaClip asks for each value when you paste it.
+- [ ] **Open in an editor.** Open a clip in VS Code or Xcode, or save it as a file, from ⌘K.
+- [ ] **Sync between Macs.** Not now: the history can contain secrets, so this feature needs a careful design.
 
 ## Done on 2026-10-25
 
