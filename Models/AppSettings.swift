@@ -70,6 +70,11 @@ final class AppSettings: ObservableObject {
     @Published var autoDismissOverlayTimeout: TimeInterval {
         didSet { AppEnvironment.defaults.set(autoDismissOverlayTimeout, forKey: Keys.autoDismissOverlayTimeout) }
     }
+    /// On by default: the clip window closes when another app comes to the front,
+    /// for example after a click outside MaClip's windows.
+    @Published var closeOnClickOutside: Bool {
+        didSet { AppEnvironment.defaults.set(closeOnClickOutside, forKey: Keys.closeOnClickOutside) }
+    }
     /// Off by default. When on, MaClip reads a key from the login Keychain, and macOS
     /// can ask for the password after each update. Change it with
     /// `ClipboardListViewModel.setHistoryEncryption(_:)`, which also converts the saved history.
@@ -116,6 +121,7 @@ final class AppSettings: ObservableObject {
         static let concealedClearTimeout = "settings.concealedClearTimeout"
         static let autoDismissOverlayEnabled = "settings.autoDismissOverlay.enabled"
         static let autoDismissOverlayTimeout = "settings.autoDismissOverlay.timeout"
+        static let closeOnClickOutside = "settings.closeOnClickOutside"
         static let encryptHistory = "settings.encryptHistory"
         static let encryptedHistoryNoticeDismissed = "settings.encryptedHistoryNoticeDismissed"
         static let extractTextEnabled = "settings.extractTextHotkey.enabled"
@@ -212,6 +218,7 @@ final class AppSettings: ObservableObject {
         moveTopOnClick = true
         autoDismissOverlayEnabled = true
         autoDismissOverlayTimeout = 20
+        closeOnClickOutside = true
         hotkeyKeyCode = Self.defaultHotkeyKeyCode
         hotkeyModifiers = Self.defaultHotkeyModifiers
         extractTextHotkeyEnabled = true
@@ -280,6 +287,7 @@ final class AppSettings: ObservableObject {
         self.moveTopOnClick = initialMoveTopOnClick
         self.autoDismissOverlayEnabled = initialAutoDismissEnabled
         self.autoDismissOverlayTimeout = initialAutoDismissTimeout
+        self.closeOnClickOutside = defaults.object(forKey: Keys.closeOnClickOutside) as? Bool ?? true
         self.encryptHistory = initialEncryptHistory
         self.encryptedHistoryNoticeDismissed = initialNoticeDismissed
         self.extractTextHotkeyEnabled = defaults.object(forKey: Keys.extractTextEnabled) as? Bool ?? true
