@@ -3,6 +3,13 @@
 All notable changes to MaClip. Versions 1.11.0 and later are written by
 release-please from the commit messages.
 
+## [2.3.0](https://github.com/jokot/mac-clipboard/compare/v2.2.1...v2.3.0) (2026-11-15)
+
+
+### Features
+
+* **clip-window:** close the window on a click outside MaClip ([#55](https://github.com/jokot/mac-clipboard/issues/55)) ([079cf24](https://github.com/jokot/mac-clipboard/commit/079cf2471697b4e1c260e5e4a4208898892c2e98))
+
 ## [2.2.1](https://github.com/jokot/mac-clipboard/compare/v2.2.0...v2.2.1) (2026-10-27)
 
 
