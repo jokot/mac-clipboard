@@ -10,6 +10,7 @@ final class AppSettingsTests: XCTestCase {
     private let concealedTimeoutKey = "settings.concealedClearTimeout"
     private let autoDismissEnabledKey = "settings.autoDismissOverlay.enabled"
     private let autoDismissTimeoutKey = "settings.autoDismissOverlay.timeout"
+    private let closeOnClickOutsideKey = "settings.closeOnClickOutside"
 
     private static let seedExclusions: Set<String> = [
         "com.agilebits.onepassword7",
@@ -192,6 +193,19 @@ final class AppSettingsTests: XCTestCase {
         AppEnvironment.defaults.removeObject(forKey: autoDismissTimeoutKey)
     }
 
+    func test_closeOnClickOutsideDefaultTrue() {
+        AppEnvironment.defaults.removeObject(forKey: closeOnClickOutsideKey)
+        let value = AppEnvironment.defaults.object(forKey: closeOnClickOutsideKey) as? Bool ?? true
+        XCTAssertTrue(value)
+    }
+
+    func test_closeOnClickOutsidePersists() {
+        AppSettings.shared.closeOnClickOutside = false
+        XCTAssertEqual(AppEnvironment.defaults.object(forKey: closeOnClickOutsideKey) as? Bool, false)
+        AppSettings.shared.closeOnClickOutside = true
+        AppEnvironment.defaults.removeObject(forKey: closeOnClickOutsideKey)
+    }
+
     func test_restorePrivacyDefaultsResetsAllFour() {
         AppSettings.shared.excludedBundleIDs = ["com.foo.bar"]
         AppSettings.shared.skipConcealedItems = true
@@ -226,6 +240,7 @@ final class RestoreDefaultSettingsTests: XCTestCase {
         s.moveTopOnClick = false
         s.autoDismissOverlayEnabled = false
         s.autoDismissOverlayTimeout = 60
+        s.closeOnClickOutside = false
         s.hotkeyKeyCode = 1
         s.extractTextHotkeyEnabled = false
         s.extractCodeKeyCode = 2
@@ -243,6 +258,7 @@ final class RestoreDefaultSettingsTests: XCTestCase {
         XCTAssertTrue(s.moveTopOnClick)
         XCTAssertTrue(s.autoDismissOverlayEnabled)
         XCTAssertEqual(s.autoDismissOverlayTimeout, 20, accuracy: 0.001)
+        XCTAssertTrue(s.closeOnClickOutside)
         XCTAssertEqual(s.hotkeyKeyCode, AppSettings.defaultHotkeyKeyCode)
         XCTAssertEqual(s.hotkeyModifiers, AppSettings.defaultHotkeyModifiers)
         XCTAssertTrue(s.extractTextHotkeyEnabled)

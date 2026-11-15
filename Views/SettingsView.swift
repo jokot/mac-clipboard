@@ -269,6 +269,10 @@ private struct GeneralTab: View {
             }
 
             SettingsSection(title: "Clip window") {
+                SettingsRow(title: "Close on click outside", caption: "Close the window when you click another app or switch to it.") {
+                    SettingsSwitch(label: "Close on click outside", isOn: $settings.closeOnClickOutside)
+                        .settingsFocus("closeOnClickOutside", toggle: $settings.closeOnClickOutside)
+                }
                 SettingsRow(title: "Close when idle", caption: "Close the window when you do not type, click or scroll in it.") {
                     SettingsSwitch(label: "Close when idle", isOn: $settings.autoDismissOverlayEnabled)
                         .settingsFocus("closeWhenIdle", toggle: $settings.autoDismissOverlayEnabled)

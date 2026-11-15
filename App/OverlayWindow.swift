@@ -32,6 +32,8 @@ final class OverlayWindowController: NSObject {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(closeRequested), name: .overlayCloseRequested, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged), name: .themeChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(appDidResignActive),
+                                               name: NSApplication.didResignActiveNotification, object: nil)
         // A click on the preview gives it focus. The search field then gives up the text cursor,
         // so typed letters do not go into the search behind the preview.
         paneObserver = windowState.$pane.sink { [weak self] pane in
@@ -235,6 +237,16 @@ final class OverlayWindowController: NSObject {
 
     @objc private func closeRequested() {
         hideImmediatelyRefocusOnly()
+    }
+
+    /// A click outside MaClip's windows, ⌘Tab or a click in the Dock brings another app
+    /// to the front. Close the clip window and leave that app in front, without a paste.
+    /// A click in the preview, the action menu, Settings or About keeps MaClip in front,
+    /// so the window stays open.
+    @objc private func appDidResignActive() {
+        guard AppSettings.shared.closeOnClickOutside, isVisible else { return }
+        autoPastePending = false
+        tearDown()
     }
 
     private func openSettings() {
