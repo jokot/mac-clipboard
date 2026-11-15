@@ -1,14 +1,14 @@
-# Secret Detection Implementation Plan
+# Secret Detection and Secret Actions Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** MaClip finds API keys, tokens and private keys in copied text and handles them as concealed clips, with the kind on the row, "Not a Secret", `tag:secret`, and "Find Secrets in History…".
+**Goal:** MaClip finds API keys, tokens and private keys in copied text and handles them as concealed clips, with the kind on the row, "Not a Secret", `tag:secret`, and "Find Secrets in History…". Each kind of secret also gets its own ⌘K actions, such as Copy Masked, the JWT decoder and Copy Public Key, and a facts list in the preview.
 
-**Architecture:** A pure detector (`SecretDetector`) and a pure capture decision (`SecretCapture`) hold all the rules, so tests cover them without a pasteboard. `ClipboardItem` gets `secretKind` and `secretDismissed`. The repository saves them as optional fields. The view model owns the "same text again" rule, "Not a Secret" and the history scan. The views only show the result.
+**Architecture:** A pure detector (`SecretDetector`) and a pure capture decision (`SecretCapture`) hold all the detection rules, so tests cover them without a pasteboard. `ClipboardItem` gets `secretKind` and `secretDismissed`. The repository saves them as optional fields. The view model owns the "same text again" rule, "Not a Secret", the history scan and the copy results. The actions come from pure helpers: `SecretMask`, `SecretExport`, `JWTDecoder`, `PrivateKeyInspector`, `SecretFacts` and `SecretActions`. The views only show the results.
 
-**Tech Stack:** Swift 5, SwiftUI and AppKit, macOS 13+, XCTest. No new packages.
+**Tech Stack:** Swift 5, SwiftUI and AppKit, macOS 13+, CryptoKit, Security, XCTest. No new packages.
 
-**Spec:** `docs/superpowers/specs/2026-10-30-secret-detection-design.md`. Design canvas: https://claude.ai/artifact/REhTjHvSy9VkLAUrrGrAgS (artboards "Clip window — secrets", "Clip window — secret preview", "Settings — Privacy", "Secrets in history — messages").
+**Spec:** `docs/superpowers/specs/2026-10-30-secret-detection-design.md`. Design canvas: https://claude.ai/artifact/REhTjHvSy9VkLAUrrGrAgS (artboards "Clip window — secrets", "Clip window — secret preview", "Clip window — JWT", "Clip window — private key", "Secret actions — menus by kind", "Settings — Privacy", "Secrets in history — messages").
 
 ## Global Constraints
 
@@ -19,7 +19,10 @@
 - A hidden secret never shows its value in a row, the preview, a menu, a help tag or an accessibility label.
 - Detection reads at most the first 65,536 characters of a clip.
 - Copy: sentence case for row titles, title case for buttons and menu items. Exact strings come from the spec.
-- Branch `feat/secret-detection`. One PR, title `feat: find secrets in copied text and hide them`, squash merge.
+- **Test keys are made at run time.** CryptoKit keys, `SecKeyCreateRandomKey` with `kSecAttrIsPermanent: false` (never the keychain), and `-----BEGIN` lines joined from parts. The one fixed key is the public RFC 8032 test 1 key.
+- **No network.** "Open Key Page" opens a fixed URL that does not contain the secret. Nothing else leaves the Mac.
+- A copy action that holds the secret makes a concealed clip. All copy actions go through one view model method (Task 12).
+- Branch `feat/secret-detection`. One PR, title `feat: find secrets in copied text, hide them, and add actions for each kind`, squash merge.
 
 ## Review Focus
 
@@ -28,6 +31,9 @@
 3. **A text clip that becomes a link clip.** `ClipboardMonitor` turns text such as `https://user:pass@host` into a URL clip. Detection must check the text before that change. Task 4 tests the decision for both paths.
 4. **A token already in the history.** The user copies a token that is in the history as a normal clip. The earlier clip must become hidden. Task 5 tests it.
 5. **Old history files.** A `history.json` without the new keys loads, and an unknown `secretKind` value loads as no kind. Task 2 tests both.
+6. **A copy action that leaks the secret.** Copy Value Only, Copy Password Only and the format actions must make concealed clips. A mask with a mistake must also not leak: the result goes through the detector again. Task 12 tests each path.
+7. **Bad input to the key reader.** The DER and OpenSSH readers check each length before they read. Task 10 sends random bytes in a valid key block and expects no crash.
+8. **Overlapping matches.** `export GITHUB_TOKEN="ghp_…"` matches the GitHub rule and the keyValue rule. The mask must hide the token once, with the GitHub prefix. Task 7 tests it.
 
 ---
 
@@ -263,11 +269,218 @@ func test_countTextUsesSingularAndPlural() {
   ``` Check by hand: copy a built token from Terminal (`printf 'ghp_%s' $(printf 'a%.0s' {1..36}) | pbcopy`), open the clip window, see the hidden row with "GitHub token"; ⌘K → Not a Secret shows the text; Settings → Privacy → Find Secrets in History… shows the alert.
 - [ ] **Step 5: Commit** `feat(secrets): show the kind of secret and add the Secrets settings`.
 
-### Task 7: Docs and PR
+### Task 7: Find each secret and mask it
 
 **Files:**
-- Modify: `README.md` (Features list), `docs/superpowers/todo.md` (section 6: mark secret detection done when merged)
+- Modify: `Utilities/SecretDetector.swift`
+- Create: `Utilities/SecretMask.swift`
+- Test: `Tests/MacClipboardTests/SecretMaskTests.swift`
 
-- [ ] **Step 1:** Add to README Features, after the concealed line: "Find API keys, tokens and private keys in copied text. MaClip hides them as concealed clips. Search with `tag:secret`."
-- [ ] **Step 2:** Run the full suite. Expected: PASS.
-- [ ] **Step 3: Commit** `docs: describe secret detection in the README`, push `feat/secret-detection`, open the PR.
+**Interfaces:**
+- Consumes: `SecretKind`, the rules of Task 1.
+- Produces:
+  - `struct SecretMatch: Equatable { let kind: SecretKind; let range: Range<String.Index>; let value: String; let key: String? }`. `range` is the secret part of the spec. `value` is the full credential. `key` is set for `keyValue` only.
+  - `SecretDetector.matches(in text: String, limit: Int? = 65_536) -> [SecretMatch]`: all matches of all rules, sorted by start. When two matches overlap, the match of the earlier rule stays and the other goes. `nil` checks the whole text.
+  - `SecretDetector.mainMatch(in text: String, kind: SecretKind) -> SecretMatch?`: the first match of that kind, in the whole text.
+  - `SecretMask.masked(_ text: String) -> String` and `SecretMask.redacted(_ text: String) -> String`. Both check the whole text.
+  - `SecretMask.hasOtherText(_ text: String) -> Bool`: true when the text has non-space characters outside its secret parts and keys.
+
+- [ ] **Step 1: Write the failing tests.** Build all tokens at run time.
+  - `test_masksATokenWithItsPrefixAndLastFour`: `"ghp_" + 32 × "a" + "a1b2"` → `"ghp_••••a1b2"`.
+  - `test_hidesTheTailOfAShortSecret`: `DB_PASSWORD=s3cr3t-Pa55w0rd` → `DB_PASSWORD=••••`.
+  - `test_masksOnlyThePasswordOfALink`: `postgres://admin:hunter22@db.local:5432/app` → `postgres://admin:••••@db.local:5432/app`.
+  - `test_masksOnlyTheLastPartOfAWebhook`: the Slack webhook of Task 1 → the link up to `B000/`, then `••••` and the last 4.
+  - `test_aPrivateKeyBecomesALabel`: a block from `-----BEGIN` to `-----END … PRIVATE KEY-----` inside other text → `[Private key]` in the same place.
+  - `test_overlapUsesTheEarlierRule`: `export GITHUB_TOKEN="ghp_…a1b2"` → `export GITHUB_TOKEN="ghp_••••a1b2"`, one mask only.
+  - `test_redactsEachSecretInALog`: a 3-line log with a GitHub token and a Stripe key → `[REDACTED GitHub token]` and `[REDACTED Stripe key]`, other text unchanged.
+  - `test_masksASecretAfterTheDetectionLimit`: 70,000 spaces, then a token → the token is masked.
+  - `test_normalTextIsUnchanged`: each text of `test_normalDeveloperTextIsNotASecret` → the same text.
+  - `test_hasOtherText`: a token only → false. `"token: " + token + "\nstatus 401"` → true. `DB_PASSWORD=…` → false.
+  - `test_matchValues`: the Slack webhook match has `value` = the whole link. The link password match has `value` = the whole link and `range` = the password. The keyValue match has `key == "DB_PASSWORD"`.
+- [ ] **Step 2: Run the tests.** Expected: build FAIL, no `SecretMatch`.
+- [ ] **Step 3: Implement.** Give each rule of Task 1 a capture group for the secret part. `kind(in:)` keeps its order and speed: it stops at the first rule that matches. `matches` runs every rule on the text, then drops the overlaps. The mask uses the prefix list of the spec section "Masks" and shows the last 4 characters only when the secret part has 20 or more characters. Run `xcodegen generate` and restore the scheme file.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS.
+- [ ] **Step 5: Commit** `feat(secrets): find each secret in a text and mask it`.
+
+### Task 8: Formats and variable names
+
+**Files:**
+- Create: `Utilities/SecretExport.swift`
+- Test: `Tests/MacClipboardTests/SecretExportTests.swift`
+
+**Interfaces:**
+- Consumes: `SecretMatch`, `SecretDetector.mainMatch` (Task 7).
+- Produces:
+  - `enum SecretFormat: CaseIterable { case env, shellExport, json, yaml }` with `title` ("Copy as .env", "Copy as Shell Export", "Copy as JSON", "Copy as YAML").
+  - `SecretExport.variableName(for match: SecretMatch) -> String?`: the name table of the spec. `nil` for `privateKey` and `jwt`.
+  - `SecretExport.pairs(in text: String) -> [(key: String, value: String)]`: every key-value line of the text, secret or not, in the forms `KEY=value`, `export KEY=value`, `KEY: value` and `"KEY": "value",`. Quotes around the value and a comma at the end are removed.
+  - `SecretExport.render(_ pairs: [(key: String, value: String)], as format: SecretFormat) -> String`.
+  - `SecretExport.text(for text: String, kind: SecretKind, format: SecretFormat) -> String?`: for `keyValue`, `render(pairs(in: text), …)`. For the other kinds, one pair of `variableName` and the main match `value`. `nil` when there is no name or no pair.
+
+- [ ] **Step 1: Write the failing tests.**
+  - `test_variableNames`: each row of the spec table. Stripe `sk_` → `STRIPE_SECRET_KEY`, `rk_` → `STRIPE_RESTRICTED_KEY`. `redis://…` → `REDIS_URL`, `amqps://…` → `AMQP_URL`, `postgres://…` → `DATABASE_URL`. A JWT → nil.
+  - `test_envQuotesOnlyWhenNeeded`: `abc-123_x.y/z:@%+=,` stays bare. `a b"c\d` → `"a b\"c\\d"`.
+  - `test_shellExportUsesSingleQuotes`: `it's` → `export K='it'\''s'`.
+  - `test_jsonIsSortedAndFormatted`: two pairs → the `JSONSerialization` output with `[.prettyPrinted, .sortedKeys]`.
+  - `test_yamlUsesAJSONStringWhenNeeded`: `a: b` → `K: "a: b"`.
+  - `test_pairsReadsEachForm`: a 4-line text with the four forms and a `# comment` line → 4 pairs, no comment.
+  - `test_aTokenBecomesOneLine`: a GitHub token, `.shellExport` → `export GITHUB_TOKEN=ghp_…`.
+- [ ] **Step 2: Run the tests.** Expected: build FAIL.
+- [ ] **Step 3: Implement.** The safe characters are letters, digits and `_ . / : @ % + = , -`. Run `xcodegen generate` and restore the scheme file.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS.
+- [ ] **Step 5: Commit** `feat(secrets): copy a secret as .env, shell export, JSON or YAML`.
+
+### Task 9: The JWT decoder
+
+**Files:**
+- Create: `Utilities/JWTDecoder.swift`
+- Test: `Tests/MacClipboardTests/JWTDecoderTests.swift`
+
+**Interfaces:**
+- Produces:
+  - `struct DecodedJWT: Equatable { let headerJSON: String; let payloadJSON: String; let algorithm: String?; let type: String?; let issuer: String?; let subject: String?; let audience: [String]; let issuedAt: Date?; let expiresAt: Date?; let notBefore: Date?; var isUnsigned: Bool }`. `headerJSON` and `payloadJSON` use `[.prettyPrinted, .sortedKeys]`.
+  - `enum JWTStatus: Equatable { case expired(Date), notYetValid(Date), valid(until: Date), noExpiry }`, from `DecodedJWT.status(now: Date) -> JWTStatus`. `notYetValid` comes before `expired`.
+  - `JWTStatus.text(now: Date, locale: Locale = .current) -> String`: "Expired 3 days ago", "Not valid until Nov 16, 2026 at 09:00", "Expires in 2 hours", "No expiry date". `isWarning: Bool` is true for `expired` and `notYetValid`.
+  - `JWTDecoder.decode(_ token: String) -> DecodedJWT?`: the first JWT in the text. `nil` when the header or the payload is not base64url JSON.
+
+- [ ] **Step 1: Write the failing tests.** A helper builds a token from two dictionaries: base64url of the JSON without `=`, then `.`, then a fixed 20-character signature.
+  - `test_readsTheClaims`: `alg`, `typ`, `iss`, `sub`, `aud` as a string, and `iat`, `exp`, `nbf` as integers → all fields.
+  - `test_audienceCanBeAList` and `test_dateClaimsCanBeDecimals`.
+  - `test_paddingIsOptional`: the same token with `=` padding decodes the same.
+  - `test_algNoneIsUnsigned`: `"alg": "None"` → `isUnsigned`.
+  - `test_statusText` with `now` fixed and `Locale(identifier: "en_US")`: exp 3 days back → "Expired 3 days ago". exp 2 hours ahead → "Expires in 2 hours". nbf ahead → "Not valid until …". No exp → "No expiry date".
+  - `test_theSignatureIsNeverInTheOutput`: neither JSON string contains the signature.
+  - `test_badInputIsNil`: a header that is not JSON, and text without a JWT.
+- [ ] **Step 2: Run the tests.** Expected: build FAIL.
+- [ ] **Step 3: Implement.** Use `RelativeDateTimeFormatter` with `.full` units for the "ago" and "in" parts, and a `DateFormatter` with `.medium` date and `.short` time for the dates. Run `xcodegen generate` and restore the scheme file.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS.
+- [ ] **Step 5: Commit** `feat(secrets): decode a JWT on the Mac`.
+
+### Task 10: The private key reader
+
+**Files:**
+- Create: `Utilities/DERReader.swift`, `Utilities/PrivateKeyInspector.swift`
+- Test: `Tests/MacClipboardTests/PrivateKeyInspectorTests.swift`
+
+**Interfaces:**
+- Produces:
+  - `struct PrivateKeyInfo: Equatable { enum Algorithm: Equatable { case ed25519, rsa(bits: Int), ecdsa(curve: String), dsa, pgp, unknown }; let algorithm: Algorithm; let isEncrypted: Bool; let publicKeyLine: String?; let fingerprint: String? }`.
+  - `PrivateKeyInfo.typeText`: "Ed25519", "RSA 4096", "ECDSA P-256", "DSA key", "PGP key" or "Private key".
+  - `PrivateKeyInfo.fileName`: `id_ed25519`, `id_rsa`, `id_ecdsa` or `private_key`.
+  - `PrivateKeyInfo.keyBlock: String`: the block from `-----BEGIN` to the `-----END …-----` line.
+  - `PrivateKeyInspector.inspect(_ text: String) -> PrivateKeyInfo?`: the first key block of the text. `nil` only when there is no block.
+  - `DERReader`: reads a tag, a length and the content, and checks each length against the bytes that are left.
+
+- [ ] **Step 1: Write the failing tests.** Build each `-----BEGIN` line from parts.
+  - `test_openSSHEd25519`: build an `openssh-key-v1` body at run time: the magic, cipher `none`, KDF `none`, 1 key, the public blob of the RFC 8032 test 1 key (`d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a`), and a private part of random bytes. Expect `.ed25519`, `isEncrypted == false`, `publicKeyLine == "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea"` and `fingerprint == "SHA256:bbXpuKG6zhzdmnxq256TlqzFBzRl2f6OOg722cYNbU8"`. Both values come from `ssh-keygen -lf`.
+  - `test_openSSHWithAPassphraseStillGivesThePublicKey`: the same body with cipher `aes256-ctr` → `isEncrypted == true`, the same public key and fingerprint.
+  - `test_pkcs8Ed25519`: the PKCS#8 prefix `302e020100300506032b657004220420`, then the RFC 8032 test 1 seed `9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60` → the same fingerprint as above.
+  - `test_pkcs8P256`: `P256.Signing.PrivateKey().pemRepresentation` → `.ecdsa(curve: "P-256")`, and the public key line starts with `ecdsa-sha2-nistp256 `. Also a SEC1 block of a run-time key → the same result.
+  - `test_pkcs1RSA`: `SecKeyCreateRandomKey` RSA 2048, `kSecAttrIsPermanent: false`, then `SecKeyCopyExternalRepresentation` in a `RSA PRIVATE KEY` block → `.rsa(bits: 2048)`. The public key line decodes to `ssh-rsa` with the exponent 65537.
+  - `test_encryptedPEMHasNoPublicKey`: an `ENCRYPTED PRIVATE KEY` block, and an `RSA PRIVATE KEY` block with `Proc-Type: 4,ENCRYPTED` → `isEncrypted == true`, `publicKeyLine == nil`, `typeText == "Private key"`.
+  - `test_dsaAndPGP`: the block names give `.dsa` and `.pgp`, no public key.
+  - `test_randomBytesNeverCrash`: 1,000 random bodies of 0 to 600 bytes in each of the four block types → each result is not nil, and nothing crashes.
+- [ ] **Step 2: Run the tests.** Expected: build FAIL.
+- [ ] **Step 3: Implement.**
+  - OpenSSH: read the public blob from the outer part. Do not read the private part.
+  - PKCS#1: `n` and `e` from the DER sequence.
+  - SEC1 and PKCS#8 EC: `P256`, `P384` and `P521` `.Signing.PrivateKey(pemRepresentation:)`, then the `x963Representation` of the public key.
+  - PKCS#8 Ed25519: the 32-byte seed, then `Curve25519.Signing.PrivateKey(rawRepresentation:)`.
+  - The SSH blob uses the SSH string and `mpint` encoding (RFC 4253, section 6.6). The fingerprint is the SHA-256 hash of the blob, in base64 without `=`.
+  - Run `xcodegen generate` and restore the scheme file.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS.
+- [ ] **Step 5: Commit** `feat(secrets): read the type, fingerprint and public key of a private key`.
+
+### Task 11: Facts and the list of actions
+
+**Files:**
+- Create: `Utilities/SecretActions.swift`
+- Test: `Tests/MacClipboardTests/SecretActionsTests.swift`
+
+**Interfaces:**
+- Consumes: Tasks 7–10.
+- Produces:
+  - `struct SecretFact: Equatable { let label: String; let value: String; let isWarning: Bool }`.
+  - `SecretFacts.facts(for text: String, kind: SecretKind, now: Date) -> [SecretFact]`: the table of the spec section "Facts about a secret". Stripe `Live` and an expired JWT are warnings.
+  - `SecretFacts.rowBadge(for text: String, kind: SecretKind) -> String?`: `"LIVE"` for a live Stripe key, else nil.
+  - `enum SecretAction: Equatable { case copyMasked, copyRedacted, copyFormat(SecretFormat), copyKeyOnly, copyValueOnly, copyLinkWithoutPassword, copyPasswordOnly, copyUser, decodeJWT, copyJWTHeader, copyJWTPayload, copyPublicKey, copyFingerprint, saveKeyFile, openKeyPage(provider: String, url: URL) }` with `title: String` and `holdsSecret: Bool`.
+  - `SecretActions.actions(for text: String, kind: SecretKind) -> [SecretAction]`: the actions that apply, in the order of the spec table.
+  - `SecretActions.copyText(for action: SecretAction, text: String, kind: SecretKind) -> String?`: the text that a copy action copies. `nil` for `decodeJWT`, `saveKeyFile` and `openKeyPage`.
+
+- [ ] **Step 1: Write the failing tests.**
+  - `test_menuOfEachKind`: the action titles of a GitHub token, a password in a link, a secret value, a log with a token, a JWT, and a private key. Each list must equal the menu of the kind on the canvas board "Secret actions — menus by kind".
+  - `test_keyPages`: each row of the spec table. npm, Discord and keyValue have no `openKeyPage`.
+  - `test_holdsSecret`: true for `copyFormat`, `copyValueOnly` and `copyPasswordOnly`. False for the others.
+  - `test_factsOfEachKind`: each GitHub prefix, AKIA and ASIA, Stripe live and test, each Slack prefix, the webhook IDs, Anthropic admin, each OpenAI prefix, a link with all parts and a link without a port, and a secret value with 3 lines.
+  - `test_jwtWithoutJSONHasNoJWTActions`: a JWT-shaped text that does not decode → no `decodeJWT`, `copyJWTHeader` or `copyJWTPayload`, and no facts.
+  - `test_privateKeyWithoutPublicKey`: an encrypted PEM → no `copyPublicKey` or `copyFingerprint`. `saveKeyFile` stays.
+  - `test_copyTexts`: Copy Link Without Password, Copy Password Only, Copy User, Copy Key Only, Copy Value Only, Copy Header and Copy Fingerprint give the strings of the spec.
+- [ ] **Step 2: Run the tests.** Expected: build FAIL.
+- [ ] **Step 3: Implement.** Use `URLComponents` for the link parts. `facts(for:kind:now:)` and `actions(for:kind:)` parse the text when the view asks. Nothing is saved. Run `xcodegen generate` and restore the scheme file.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS.
+- [ ] **Step 5: Commit** `feat(secrets): list the facts and the actions of each kind`.
+
+### Task 12: Copy results and the key file
+
+**Files:**
+- Modify: `ViewModels/ClipboardListViewModel.swift`
+- Create: `Services/PrivateKeyFile.swift`
+- Test: `Tests/MacClipboardTests/ClipboardListViewModelTests.swift`, `Tests/MacClipboardTests/PrivateKeyFileTests.swift`
+
+**Interfaces:**
+- Consumes: Tasks 2, 4, 11.
+- Produces:
+  - `ClipboardListViewModel.copySecretResult(_ text: String, from source: ClipboardItem, holdsSecret: Bool, skipConcealed: Bool = AppSettings.shared.skipConcealedItems, timeout: TimeInterval = AppSettings.shared.concealedClearTimeout, now: Date = Date())`.
+  - `PrivateKeyFile.write(_ keyBlock: String, to url: URL) throws`.
+
+- [ ] **Step 1: Write the failing tests.** Follow the existing tests of `copyToPasteboardAsText` for the pasteboard.
+  - `test_aCopyThatHoldsTheSecretIsConcealed`: Copy Value Only of a secret value → a new top clip with `isConcealed`, kind `.keyValue`, and the expiry `now + timeout`. The pasteboard has the text and `org.nspasteboard.ConcealedType`.
+  - `test_theDetectedKindWins`: Copy Value Only of `GITHUB_TOKEN=ghp_…` → kind `.githubToken`.
+  - `test_aMaskedCopyIsNormal`: Copy Masked → `isConcealed == false`, no kind, no concealed mark.
+  - `test_aNormalCopyThatStillHasASecretIsConcealed`: `holdsSecret: false` with a text that contains a token → concealed with `.githubToken`.
+  - `test_dontSaveConcealedClipsAddsNoClip`: `skipConcealed: true`, `holdsSecret: true` → the history does not change, and the pasteboard has the text and the mark.
+  - `test_theKeyFileHasPermission600`: write to a temporary folder → the file attributes have `posixPermissions == 0o600`, and the file ends with `\n`.
+- [ ] **Step 2: Run the tests.** Expected: build FAIL.
+- [ ] **Step 3: Implement.**
+  - `copySecretResult`: kind = `SecretDetector.kind(in: text)`, else `source.secretKind` when `holdsSecret`. A result with a kind is concealed. Write the pasteboard as `copyToPasteboardAsText` does, and add the concealed type for a concealed result. Call `monitor.ignoreCurrentChangeCount()`. Then insert or move the clip with the flags. For an existing equal clip, use the "same text again" rule of Task 5.
+  - `PrivateKeyFile.write`: an atomic write, then `FileManager.setAttributes([.posixPermissions: 0o600])`.
+  - Run `xcodegen generate` and restore the scheme file.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS.
+- [ ] **Step 5: Commit** `feat(secrets): make each copy of a secret a concealed clip`.
+
+### Task 13: The views of the actions
+
+**Files:**
+- Modify: `Views/ContentView.swift` (⌘K menu), `Views/ClipPreview.swift`, `Views/Components/ClipboardItemRow.swift`, `Utilities/Notifications.swift`
+- Test: the pure helpers of Tasks 7–11 already cover the strings. Add a test for any new pure helper that this task makes.
+
+**Interfaces:**
+- Consumes: Tasks 6, 11, 12.
+- Produces: `Notification.Name.overlayDecodeJWT` (object: the clip id).
+
+- [ ] **Step 1: Write a failing test** for each new pure helper, for example the order of the preview buttons of each kind.
+- [ ] **Step 2: Run the tests.** Expected: FAIL.
+- [ ] **Step 3: Implement**, as in the canvas:
+  - ⌘K: after "Not a Secret", a separator, then `SecretActions.actions(for:kind:)`. Each copy action calls `copySecretResult` with its `holdsSecret`. `decodeJWT` posts `.overlayDecodeJWT`. `saveKeyFile` opens an `NSSavePanel` at `~/.ssh` with `PrivateKeyInfo.fileName`, then calls `PrivateKeyFile.write`. An error shows an `NSAlert`. `openKeyPage` calls `NSWorkspace.shared.open(url)`.
+  - Row: the `rowBadge` pill after the kind, orange text on an orange tint. The accessibility label becomes "Concealed clip, Stripe key, live".
+  - Preview: the facts list under the main content, in both states. The private key buttons: Not a Secret, Copy Public Key, Paste.
+  - Preview, decoded view: on `.overlayDecodeJWT`, select the clip, open the preview, and show the status line, the alg warning, the claims, the header and payload JSON, and the note. The buttons are Copy Header, Copy Payload and Paste. The view ends when the preview closes or the selection moves.
+- [ ] **Step 4: Run the tests.** Expected: PASS, and the full suite PASS. Make a Release build and install it, as in Task 6. Check by hand with test values that you build in Terminal:
+  - A JWT: `h=$(printf '{"alg":"HS256","typ":"JWT"}' | base64 | tr '+/' '-_' | tr -d '=')`, `p=$(printf '{"sub":"user_1","exp":1700000000}' | base64 | tr '+/' '-_' | tr -d '=')`, then `printf '%s.%s.%s' "$h" "$p" "$(printf 's%.0s' {1..20})" | pbcopy`. ⌘K → Decode JWT shows "Expired …".
+  - A token: ⌘K → Copy Masked, Copy as Shell Export (a new hidden clip), Open Key Page on GitHub.
+  - A link: `printf 'postgres://admin:%s@db.local:5432/app' hunter22 | pbcopy`. ⌘K → Copy Link Without Password, Copy Password Only (a new hidden clip).
+  - A private key: `ssh-keygen -t ed25519 -N '' -f "$S/k" -q && pbcopy < "$S/k"`. The facts show the same fingerprint as `ssh-keygen -lf "$S/k"`. Copy Public Key equals `cut -d' ' -f1,2 "$S/k.pub"`. Save as File… writes a file with `-rw-------`. Delete `$S/k*` and the saved file after the check.
+  - Open each key page URL of the spec in a signed-in browser. Remove a row whose page does not open, in the code and in the spec.
+- [ ] **Step 5: Commit** `feat(secrets): show the secret actions, the facts and the JWT view`.
+
+### Task 14: Docs and PR
+
+**Files:**
+- Modify: `README.md` (Features list), `docs/superpowers/todo.md` (section 6)
+
+- [ ] **Step 1:** Add to README Features, after the concealed line:
+  - "Find API keys, tokens and private keys in copied text. MaClip hides them as concealed clips. Search with `tag:secret`."
+  - "Actions for each kind of secret in ⌘K: decode a JWT, copy the public key of a private key, copy a log with its secrets masked, and more. Nothing leaves your Mac."
+- [ ] **Step 2:** In todo section 6, mark secret detection done, and write that the "Decode a JWT" item of the transform actions is done for detected JWTs.
+- [ ] **Step 3:** Run the full suite. Expected: PASS.
+- [ ] **Step 4: Commit** `docs: describe secret detection and secret actions in the README`, push `feat/secret-detection`, open the PR.
