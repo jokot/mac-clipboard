@@ -1129,6 +1129,114 @@ extension ClipboardListViewModelTests {
     }
 }
 
+// MARK: - Secret copy results
+
+extension ClipboardListViewModelTests {
+    private var concealedType: NSPasteboard.PasteboardType { NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType") }
+
+    @MainActor
+    private func makeCopyVM(_ items: [ClipboardItem] = []) -> (ClipboardListViewModel, MockMonitor) {
+        AppSettings.shared.maxItems = 50
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        repo.savedItems = items
+        let monitor = MockMonitor()
+        return (ClipboardListViewModel(repository: repo, monitor: monitor), monitor)
+    }
+
+    @MainActor
+    func test_aCopyThatHoldsTheSecretIsConcealed() {
+        let source = ClipboardItem(date: Date(), content: .text("DB_PASSWORD=s3cr3t-Pa55w0rd"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .keyValue)
+        let (vm, monitor) = makeCopyVM([source])
+        let now = Date(timeIntervalSince1970: 5_000)
+
+        vm.copySecretResult("s3cr3t-Pa55w0rd", from: source, holdsSecret: true, skipConcealed: false, timeout: 300, now: now)
+
+        let top = vm.items[0]
+        XCTAssertNotEqual(top.id, source.id)
+        XCTAssertTrue(top.isConcealed)
+        XCTAssertEqual(top.secretKind, .keyValue)
+        XCTAssertEqual(top.concealedExpiresAt, now.addingTimeInterval(300))
+        XCTAssertEqual(NSPasteboard.general.string(forType: .string), "s3cr3t-Pa55w0rd")
+        XCTAssertTrue(NSPasteboard.general.types?.contains(concealedType) == true)
+        XCTAssertGreaterThan(monitor.ignoreCallCount, 0)
+    }
+
+    @MainActor
+    func test_theDetectedKindWins() {
+        let token = "ghp_" + String(repeating: "a", count: 36)
+        let source = ClipboardItem(date: Date(), content: .text("GITHUB_TOKEN=" + token), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("export GITHUB_TOKEN=" + token, from: source, holdsSecret: true,
+                            skipConcealed: false, timeout: 300, now: Date())
+
+        XCTAssertEqual(vm.items[0].secretKind, .githubToken)
+    }
+
+    @MainActor
+    func test_aMaskedCopyIsNormal() {
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("ghp_\u{2022}\u{2022}\u{2022}\u{2022}a1b2", from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: 300, now: Date())
+
+        XCTAssertFalse(vm.items[0].isConcealed)
+        XCTAssertNil(vm.items[0].secretKind)
+        XCTAssertFalse(NSPasteboard.general.types?.contains(concealedType) == true)
+    }
+
+    @MainActor
+    func test_aNormalCopyThatStillHasASecretIsConcealed() {
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .keyValue)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("log: ghp_" + String(repeating: "b", count: 36), from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: -1, now: Date())
+
+        XCTAssertTrue(vm.items[0].isConcealed)
+        XCTAssertEqual(vm.items[0].secretKind, .githubToken)
+        XCTAssertEqual(vm.items[0].concealedExpiresAt, .distantFuture)
+    }
+
+    @MainActor
+    func test_dontSaveConcealedClipsAddsNoClip() {
+        let source = ClipboardItem(date: Date(), content: .text("DB_PASSWORD=s3cr3t-Pa55w0rd"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .keyValue)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("s3cr3t-Pa55w0rd", from: source, holdsSecret: true, skipConcealed: true, timeout: 300, now: Date())
+
+        XCTAssertEqual(vm.items.map(\.id), [source.id])
+        XCTAssertEqual(NSPasteboard.general.string(forType: .string), "s3cr3t-Pa55w0rd")
+        XCTAssertTrue(NSPasteboard.general.types?.contains(concealedType) == true)
+    }
+
+    /// The result follows the link rule of the monitor: only http and https text becomes a link clip.
+    @MainActor
+    func test_aLinkResultFollowsTheLinkRule() {
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .linkPassword)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("https://admin@example.com/app", from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: 300, now: Date())
+        guard case .url(let url) = vm.items[0].content else { return XCTFail("expected a link clip") }
+        XCTAssertEqual(url.absoluteString, "https://admin@example.com/app")
+        XCTAssertFalse(vm.items[0].isConcealed)
+
+        vm.copySecretResult("postgres://admin@db.local:5432/app", from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: 300, now: Date())
+        guard case .text(let text) = vm.items[0].content else { return XCTFail("expected a text clip") }
+        XCTAssertEqual(text, "postgres://admin@db.local:5432/app")
+    }
+}
+
 // MARK: - Mocks
 private final class MockRepo: ClipboardRepositoryProtocol {
     var savedItems: [ClipboardItem] = []

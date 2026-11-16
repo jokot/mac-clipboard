@@ -166,6 +166,31 @@ final class ClipboardListViewModel: ObservableObject {
         repository.saveToDiskAsync(items: items)
     }
 
+    /// Puts the result of a secret action on the clipboard and adds it as a clip at the top.
+    /// The result is a concealed clip when it holds the secret, or when the detector still finds a
+    /// secret in it. A concealed result also gets the concealed mark on the clipboard, and with
+    /// "Don't save concealed clips" on, it does not become a clip.
+    func copySecretResult(_ text: String, from source: ClipboardItem, holdsSecret: Bool,
+                          skipConcealed: Bool = AppSettings.shared.skipConcealedItems,
+                          timeout: TimeInterval = AppSettings.shared.concealedClearTimeout,
+                          now: Date = Date()) {
+        let kind = SecretDetector.kind(in: text) ?? (holdsSecret ? source.secretKind : nil)
+        let concealed = kind != nil
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+        if concealed { pb.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")) }
+        monitor.ignoreCurrentChangeCount()
+        if concealed && skipConcealed { return }
+
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let content: ClipboardItemContent = URLUtils.linkURL(from: trimmed).map { .url($0) } ?? .text(text)
+        append(ClipboardItem(date: now, content: content, sourceBundleID: source.sourceBundleID,
+                             isConcealed: concealed,
+                             concealedExpiresAt: concealed ? SecretCapture.expiry(timeout: timeout, now: now) : nil,
+                             secretKind: kind))
+    }
+
     /// Checks the text clips and link clips that are not concealed and not marked "Not a Secret".
     func scanHistoryForSecrets() -> SecretScan {
         var checked = 0

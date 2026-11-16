@@ -34,6 +34,7 @@
 		3E6074E6F47E3A8677C66048 /* SecretScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CECDFE3E55157FBF8B90B2A /* SecretScan.swift */; };
 		4245D9AFDC682E6F5D5B798B /* AccentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B122731F3648582A52541069 /* AccentStore.swift */; };
 		42807365286B22851686F5CD /* PrivateKeyInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9867ABAFE6426F9BA4C4F31 /* PrivateKeyInspector.swift */; };
+		4441D25517F50383196D06E2 /* PrivateKeyFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22D503C43C24938D5048F728 /* PrivateKeyFileTests.swift */; };
 		45DBD2E88E7CCCB82673EDF0 /* AccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451581E9F48AB3E1E26559B3 /* AccentColor.swift */; };
 		484511220AFBFACF1596A9F7 /* AccentColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75566F1C5C65A91FC70BE7FD /* AccentColorTests.swift */; };
 		4BE22C994D3179BEA1B18F6E /* SecretExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4B02E33836B49D99EC0F08 /* SecretExportTests.swift */; };
@@ -78,6 +79,7 @@
 		B7145E979D867746DB75E236 /* ClipboardListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63ECD86587A3DE062DB598C0 /* ClipboardListViewModel.swift */; };
 		B7D4E2B42C30142CC9A044ED /* FirstMouseHostingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2888C02F1F29FE5B864D3A /* FirstMouseHostingView.swift */; };
 		B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */; };
+		BC5732355C94CF21B72C2165 /* PrivateKeyFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09C1ABACA61C8AF7FF994E4 /* PrivateKeyFile.swift */; };
 		C127FE0E57A35CA8C307010D /* ImageCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */; };
 		C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815338FAF7D3A98423D0E86C /* ClipboardItem.swift */; };
 		C4D6404FDE08FA1F95BF1662 /* SecretMaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */; };
@@ -132,6 +134,7 @@
 		20F3C744F57A8A29817C5FE9 /* PrivateKeyInspectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateKeyInspectorTests.swift; sourceTree = "<group>"; };
 		21E96C952DB2DA995B5643E4 /* ClipKeyMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipKeyMap.swift; sourceTree = "<group>"; };
 		2282C4E59BB062B2225B5FA5 /* ClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardApp.swift; sourceTree = "<group>"; };
+		22D503C43C24938D5048F728 /* PrivateKeyFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateKeyFileTests.swift; sourceTree = "<group>"; };
 		233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardRepository.swift; sourceTree = "<group>"; };
 		29B83B9A3E84D76CB87EAFDD /* AccessibilityAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAccess.swift; sourceTree = "<group>"; };
 		29C21D90472A3B9C870B4F0E /* AppearanceTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceTab.swift; sourceTree = "<group>"; };
@@ -189,6 +192,7 @@
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
 		B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretDetectorTests.swift; sourceTree = "<group>"; };
 		BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListTextTests.swift; sourceTree = "<group>"; };
+		C09C1ABACA61C8AF7FF994E4 /* PrivateKeyFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateKeyFile.swift; sourceTree = "<group>"; };
 		C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironmentTests.swift; sourceTree = "<group>"; };
 		C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListText.swift; sourceTree = "<group>"; };
 		C67FC149D427F9DDCBC6AA38 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -347,6 +351,7 @@
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
 				B163388AA3B5613A26CB85F9 /* JWTDecoderTests.swift */,
 				343918D327D3415521E47E64 /* KeyShortcutsTests.swift */,
+				22D503C43C24938D5048F728 /* PrivateKeyFileTests.swift */,
 				20F3C744F57A8A29817C5FE9 /* PrivateKeyInspectorTests.swift */,
 				539EA1869F267B33061BAC4B /* SecretActionsTests.swift */,
 				F32A319FC028A7C05FD765EE /* SecretCaptureTests.swift */,
@@ -398,6 +403,7 @@
 				EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */,
 				B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */,
 				E8F4194F31C555F3F3166BDA /* OCRService.swift */,
+				C09C1ABACA61C8AF7FF994E4 /* PrivateKeyFile.swift */,
 				F857924B7709315DCBF21FB7 /* SecretCapture.swift */,
 				A4235CBBB175E9BB87DE8791 /* UpdateService.swift */,
 			);
@@ -512,6 +518,7 @@
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
 				06A11F388EED6AC6E5C4B1CA /* JWTDecoderTests.swift in Sources */,
 				E9EB7C213CD707051F2DFCFA /* KeyShortcutsTests.swift in Sources */,
+				4441D25517F50383196D06E2 /* PrivateKeyFileTests.swift in Sources */,
 				4D87E91A1D45C779B6CF3F61 /* PrivateKeyInspectorTests.swift in Sources */,
 				37C8F01194FD6D4B647DFF6A /* SecretActionsTests.swift in Sources */,
 				6F1E89128FE59AFCD248B00B /* SecretCaptureTests.swift in Sources */,
@@ -577,6 +584,7 @@
 				59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */,
 				831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */,
 				B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */,
+				BC5732355C94CF21B72C2165 /* PrivateKeyFile.swift in Sources */,
 				42807365286B22851686F5CD /* PrivateKeyInspector.swift in Sources */,
 				E20EE9733863E22E3261667D /* SecretActions.swift in Sources */,
 				941DF98FCD932B2D4CA7128B /* SecretCapture.swift in Sources */,
