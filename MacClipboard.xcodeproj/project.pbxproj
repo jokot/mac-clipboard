@@ -28,6 +28,7 @@
 		2D59A4DD6FB5FB360D3D61E3 /* ImageEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */; };
 		2DA665FB0CED6CA5E30F9B3F /* AccessibilityPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170D815A01E99A4093527555 /* AccessibilityPromptView.swift */; };
 		2E782788303ABCBED58B7CE9 /* SettingsRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB405DFA798E0AE1F1AD129 /* SettingsRows.swift */; };
+		37C8F01194FD6D4B647DFF6A /* SecretActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539EA1869F267B33061BAC4B /* SecretActionsTests.swift */; };
 		398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31AB460CDECFC331586AF24 /* SecretDetector.swift */; };
 		398B57CF777E490F32AB80BA /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9368EADE952C9A3FAF79C83C /* JWTDecoder.swift */; };
 		3E6074E6F47E3A8677C66048 /* SecretScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CECDFE3E55157FBF8B90B2A /* SecretScan.swift */; };
@@ -87,6 +88,7 @@
 		DE92D7719E9B94DB53C7BF10 /* ExtractPasteController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92DAD4224B51A0C0BD29A8C5 /* ExtractPasteController.swift */; };
 		E0C61B17E9A3D544890A8A61 /* HotkeyCapturingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64179F24FF8AFF7D440BC24 /* HotkeyCapturingView.swift */; };
 		E101AE6EFE5EF8A09F57725E /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C7D258BC605842AEBA68655 /* CanvasView.swift */; };
+		E20EE9733863E22E3261667D /* SecretActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 429EFAF08C31A5D346C2284C /* SecretActions.swift */; };
 		E25C91356354DBBCF517DBF0 /* HotkeyUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */; };
 		E30B468F5CA2FC0F21CC9586 /* ContentTagsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E228CEA32B7DFEF0889459 /* ContentTagsTests.swift */; };
 		E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A5E1B92A0543BA5D33AD02 /* InfoView.swift */; };
@@ -142,10 +144,12 @@
 		33EFD2074486FADCBD667A8D /* ImageCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompositor.swift; sourceTree = "<group>"; };
 		343918D327D3415521E47E64 /* KeyShortcutsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcutsTests.swift; sourceTree = "<group>"; };
 		42329943E61EA51FA9377AE9 /* MenuBarIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "MenuBarIcon@2x.png"; sourceTree = "<group>"; };
+		429EFAF08C31A5D346C2284C /* SecretActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretActions.swift; sourceTree = "<group>"; };
 		451581E9F48AB3E1E26559B3 /* AccentColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColor.swift; sourceTree = "<group>"; };
 		4B4B02E33836B49D99EC0F08 /* SecretExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretExportTests.swift; sourceTree = "<group>"; };
 		4E7F2BCE8886027192AD2307 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardListViewModelTests.swift; sourceTree = "<group>"; };
+		539EA1869F267B33061BAC4B /* SecretActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretActionsTests.swift; sourceTree = "<group>"; };
 		555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLUtilsTests.swift; sourceTree = "<group>"; };
 		5A9124D76CCC487A39EF0660 /* ShortcutsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsPanel.swift; sourceTree = "<group>"; };
 		5B9C1B3758DFC3B21C63A452 /* ClipboardItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItemRow.swift; sourceTree = "<group>"; };
@@ -308,6 +312,7 @@
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
 				2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */,
 				C9867ABAFE6426F9BA4C4F31 /* PrivateKeyInspector.swift */,
+				429EFAF08C31A5D346C2284C /* SecretActions.swift */,
 				D31AB460CDECFC331586AF24 /* SecretDetector.swift */,
 				9136BED16CE0A49D73F98AC3 /* SecretExport.swift */,
 				2EB933B3A6DFCDB94783967F /* SecretMask.swift */,
@@ -343,6 +348,7 @@
 				B163388AA3B5613A26CB85F9 /* JWTDecoderTests.swift */,
 				343918D327D3415521E47E64 /* KeyShortcutsTests.swift */,
 				20F3C744F57A8A29817C5FE9 /* PrivateKeyInspectorTests.swift */,
+				539EA1869F267B33061BAC4B /* SecretActionsTests.swift */,
 				F32A319FC028A7C05FD765EE /* SecretCaptureTests.swift */,
 				B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */,
 				4B4B02E33836B49D99EC0F08 /* SecretExportTests.swift */,
@@ -507,6 +513,7 @@
 				06A11F388EED6AC6E5C4B1CA /* JWTDecoderTests.swift in Sources */,
 				E9EB7C213CD707051F2DFCFA /* KeyShortcutsTests.swift in Sources */,
 				4D87E91A1D45C779B6CF3F61 /* PrivateKeyInspectorTests.swift in Sources */,
+				37C8F01194FD6D4B647DFF6A /* SecretActionsTests.swift in Sources */,
 				6F1E89128FE59AFCD248B00B /* SecretCaptureTests.swift in Sources */,
 				14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */,
 				4BE22C994D3179BEA1B18F6E /* SecretExportTests.swift in Sources */,
@@ -571,6 +578,7 @@
 				831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */,
 				B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */,
 				42807365286B22851686F5CD /* PrivateKeyInspector.swift in Sources */,
+				E20EE9733863E22E3261667D /* SecretActions.swift in Sources */,
 				941DF98FCD932B2D4CA7128B /* SecretCapture.swift in Sources */,
 				398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */,
 				B6529F118BA3806392CE2ACA /* SecretExport.swift in Sources */,
