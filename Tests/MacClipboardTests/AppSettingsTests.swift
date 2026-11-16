@@ -211,8 +211,11 @@ final class AppSettingsTests: XCTestCase {
         AppSettings.shared.skipConcealedItems = true
         AppSettings.shared.concealedClearTimeout = 60
         AppSettings.shared.saveMaClipClips = true
+        AppSettings.shared.findSecrets = false
 
         AppSettings.shared.restorePrivacyDefaults()
+
+        XCTAssertTrue(AppSettings.shared.findSecrets)
 
         XCTAssertEqual(Set(AppSettings.shared.excludedBundleIDs), Self.seedExclusions)
         XCTAssertFalse(AppSettings.shared.skipConcealedItems)
@@ -223,6 +226,26 @@ final class AppSettingsTests: XCTestCase {
         AppEnvironment.defaults.removeObject(forKey: excludedKey)
         AppEnvironment.defaults.removeObject(forKey: skipConcealedKey)
         AppEnvironment.defaults.removeObject(forKey: concealedTimeoutKey)
+    }
+}
+
+final class FindSecretsSettingTests: XCTestCase {
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        try XCTSkipUnless(AppEnvironment.isRunningTests, "test storage isolation is not active")
+    }
+
+    func test_findSecretsIsOnByDefault() {
+        XCTAssertTrue(AppSettings.initialFindSecrets(stored: nil))
+        XCTAssertFalse(AppSettings.initialFindSecrets(stored: false))
+    }
+
+    func test_findSecretsIsSaved() {
+        AppSettings.shared.findSecrets = false
+        XCTAssertEqual(AppEnvironment.defaults.object(forKey: "settings.findSecrets") as? Bool, false)
+        AppSettings.shared.findSecrets = true
+        XCTAssertEqual(AppEnvironment.defaults.object(forKey: "settings.findSecrets") as? Bool, true)
+        AppEnvironment.defaults.removeObject(forKey: "settings.findSecrets")
     }
 }
 
@@ -249,6 +272,7 @@ final class RestoreDefaultSettingsTests: XCTestCase {
         s.excludedBundleIDs = ["com.foo.bar"]
         s.saveMaClipClips = true
         s.skipConcealedItems = true
+        s.findSecrets = false
 
         s.restoreDefaultSettings()
 
@@ -268,6 +292,7 @@ final class RestoreDefaultSettingsTests: XCTestCase {
         XCTAssertEqual(s.excludedBundleIDs, AppSettings.defaultSeedExclusions)
         XCTAssertFalse(s.saveMaClipClips)
         XCTAssertFalse(s.skipConcealedItems)
+        XCTAssertTrue(s.findSecrets)
     }
 
     func test_restoreKeepsTheClipLimitAndEncryption() {

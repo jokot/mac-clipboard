@@ -18,6 +18,12 @@ final class OverlayWindowController: NSObject {
     private let imageEditor = ImageEditorWindowController()
     private var previewPanel: NSPanel?
     private var previewedItemID: UUID?
+    /// The clip in the preview, to redraw it when its flags change ("Not a Secret", Hide).
+    private var previewedItem: ClipboardItem?
+    private var itemsObserver: AnyCancellable?
+    /// The clip whose preview shows the decoded JWT. The view ends when the preview closes
+    /// or shows another clip.
+    private var decodedJWTItemID: UUID?
     private var lastActivity: Date = Date()
     private let windowState = ClipWindowState()
     private var paneObserver: AnyCancellable?
@@ -32,6 +38,7 @@ final class OverlayWindowController: NSObject {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(closeRequested), name: .overlayCloseRequested, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged), name: .themeChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(decodeJWT(_:)), name: .overlayDecodeJWT, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appDidResignActive),
                                                name: NSApplication.didResignActiveNotification, object: nil)
         // A click on the preview gives it focus. The search field then gives up the text cursor,
@@ -41,6 +48,16 @@ final class OverlayWindowController: NSObject {
                   (window.firstResponder as? NSTextView)?.isFieldEditor == true else { return }
             self?.leaveSearchField()
         }
+        // "Not a Secret" and Hide change the flags of a clip. Redraw the preview of that clip.
+        itemsObserver = viewModel.$items.sink { [weak self] items in
+            DispatchQueue.main.async { self?.refreshPreview(from: items) }
+        }
+    }
+
+    private func refreshPreview(from items: [ClipboardItem]) {
+        guard let shown = previewedItem, previewedItemID == shown.id, !windowState.editing,
+              let current = items.first(where: { $0.id == shown.id }), current != shown else { return }
+        showPreview(current)
     }
 
     deinit {
@@ -49,6 +66,11 @@ final class OverlayWindowController: NSObject {
 
     @objc private func themeChanged() {
         applyTheme()
+    }
+
+    @objc private func decodeJWT(_ note: Notification) {
+        guard let id = note.object as? UUID, let item = viewModel.items.first(where: { $0.id == id }) else { return }
+        showPreview(item, decodedJWT: true)
     }
 
     func toggle() {
@@ -520,9 +542,11 @@ private extension OverlayWindowController {
     /// Shows the clip in a panel beside the clip window. The panel is a child window, so it
     /// moves and hides with the clip window, and the clip window keeps the keyboard.
     /// In edit mode, the panel takes the keyboard until Save or Cancel.
-    func showPreview(_ item: ClipboardItem, editing: Bool = false) {
+    func showPreview(_ item: ClipboardItem, editing: Bool = false, decodedJWT: Bool = false) {
         guard let window else { return }
+        if decodedJWT { decodedJWTItemID = item.id } else if decodedJWTItemID != item.id { decodedJWTItemID = nil }
         previewedItemID = item.id
+        previewedItem = item
         windowState.previewOpen = true
         windowState.editing = editing
         if editing { windowState.pane = .preview }
@@ -539,7 +563,13 @@ private extension OverlayWindowController {
             onClose: { [weak self] in self?.closePreview() },
             isEditing: editing,
             onSave: { [weak self] content in self?.saveEdit(of: item, content: content) },
-            onCancelEdit: { [weak self] in self?.endEdit(showing: item) }
+            onCancelEdit: { [weak self] in self?.endEdit(showing: item) },
+            onDismissSecret: { [weak self] in self?.viewModel.dismissSecret(item) },
+            decodedJWT: decodedJWTItemID == item.id,
+            onSecretAction: { [weak self] action in
+                guard let self else { return }
+                SecretActionRunner.run(action, on: item, viewModel: self.viewModel)
+            }
         )
         let panel = previewPanel ?? makePreviewPanel()
         previewPanel = panel
@@ -593,6 +623,7 @@ private extension OverlayWindowController {
 
     func closePreview() {
         previewedItemID = nil
+        decodedJWTItemID = nil
         windowState.previewOpen = false
         windowState.editing = false
         windowState.pane = .list

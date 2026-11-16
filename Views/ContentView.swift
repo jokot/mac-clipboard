@@ -313,6 +313,7 @@ struct ContentView: View {
                                 openImageEditor(for: item)
                             },
                             onCopyOnly: { item in copyOnly(item) },
+                            onDismissSecret: { item in viewModel.dismissSecret(item) },
                             onPreview: { item in
                                 selectedIndex = index
                                 onPreview(item)
@@ -432,42 +433,39 @@ struct ContentView: View {
 
     /// The ⌘K menu: the same actions as the context menu, with their keys.
     private func menuActions(for item: ClipboardItem) -> [ClipMenuAction] {
-        var actions = [
-            ClipMenuAction(title: "Paste", key: KeyCombo(.returnKey)) { onSelect(item) },
-            ClipMenuAction(title: "Copy Only", key: .command("c")) { copyOnly(item) },
-            ClipMenuAction(title: "Preview", key: KeyCombo(.space)) { onTogglePreview(item) },
-        ]
-        switch item.content {
-        case .url(let url):
-            actions.append(ClipMenuAction(title: "Open Link", key: .command("o")) { openLink(url) })
-        case .file:
-            actions.append(ClipMenuAction(title: "Open", key: .command("o")) { openFile(item) })
-            actions.append(ClipMenuAction(title: "Reveal in Finder", key: .command("r")) { revealInFinder(item) })
-            actions.append(ClipMenuAction(title: "Copy Path", key: KeyCombo(.character("c"), [.option, .command])) { copyFilePath(item) })
-        case .image:
-            actions.append(ClipMenuAction(title: "Extract Text", key: .command("t")) { extractText(item) })
-            actions.append(ClipMenuAction(title: "Extract Code", key: .command("b")) { extractCode(item) })
-        case .text:
-            break
-        }
-        if item.isConcealed {
-            actions.append(ClipMenuAction(title: "Show for 5 Seconds", key: .command("u")) {
-                NotificationCenter.default.post(name: .overlayRevealItem, object: item.id)
-            })
-        }
-        actions.append(ClipMenuAction(title: "Edit\u{2026}", key: .command("e")) {
-            if case .image = item.content { openImageEditor(for: item) } else { onEdit(item) }
-        })
-        actions.append(.separator)
-        if let bundleID = item.sourceBundleID {
-            let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
-            actions.append(ClipMenuAction(title: "Don\u{2019}t Save Clips from \(name)\u{2026}",
-                                          key: KeyCombo(.delete, [.option, .command])) { confirmExclude(bundleID: bundleID) })
-            actions.append(.separator)
-        }
         let index = selectedIndex
-        actions.append(ClipMenuAction(title: "Delete", key: KeyCombo(.delete, .command)) { remove(item, at: index) })
-        return actions
+        return ClipMenuLayout.entries(for: item).map { entry in
+            if entry == .separator { return .separator }
+            let title: String
+            if case .excludeApp(let bundleID) = entry {
+                let name = AppMetadata.shared.displayName(for: bundleID) ?? bundleID
+                title = "Don\u{2019}t Save Clips from \(name)\u{2026}"
+            } else {
+                title = entry.title
+            }
+            return ClipMenuAction(title: title, key: entry.key) { perform(entry, on: item, at: index) }
+        }
+    }
+
+    private func perform(_ entry: ClipMenuEntry, on item: ClipboardItem, at index: Int) {
+        switch entry {
+        case .paste: onSelect(item)
+        case .copyOnly: copyOnly(item)
+        case .preview: onTogglePreview(item)
+        case .openLink: if case .url(let url) = item.content { openLink(url) }
+        case .open: openFile(item)
+        case .revealInFinder: revealInFinder(item)
+        case .copyPath: copyFilePath(item)
+        case .extractText: extractText(item)
+        case .extractCode: extractCode(item)
+        case .showForFiveSeconds: NotificationCenter.default.post(name: .overlayRevealItem, object: item.id)
+        case .notASecret: viewModel.dismissSecret(item)
+        case .secret(let action): SecretActionRunner.run(action, on: item, viewModel: viewModel)
+        case .edit: if case .image = item.content { openImageEditor(for: item) } else { onEdit(item) }
+        case .excludeApp(let bundleID): confirmExclude(bundleID: bundleID)
+        case .delete: remove(item, at: index)
+        case .separator: break
+        }
     }
 
     /// Reads the text in an image clip, then copies it as a new text clip at the top.

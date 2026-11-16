@@ -156,6 +156,76 @@ final class ClipboardListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Secrets
+
+    /// "Not a Secret": shows the text, stops the countdown and removes the kind.
+    /// MaClip then does not hide this clip again when the user copies it.
+    func dismissSecret(_ item: ClipboardItem) {
+        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[idx] = items[idx].marked(concealed: false, expiresAt: nil, secretKind: nil, secretDismissed: true)
+        repository.saveToDiskAsync(items: items)
+    }
+
+    /// Puts the result of a secret action on the clipboard and adds it as a clip at the top.
+    /// The result is a concealed clip when it holds the secret, or when the detector still finds a
+    /// secret in it. A concealed result also gets the concealed mark on the clipboard, and with
+    /// "Don't save concealed clips" on, it does not become a clip.
+    func copySecretResult(_ text: String, from source: ClipboardItem, holdsSecret: Bool,
+                          skipConcealed: Bool = AppSettings.shared.skipConcealedItems,
+                          timeout: TimeInterval = AppSettings.shared.concealedClearTimeout,
+                          now: Date = Date()) {
+        let kind = SecretDetector.kind(in: text) ?? (holdsSecret ? source.secretKind : nil)
+        let concealed = kind != nil
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+        if concealed { pb.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")) }
+        monitor.ignoreCurrentChangeCount()
+        if concealed && skipConcealed { return }
+
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let content: ClipboardItemContent = URLUtils.linkURL(from: trimmed).map { .url($0) } ?? .text(text)
+        append(ClipboardItem(date: now, content: content, sourceBundleID: source.sourceBundleID,
+                             isConcealed: concealed,
+                             concealedExpiresAt: concealed ? SecretCapture.expiry(timeout: timeout, now: now) : nil,
+                             secretKind: kind))
+    }
+
+    /// Checks the text clips and link clips that are not concealed and not marked "Not a Secret".
+    func scanHistoryForSecrets() -> SecretScan {
+        var checked = 0
+        var found: [(id: UUID, kind: SecretKind)] = []
+        for item in items where !item.isConcealed && !item.secretDismissed {
+            let text: String
+            switch item.content {
+            case .text(let t): text = t
+            case .url(let u): text = u.absoluteString
+            case .image, .file: continue
+            }
+            checked += 1
+            if let kind = SecretDetector.kind(in: text) { found.append((item.id, kind)) }
+        }
+        return SecretScan(checked: checked, found: found)
+    }
+
+    /// Hides the clips of a scan. They get no countdown, because the user did not copy them now.
+    func hideSecrets(_ scan: SecretScan) {
+        guard !scan.isEmpty else { return }
+        let kinds = Dictionary(scan.found.map { ($0.id, $0.kind) }, uniquingKeysWith: { a, _ in a })
+        items = items.map { item in
+            guard let kind = kinds[item.id] else { return item }
+            return item.marked(concealed: true, expiresAt: nil, secretKind: kind, secretDismissed: false)
+        }
+        repository.saveToDiskAsync(items: items)
+    }
+
+    func deleteSecrets(_ scan: SecretScan) {
+        guard !scan.isEmpty else { return }
+        let ids = Set(scan.found.map(\.id))
+        items.removeAll { ids.contains($0.id) }
+        repository.saveToDiskAsync(items: items)
+    }
+
     func promote(_ item: ClipboardItem) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         let moved = items.remove(at: idx)
@@ -214,22 +284,13 @@ final class ClipboardListViewModel: ObservableObject {
     }
 
     /// Replaces the `content` of an existing clip in-place while preserving identity
-    /// (id, date, sourceBundleID, isConcealed, concealedExpiresAt, isOCRResult).
+    /// (id, date, sourceBundleID and all flags, see `ClipboardItem.replacing(content:)`).
     /// Persists the updated list and clears the tag-detection cache.
     /// Returns the updated item, or `nil` if no item with the matching id was found.
     @discardableResult
     func replaceContent(of item: ClipboardItem, with newContent: ClipboardItemContent) -> ClipboardItem? {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return nil }
-        let existing = items[idx]
-        let updated = ClipboardItem(
-            id: existing.id,
-            date: existing.date,
-            content: newContent,
-            sourceBundleID: existing.sourceBundleID,
-            isConcealed: existing.isConcealed,
-            concealedExpiresAt: existing.concealedExpiresAt,
-            isOCRResult: existing.isOCRResult
-        )
+        let updated = items[idx].replacing(content: newContent)
         items[idx] = updated
         repository.saveToDiskAsync(items: items)
         ContentTagDetector.clearCache()
@@ -249,7 +310,9 @@ final class ClipboardListViewModel: ObservableObject {
             sourceBundleID: source.sourceBundleID,
             isConcealed: source.isConcealed,
             concealedExpiresAt: source.concealedExpiresAt,
-            isOCRResult: false
+            isOCRResult: false,
+            secretKind: source.secretKind,
+            secretDismissed: source.secretDismissed
         )
         items.insert(item, at: 0)
         applyMaxItems(AppSettings.shared.maxItems)
@@ -310,6 +373,7 @@ final class ClipboardListViewModel: ObservableObject {
         var sourceFilters: [String] = []
         var textFilters: [String] = []
         var tagFilters: [ContentTag] = []
+        var requiresSecret = false
         var hasUnknownTag = false
 
         for token in trimmed.split(separator: " ", omittingEmptySubsequences: true) {
@@ -320,7 +384,10 @@ final class ClipboardListViewModel: ObservableObject {
                 if !value.isEmpty { sourceFilters.append(value) }
             } else if lower.hasPrefix("tag:") {
                 let value = String(s.dropFirst(4)).lowercased()
-                if let tag = ContentTag(rawValue: value) {
+                if value == "secret" {
+                    // The saved kind of the clip, not the text, so "Not a Secret" removes the tag.
+                    requiresSecret = true
+                } else if let tag = ContentTag(rawValue: value) {
                     tagFilters.append(tag)
                 } else {
                     hasUnknownTag = true
@@ -333,6 +400,8 @@ final class ClipboardListViewModel: ObservableObject {
         if hasUnknownTag { return [] }
 
         return items.filter { item in
+            if requiresSecret && item.secretKind == nil { return false }
+
             if !sourceFilters.isEmpty {
                 let bundleID = item.sourceBundleID
                 let displayName = bundleID.flatMap { AppMetadata.shared.displayName(for: $0) }
@@ -374,9 +443,18 @@ final class ClipboardListViewModel: ObservableObject {
     // Private
     private func append(_ item: ClipboardItem) {
         // Promote-if-exists: if the same content already lives in history, move it to top.
+        // It keeps its flags, with one exception: a new copy that is a detected secret hides an
+        // earlier normal clip, unless the user marked that clip "Not a Secret".
         if let existingIdx = items.firstIndex(where: { $0.matchesContent(item) }) {
-            if existingIdx == 0 { return }   // already on top
-            let existing = items.remove(at: existingIdx)
+            var existing = items[existingIdx]
+            let hides = item.secretKind != nil && !existing.isConcealed && !existing.secretDismissed
+            if hides {
+                existing = existing.marked(concealed: true, expiresAt: item.concealedExpiresAt,
+                                           secretKind: item.secretKind, secretDismissed: false)
+            } else if existingIdx == 0 {
+                return   // already on top
+            }
+            items.remove(at: existingIdx)
             items.insert(existing, at: 0)
             repository.saveToDiskAsync(items: items)
             return
@@ -391,15 +469,7 @@ final class ClipboardListViewModel: ObservableObject {
            case .memory(let image) = imgContent.source {
             if let savedURL = repository.saveImage(image) {
                 let newContent = ImageContent(source: .file(savedURL), cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode)
-                itemToInsert = ClipboardItem(
-                    id: item.id,
-                    date: item.date,
-                    content: .image(newContent),
-                    sourceBundleID: item.sourceBundleID,
-                    isConcealed: item.isConcealed,
-                    concealedExpiresAt: item.concealedExpiresAt,
-                    isOCRResult: item.isOCRResult
-                )
+                itemToInsert = item.replacing(content: .image(newContent))
             }
         }
         
@@ -442,16 +512,7 @@ final class ClipboardListViewModel: ObservableObject {
             if let cachedBarcode = cachedBarcode {
                 newContent.cachedBarcode = cachedBarcode
             }
-            let existing = items[idx]
-            items[idx] = ClipboardItem(
-                id: existing.id,
-                date: existing.date,
-                content: .image(newContent),
-                sourceBundleID: existing.sourceBundleID,
-                isConcealed: existing.isConcealed,
-                concealedExpiresAt: existing.concealedExpiresAt,
-                isOCRResult: existing.isOCRResult
-            )
+            items[idx] = items[idx].replacing(content: .image(newContent))
             repository.saveToDiskAsync(items: items)
         }
     }

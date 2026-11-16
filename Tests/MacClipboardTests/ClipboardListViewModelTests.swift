@@ -948,6 +948,295 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 }
 
+// MARK: - Secret flags
+
+extension ClipboardListViewModelTests {
+    @MainActor
+    func test_editKeepsTheSecretFlags() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let expiry = Date(timeIntervalSinceNow: 120)
+        let secret = ClipboardItem(date: Date(), content: .text("DB_PASSWORD=old"),
+                                   isConcealed: true, concealedExpiresAt: expiry, secretKind: .keyValue)
+        let repo = MockRepo()
+        repo.savedItems = [secret]
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        let updated = vm.replaceContent(of: secret, with: .text("new"))
+
+        XCTAssertEqual(updated?.isConcealed, true)
+        XCTAssertEqual(updated?.concealedExpiresAt, expiry)
+        XCTAssertEqual(updated?.secretKind, .keyValue)
+        XCTAssertEqual(vm.items.first?.secretKind, .keyValue)
+    }
+
+    @MainActor
+    func test_saveAsNewImageKeepsTheSecretFlags() throws {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .privateKey, secretDismissed: false)
+        let vm = ClipboardListViewModel(repository: MockRepo(), monitor: MockMonitor())
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 32))
+        let png = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+
+        XCTAssertTrue(vm.insertImage(pngData: png, from: source))
+        XCTAssertEqual(vm.items.first?.secretKind, .privateKey)
+        XCTAssertEqual(vm.items.first?.isConcealed, true)
+    }
+}
+
+// MARK: - Secrets
+
+extension ClipboardListViewModelTests {
+    private var token: String { "ghp_" + String(repeating: "a", count: 36) }
+
+    @MainActor
+    private func makeSecretsVM(_ items: [ClipboardItem]) -> (ClipboardListViewModel, MockRepo, MockMonitor) {
+        AppSettings.shared.maxItems = 50
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        repo.savedItems = items
+        let monitor = MockMonitor()
+        return (ClipboardListViewModel(repository: repo, monitor: monitor), repo, monitor)
+    }
+
+    @MainActor
+    func test_copyingASecretAgainHidesTheEarlierClip() async {
+        let earlier = ClipboardItem(date: Date(), content: .text(token))
+        let other = ClipboardItem(date: Date(), content: .text("other"))
+        let (vm, _, monitor) = makeSecretsVM([other, earlier])
+        let expiry = Date(timeIntervalSinceNow: 300)
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text(token), isConcealed: true,
+                                   concealedExpiresAt: expiry, secretKind: .githubToken))
+        await MainActor.run { }
+
+        XCTAssertEqual(vm.items.first?.id, earlier.id)
+        XCTAssertEqual(vm.items.first?.isConcealed, true)
+        XCTAssertEqual(vm.items.first?.concealedExpiresAt, expiry)
+        XCTAssertEqual(vm.items.first?.secretKind, .githubToken)
+    }
+
+    @MainActor
+    func test_copyingASecretAgainHidesTheEarlierClipAlsoOnTop() async {
+        let earlier = ClipboardItem(date: Date(), content: .text(token))
+        let (vm, _, monitor) = makeSecretsVM([earlier])
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text(token), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken))
+        await MainActor.run { }
+
+        XCTAssertEqual(vm.items.count, 1)
+        XCTAssertEqual(vm.items.first?.isConcealed, true)
+        XCTAssertEqual(vm.items.first?.secretKind, .githubToken)
+    }
+
+    @MainActor
+    func test_aDismissedSecretStaysVisibleWhenCopiedAgain() async {
+        let earlier = ClipboardItem(date: Date(), content: .text(token), secretDismissed: true)
+        let other = ClipboardItem(date: Date(), content: .text("other"))
+        let (vm, _, monitor) = makeSecretsVM([other, earlier])
+
+        monitor.emit(ClipboardItem(date: Date(), content: .text(token), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken))
+        await MainActor.run { }
+
+        XCTAssertEqual(vm.items.first?.id, earlier.id)
+        XCTAssertEqual(vm.items.first?.isConcealed, false)
+        XCTAssertNil(vm.items.first?.secretKind)
+    }
+
+    @MainActor
+    func test_notASecretShowsTheClip() {
+        let secret = ClipboardItem(date: Date(), content: .text(token), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken)
+        let (vm, repo, _) = makeSecretsVM([secret])
+
+        vm.dismissSecret(secret)
+
+        let item = vm.items[0]
+        XCTAssertFalse(item.isConcealed)
+        XCTAssertNil(item.concealedExpiresAt)
+        XCTAssertNil(item.secretKind)
+        XCTAssertTrue(item.secretDismissed)
+        XCTAssertEqual(repo.saveAsyncCount, 1)
+    }
+
+    @MainActor
+    private func scanFixture() -> [ClipboardItem] {
+        let key = "-----" + "BEGIN OPENSSH PRIVATE KEY-----\nabc"
+        return [
+            ClipboardItem(date: Date(), content: .text(token)),
+            ClipboardItem(date: Date(), content: .text(key)),
+            ClipboardItem(date: Date(), content: .text("normal text")),
+            ClipboardItem(date: Date(), content: .url(URL(string: "https://example.com")!)),
+            ClipboardItem(date: Date(), content: .text(token + "b"), isConcealed: true, concealedExpiresAt: .distantFuture),
+            ClipboardItem(date: Date(), content: .text(token + "c"), secretDismissed: true),
+            ClipboardItem(date: Date(), content: .file([URL(fileURLWithPath: "/tmp/x")])),
+        ]
+    }
+
+    @MainActor
+    func test_scanFindsSecretsAndSkipsConcealedAndDismissedClips() {
+        let fixture = scanFixture()
+        let (vm, _, _) = makeSecretsVM(fixture)
+
+        let scan = vm.scanHistoryForSecrets()
+
+        XCTAssertEqual(scan.checked, 4)
+        XCTAssertEqual(scan.found.map(\.id), [fixture[0].id, fixture[1].id])
+        XCTAssertEqual(scan.found.map(\.kind), [.githubToken, .privateKey])
+    }
+
+    @MainActor
+    func test_hideSecretsHasNoCountdown() {
+        let fixture = scanFixture()
+        let (vm, _, _) = makeSecretsVM(fixture)
+
+        vm.hideSecrets(vm.scanHistoryForSecrets())
+
+        XCTAssertTrue(vm.items[0].isConcealed)
+        XCTAssertNil(vm.items[0].concealedExpiresAt)
+        XCTAssertEqual(vm.items[0].secretKind, .githubToken)
+        XCTAssertEqual(vm.items[1].secretKind, .privateKey)
+        XCTAssertFalse(vm.items[2].isConcealed)
+        vm.runConcealedExpirySweep(now: Date().addingTimeInterval(1_000_000))
+        XCTAssertEqual(vm.items.count, fixture.count, "a hidden clip without a countdown stays")
+    }
+
+    @MainActor
+    func test_deleteSecretsRemovesTheClips() {
+        let fixture = scanFixture()
+        let (vm, _, _) = makeSecretsVM(fixture)
+
+        vm.deleteSecrets(vm.scanHistoryForSecrets())
+
+        XCTAssertEqual(vm.items.map(\.id), Array(fixture.dropFirst(2)).map(\.id))
+    }
+
+    @MainActor
+    func test_tagSecretFindsClipsWithAKind() {
+        let secret = ClipboardItem(date: Date(), content: .text(token), isConcealed: true, secretKind: .githubToken)
+        let normal = ClipboardItem(date: Date(), content: .text("hello"))
+        let (vm, _, _) = makeSecretsVM([secret, normal])
+
+        vm.searchText = "tag:secret"
+
+        XCTAssertEqual(vm.filteredItems.map(\.id), [secret.id])
+    }
+}
+
+// MARK: - Secret copy results
+
+extension ClipboardListViewModelTests {
+    private var concealedType: NSPasteboard.PasteboardType { NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType") }
+
+    @MainActor
+    private func makeCopyVM(_ items: [ClipboardItem] = []) -> (ClipboardListViewModel, MockMonitor) {
+        AppSettings.shared.maxItems = 50
+        AppSettings.shared.autoCleanEnabled = false
+        let repo = MockRepo()
+        repo.savedItems = items
+        let monitor = MockMonitor()
+        return (ClipboardListViewModel(repository: repo, monitor: monitor), monitor)
+    }
+
+    @MainActor
+    func test_aCopyThatHoldsTheSecretIsConcealed() {
+        let source = ClipboardItem(date: Date(), content: .text("DB_PASSWORD=s3cr3t-Pa55w0rd"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .keyValue)
+        let (vm, monitor) = makeCopyVM([source])
+        let now = Date(timeIntervalSince1970: 5_000)
+
+        vm.copySecretResult("s3cr3t-Pa55w0rd", from: source, holdsSecret: true, skipConcealed: false, timeout: 300, now: now)
+
+        let top = vm.items[0]
+        XCTAssertNotEqual(top.id, source.id)
+        XCTAssertTrue(top.isConcealed)
+        XCTAssertEqual(top.secretKind, .keyValue)
+        XCTAssertEqual(top.concealedExpiresAt, now.addingTimeInterval(300))
+        XCTAssertEqual(NSPasteboard.general.string(forType: .string), "s3cr3t-Pa55w0rd")
+        XCTAssertTrue(NSPasteboard.general.types?.contains(concealedType) == true)
+        XCTAssertGreaterThan(monitor.ignoreCallCount, 0)
+    }
+
+    @MainActor
+    func test_theDetectedKindWins() {
+        let token = "ghp_" + String(repeating: "a", count: 36)
+        let source = ClipboardItem(date: Date(), content: .text("GITHUB_TOKEN=" + token), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("export GITHUB_TOKEN=" + token, from: source, holdsSecret: true,
+                            skipConcealed: false, timeout: 300, now: Date())
+
+        XCTAssertEqual(vm.items[0].secretKind, .githubToken)
+    }
+
+    @MainActor
+    func test_aMaskedCopyIsNormal() {
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .githubToken)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("ghp_\u{2022}\u{2022}\u{2022}\u{2022}a1b2", from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: 300, now: Date())
+
+        XCTAssertFalse(vm.items[0].isConcealed)
+        XCTAssertNil(vm.items[0].secretKind)
+        XCTAssertFalse(NSPasteboard.general.types?.contains(concealedType) == true)
+    }
+
+    @MainActor
+    func test_aNormalCopyThatStillHasASecretIsConcealed() {
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .keyValue)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("log: ghp_" + String(repeating: "b", count: 36), from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: -1, now: Date())
+
+        XCTAssertTrue(vm.items[0].isConcealed)
+        XCTAssertEqual(vm.items[0].secretKind, .githubToken)
+        XCTAssertEqual(vm.items[0].concealedExpiresAt, .distantFuture)
+    }
+
+    @MainActor
+    func test_dontSaveConcealedClipsAddsNoClip() {
+        let source = ClipboardItem(date: Date(), content: .text("DB_PASSWORD=s3cr3t-Pa55w0rd"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .keyValue)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("s3cr3t-Pa55w0rd", from: source, holdsSecret: true, skipConcealed: true, timeout: 300, now: Date())
+
+        XCTAssertEqual(vm.items.map(\.id), [source.id])
+        XCTAssertEqual(NSPasteboard.general.string(forType: .string), "s3cr3t-Pa55w0rd")
+        XCTAssertTrue(NSPasteboard.general.types?.contains(concealedType) == true)
+    }
+
+    /// The result follows the link rule of the monitor: only http and https text becomes a link clip.
+    @MainActor
+    func test_aLinkResultFollowsTheLinkRule() {
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .linkPassword)
+        let (vm, _) = makeCopyVM([source])
+
+        vm.copySecretResult("https://admin@example.com/app", from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: 300, now: Date())
+        guard case .url(let url) = vm.items[0].content else { return XCTFail("expected a link clip") }
+        XCTAssertEqual(url.absoluteString, "https://admin@example.com/app")
+        XCTAssertFalse(vm.items[0].isConcealed)
+
+        vm.copySecretResult("postgres://admin@db.local:5432/app", from: source, holdsSecret: false,
+                            skipConcealed: false, timeout: 300, now: Date())
+        guard case .text(let text) = vm.items[0].content else { return XCTFail("expected a text clip") }
+        XCTAssertEqual(text, "postgres://admin@db.local:5432/app")
+    }
+}
+
 // MARK: - Mocks
 private final class MockRepo: ClipboardRepositoryProtocol {
     var savedItems: [ClipboardItem] = []

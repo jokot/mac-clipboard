@@ -25,6 +25,8 @@ struct ClipboardItemRow: View {
     var onEditImage: ((ClipboardItem) -> Void)? = nil
     /// Puts the clip on the pasteboard without pasting it.
     var onCopyOnly: ((ClipboardItem) -> Void)? = nil
+    /// "Not a Secret": shows a detected secret as a normal clip.
+    var onDismissSecret: ((ClipboardItem) -> Void)? = nil
     /// Opens the preview panel for this clip.
     var onPreview: ((ClipboardItem) -> Void)? = nil
 
@@ -89,6 +91,9 @@ struct ClipboardItemRow: View {
             Button("Show for 5 Seconds") { reveal() }
                 .keyboardShortcut("u", modifiers: .command)
         }
+        if item.secretKind != nil, let onDismissSecret {
+            Button("Not a Secret") { onDismissSecret(item) }
+        }
         if ClipEdit.canEdit(item.content), let onEdit {
             Button("Edit…") { onEdit(item) }
                 .keyboardShortcut("e", modifiers: .command)
@@ -149,10 +154,6 @@ struct ClipboardItemRow: View {
         return .secondary
     }
 
-    private func masked(_ string: String) -> String {
-        String(repeating: "\u{2022}", count: min(12, max(4, string.count)))
-    }
-
     @ViewBuilder
     private var content: some View {
         switch item.content {
@@ -180,23 +181,56 @@ struct ClipboardItemRow: View {
     @ViewBuilder
     private var mainText: some View {
         let hidden = item.isConcealed && !isRevealed
+        if hidden {
+            hiddenText
+        } else {
+            visibleText
+        }
+    }
+
+    /// The masked dots, then the kind of secret. The value is never in the label.
+    private var hiddenText: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(String(repeating: "\u{2022}", count: 12))
+                .foregroundColor(.secondary)
+            if let kind = item.secretKind {
+                Text(kind.title)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            if let badge = ClipPreviewInfo.rowBadge(for: item) {
+                Text(badge)
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(0.5)
+                    .foregroundColor(Theme.warning)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.warning.opacity(0.18)))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(ClipPreviewInfo.hiddenRowLabel(for: item))
+    }
+
+    @ViewBuilder
+    private var visibleText: some View {
         switch item.content {
         case .text(let string):
             let tag = ContentTagDetector.primaryTag(for: item)
             let isCode = tag == .code || tag == .json || tag == .diff
-            Text(hidden ? masked(string) : TextPreview.preview(for: string))
-                .font(isCode && !hidden ? .system(size: 12, design: .monospaced) : .body)
-                .foregroundColor(hidden ? .secondary : .primary)
+            Text(TextPreview.preview(for: string))
+                .font(isCode ? .system(size: 12, design: .monospaced) : .body)
+                .foregroundColor(.primary)
                 .lineLimit(2)
         case .url(let url):
-            Text(hidden ? masked(url.absoluteString) : url.absoluteString)
-                .foregroundColor(hidden ? .secondary : Theme.accentText)
+            Text(url.absoluteString)
+                .foregroundColor(Theme.accentText)
                 .lineLimit(1)
                 .truncationMode(.middle)
         case .file(let urls):
             let name = urls.first?.lastPathComponent ?? "(unknown)"
-            (Text(hidden ? masked(name) : name)
-             + Text(urls.count > 1 && !hidden ? "  and \(urls.count - 1) more" : "").foregroundColor(.secondary))
+            (Text(name)
+             + Text(urls.count > 1 ? "  and \(urls.count - 1) more" : "").foregroundColor(.secondary))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .help(urls.prefix(10).map(\.path).joined(separator: "\n")
