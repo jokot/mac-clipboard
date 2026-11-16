@@ -13,6 +13,7 @@
 		0A01B58AB7BD50779A091321 /* EditorStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDB820E002001C4564D4D1F /* EditorStatusTests.swift */; };
 		0EFE4D34B1B4FC0A9B17E1B6 /* TextPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF81986603D19912EF59AD1 /* TextPreview.swift */; };
 		112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */; };
+		14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */; };
 		1690F3F4EABD38C6D216C68C /* ClipKeyMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E96C952DB2DA995B5643E4 /* ClipKeyMap.swift */; };
 		18C0680CAEFAFBEBFBC0DE10 /* ClipListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */; };
 		19742895E7A968E617947BA6 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2A25C559C9759FD8E4AF7B /* AppIconView.swift */; };
@@ -25,6 +26,7 @@
 		2D59A4DD6FB5FB360D3D61E3 /* ImageEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701FA308CBB00953918EF9A4 /* ImageEditorSheet.swift */; };
 		2DA665FB0CED6CA5E30F9B3F /* AccessibilityPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170D815A01E99A4093527555 /* AccessibilityPromptView.swift */; };
 		2E782788303ABCBED58B7CE9 /* SettingsRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB405DFA798E0AE1F1AD129 /* SettingsRows.swift */; };
+		398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31AB460CDECFC331586AF24 /* SecretDetector.swift */; };
 		4245D9AFDC682E6F5D5B798B /* AccentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B122731F3648582A52541069 /* AccentStore.swift */; };
 		45DBD2E88E7CCCB82673EDF0 /* AccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451581E9F48AB3E1E26559B3 /* AccentColor.swift */; };
 		484511220AFBFACF1596A9F7 /* AccentColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75566F1C5C65A91FC70BE7FD /* AccentColorTests.swift */; };
@@ -153,6 +155,7 @@
 		B122731F3648582A52541069 /* AccentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentStore.swift; sourceTree = "<group>"; };
 		B18F8150D9761A140088F983 /* AppMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadataTests.swift; sourceTree = "<group>"; };
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
+		B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretDetectorTests.swift; sourceTree = "<group>"; };
 		BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListTextTests.swift; sourceTree = "<group>"; };
 		C0C0E2D389EBA64CC6FCE675 /* AppEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironmentTests.swift; sourceTree = "<group>"; };
 		C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListText.swift; sourceTree = "<group>"; };
@@ -160,6 +163,7 @@
 		C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtils.swift; sourceTree = "<group>"; };
 		C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCryptoTests.swift; sourceTree = "<group>"; };
 		CDDB820E002001C4564D4D1F /* EditorStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorStatusTests.swift; sourceTree = "<group>"; };
+		D31AB460CDECFC331586AF24 /* SecretDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretDetector.swift; sourceTree = "<group>"; };
 		D4A2B6F8E069A6DFFDA84A50 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D561C754CE8B3377968813CC /* AppMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadata.swift; sourceTree = "<group>"; };
 		DA06703AB7DD76075D2895A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -268,6 +272,7 @@
 				6E1A98A9409F221718C10FB5 /* MaxItemsDraft.swift */,
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
 				2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */,
+				D31AB460CDECFC331586AF24 /* SecretDetector.swift */,
 				1AF81986603D19912EF59AD1 /* TextPreview.swift */,
 				6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */,
 				1FE3104C8613878A7EC210BD /* WindowKeyMaps.swift */,
@@ -297,6 +302,7 @@
 				5E9FF33AF5F9B8A12F4B06BD /* ImageEditorViewModelTests.swift */,
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
 				343918D327D3415521E47E64 /* KeyShortcutsTests.swift */,
+				B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */,
 				F4D51B70AAAA729C12A4DBB6 /* SpyKeyStore.swift */,
 				DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */,
 				555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */,
@@ -451,6 +457,7 @@
 				232718A01D9DEB7A1DCD2305 /* ImageEditorViewModelTests.swift in Sources */,
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
 				E9EB7C213CD707051F2DFCFA /* KeyShortcutsTests.swift in Sources */,
+				14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */,
 				DA3DC83A5333247B6A45CC07 /* SpyKeyStore.swift in Sources */,
 				87011F9E077DDB68590A1E5D /* TextPreviewTests.swift in Sources */,
 				571B862018FC471035814617 /* URLUtilsTests.swift in Sources */,
@@ -504,6 +511,7 @@
 				59EF8EE29A879D52B3ADE552 /* OCRService.swift in Sources */,
 				831AFA2594914C88871C1FD8 /* OverlayWindow.swift in Sources */,
 				B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */,
+				398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */,
 				2E782788303ABCBED58B7CE9 /* SettingsRows.swift in Sources */,
 				7E0D43030BBB9BE895CCF2C2 /* SettingsView.swift in Sources */,
 				A2CE77F1107B83E43095B437 /* ShortcutsPanel.swift in Sources */,
