@@ -44,6 +44,7 @@
 		6F1E89128FE59AFCD248B00B /* SecretCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32A319FC028A7C05FD765EE /* SecretCaptureTests.swift */; };
 		7170F47F267388BAF4517709 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7F2BCE8886027192AD2307 /* Notifications.swift */; };
 		757DEF736A5B201C9CBFA93E /* ClipListTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDF56D29FAAFA3A6AFB73DA /* ClipListTextTests.swift */; };
+		776A9F8D61319DBD2B043327 /* SecretMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EB933B3A6DFCDB94783967F /* SecretMask.swift */; };
 		77C2E8A92F5F7C12481B5954 /* ExtractPasteControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A90B1A3298B9A8AB94DA69 /* ExtractPasteControllerTests.swift */; };
 		7B9087750A8525BD84CFB84C /* AppSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E827E59109586E92EF348B3C /* AppSettingsTests.swift */; };
 		7D307A167F9C9108005E211D /* HotKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */; };
@@ -71,6 +72,7 @@
 		B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */; };
 		C127FE0E57A35CA8C307010D /* ImageCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */; };
 		C3861483D3B8E2A1F2A37297 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815338FAF7D3A98423D0E86C /* ClipboardItem.swift */; };
+		C4D6404FDE08FA1F95BF1662 /* SecretMaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */; };
 		CC082A9CFED49E1BD9FBF5C3 /* ImageEditorWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */; };
 		D350C3F63B3D0E46C6DEFEA6 /* URLUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */; };
 		D9677C720DDEED857A4B195D /* KeyShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0292CF77B1F1E1872C0C520D /* KeyShortcuts.swift */; };
@@ -127,6 +129,7 @@
 		2CECDFE3E55157FBF8B90B2A /* SecretScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretScan.swift; sourceTree = "<group>"; };
 		2CFE0C41EAC429ECC7924A25 /* SecretViewTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretViewTextTests.swift; sourceTree = "<group>"; };
 		2E9632926ED59CE6C55930B8 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		2EB933B3A6DFCDB94783967F /* SecretMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMask.swift; sourceTree = "<group>"; };
 		32A4DA1B4B490DFCFE8FF7FF /* SecretScanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretScanTests.swift; sourceTree = "<group>"; };
 		33EFD2074486FADCBD667A8D /* ImageCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompositor.swift; sourceTree = "<group>"; };
 		343918D327D3415521E47E64 /* KeyShortcutsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcutsTests.swift; sourceTree = "<group>"; };
@@ -157,6 +160,7 @@
 		8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorWindowController.swift; sourceTree = "<group>"; };
 		92DAD4224B51A0C0BD29A8C5 /* ExtractPasteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractPasteController.swift; sourceTree = "<group>"; };
 		95F666DE6781E514FE7F9921 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMaskTests.swift; sourceTree = "<group>"; };
 		9C7D258BC605842AEBA68655 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
 		A4235CBBB175E9BB87DE8791 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
 		A64179F24FF8AFF7D440BC24 /* HotkeyCapturingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyCapturingView.swift; sourceTree = "<group>"; };
@@ -288,6 +292,7 @@
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
 				2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */,
 				D31AB460CDECFC331586AF24 /* SecretDetector.swift */,
+				2EB933B3A6DFCDB94783967F /* SecretMask.swift */,
 				2CECDFE3E55157FBF8B90B2A /* SecretScan.swift */,
 				1AF81986603D19912EF59AD1 /* TextPreview.swift */,
 				6A5D313DE179B409A4DEA4D7 /* URLUtils.swift */,
@@ -321,6 +326,7 @@
 				F32A319FC028A7C05FD765EE /* SecretCaptureTests.swift */,
 				B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */,
 				0D2D17D2ADED46102EC0753A /* SecretFieldsRepositoryTests.swift */,
+				9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */,
 				32A4DA1B4B490DFCFE8FF7FF /* SecretScanTests.swift */,
 				2CFE0C41EAC429ECC7924A25 /* SecretViewTextTests.swift */,
 				F4D51B70AAAA729C12A4DBB6 /* SpyKeyStore.swift */,
@@ -481,6 +487,7 @@
 				6F1E89128FE59AFCD248B00B /* SecretCaptureTests.swift in Sources */,
 				14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */,
 				1A5C4CFD858AF3B66BA56B34 /* SecretFieldsRepositoryTests.swift in Sources */,
+				C4D6404FDE08FA1F95BF1662 /* SecretMaskTests.swift in Sources */,
 				64F7CA0D5DB4AA7AEC18B2C2 /* SecretScanTests.swift in Sources */,
 				F58C53A2DBCA6AE2C4559F63 /* SecretViewTextTests.swift in Sources */,
 				DA3DC83A5333247B6A45CC07 /* SpyKeyStore.swift in Sources */,
@@ -539,6 +546,7 @@
 				B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */,
 				941DF98FCD932B2D4CA7128B /* SecretCapture.swift in Sources */,
 				398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */,
+				776A9F8D61319DBD2B043327 /* SecretMask.swift in Sources */,
 				3E6074E6F47E3A8677C66048 /* SecretScan.swift in Sources */,
 				2E782788303ABCBED58B7CE9 /* SettingsRows.swift in Sources */,
 				7E0D43030BBB9BE895CCF2C2 /* SettingsView.swift in Sources */,

@@ -100,7 +100,8 @@ enum SecretDetector {
         Rule(kind: .npmToken, regex: re(#"\bnpm_[A-Za-z0-9]{36}\b"#), accepts: nil),
         Rule(kind: .jwt, regex: re(#"\beyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{10,}"#), accepts: nil),
         Rule(kind: .linkPassword,
-             regex: re(#"\b[A-Za-z][A-Za-z0-9+.\-]*://[^\s:/@]+:([^\s/@]{3,})@[^\s/@]+"#), accepts: nil),
+             regex: re(#"\b[A-Za-z][A-Za-z0-9+.\-]*://[^\s:/@]+:([^\s/@]{3,})@[^\s/@"'<>]+(?:[/?#][^\s"'<>]*)?"#),
+             accepts: nil),
         Rule(kind: .keyValue, regex: re(keyValuePattern, [.anchorsMatchLines]), accepts: { match, text in
             let key = text.substring(with: match.range(at: 2))
             let raw = text.substring(with: match.range(at: 3))
@@ -154,5 +155,100 @@ enum SecretDetector {
         if ["changeme", "password", "null", "none", "true", "false"].contains(lower) { return false }
         if lower.hasPrefix("your") || lower.hasPrefix("example") { return false }
         return true
+    }
+}
+
+// MARK: - Each secret in a text
+
+/// One secret in a text.
+struct SecretMatch: Equatable {
+    let kind: SecretKind
+    /// The whole text that the rule matched, for example the full `KEY=value` line.
+    let matchRange: Range<String.Index>
+    /// The characters that a mask hides: the token, the password of a link, the last part of a
+    /// webhook, the value after a key, or the whole private key block.
+    let range: Range<String.Index>
+    /// The full credential that an export copies. The whole link for a webhook and a link
+    /// with a password, else the secret part.
+    let value: String
+    /// The key of a `KEY=value` line. Nil for the other kinds.
+    let key: String?
+}
+
+extension SecretDetector {
+    /// A private key from its first line to its last line, or to the end of the text.
+    private static let privateKeyBlock = try! NSRegularExpression(pattern:
+        #"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----|\z)"#)
+
+    /// All secrets in `text`, in text order. When two matches overlap, the match of the rule
+    /// that comes first in the table stays. `limit` nil checks the whole text.
+    static func matches(in text: String, limit: Int? = SecretDetector.limit) -> [SecretMatch] {
+        let checked = limit.map { String(text.prefix($0)) } ?? text
+        let ns = checked as NSString
+        let all = NSRange(location: 0, length: ns.length)
+        var kept: [(whole: NSRange, match: SecretMatch)] = []
+        for rule in rules {
+            let regex = rule.kind == .privateKey ? privateKeyBlock : rule.regex
+            regex.enumerateMatches(in: checked, range: all) { result, _, _ in
+                guard let result else { return }
+                if let accepts = rule.accepts, !accepts(result, ns) { return }
+                let whole = result.range
+                if kept.contains(where: { NSIntersectionRange($0.whole, whole).length > 0 }) { return }
+                if let match = makeMatch(rule.kind, result, in: checked, ns) { kept.append((whole, match)) }
+            }
+        }
+        return kept.sorted { $0.whole.location < $1.whole.location }.map(\.match)
+    }
+
+    /// The first secret of `kind` in the whole text. The actions for one secret use it.
+    static func mainMatch(in text: String, kind: SecretKind) -> SecretMatch? {
+        matches(in: text, limit: nil).first { $0.kind == kind }
+    }
+
+    private static func makeMatch(_ kind: SecretKind, _ result: NSTextCheckingResult,
+                                  in text: String, _ ns: NSString) -> SecretMatch? {
+        let whole = result.range
+        var secret = whole
+        var key: String?
+        switch kind {
+        case .linkPassword:
+            secret = result.range(at: 1)
+        case .slackWebhook, .discordWebhook:
+            var end = whole.location + whole.length
+            while end > whole.location, ns.character(at: end - 1) == 0x2F { end -= 1 }   // "/"
+            let body = ns.substring(with: NSRange(location: whole.location, length: end - whole.location)) as NSString
+            let slash = body.range(of: "/", options: .backwards)
+            let start = whole.location + (slash.location == NSNotFound ? 0 : slash.location + 1)
+            secret = NSRange(location: start, length: end - start)
+        case .keyValue:
+            key = ns.substring(with: result.range(at: 2))
+            secret = cleanValueRange(result.range(at: 3), in: ns)
+        default:
+            break
+        }
+        guard secret.length > 0,
+              let matchRange = Range(whole, in: text), let range = Range(secret, in: text) else { return nil }
+        let value: String
+        switch kind {
+        case .linkPassword, .slackWebhook, .discordWebhook: value = String(text[matchRange])
+        default: value = String(text[range])
+        }
+        return SecretMatch(kind: kind, matchRange: matchRange, range: range, value: value, key: key)
+    }
+
+    /// The range of the value without spaces, a comma at the end, and quotes around it.
+    /// It follows `cleanValue(_:)`.
+    private static func cleanValueRange(_ raw: NSRange, in ns: NSString) -> NSRange {
+        func isSpace(_ c: unichar) -> Bool { c == 0x20 || c == 0x09 }
+        var s = raw.location, e = raw.location + raw.length
+        while e > s, isSpace(ns.character(at: e - 1)) { e -= 1 }
+        if e > s, ns.character(at: e - 1) == 0x2C { e -= 1 }   // ","
+        while e > s, isSpace(ns.character(at: e - 1)) { e -= 1 }
+        while s < e, isSpace(ns.character(at: s)) { s += 1 }
+        if e - s >= 2 {
+            let first = ns.character(at: s)
+            if (first == 0x22 || first == 0x27), ns.character(at: e - 1) == first { s += 1; e -= 1 }
+        }
+        return NSRange(location: s, length: e - s)
     }
 }
