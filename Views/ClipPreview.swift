@@ -38,6 +38,45 @@ enum ClipPreviewInfo {
     private static func plural(_ n: Int, _ word: String) -> String {
         "\(n) \(word)\(n == 1 ? "" : "s")"
     }
+
+    // MARK: - Hidden clips
+
+    /// "This clip is a GitHub token", or "This clip is concealed" for a clip without a kind.
+    static func concealedTitle(for item: ClipboardItem) -> String {
+        guard let kind = item.secretKind else { return "This clip is concealed" }
+        let name: String
+        switch kind {
+        case .privateKey, .keyValue, .linkPassword: name = kind.title.prefix(1).lowercased() + kind.title.dropFirst()
+        default: name = kind.title
+        }
+        // "an AWS access key", "an npm token", "a GitHub token".
+        let article = "AEIOUaeioun".contains(name.first ?? "x") ? "an" : "a"
+        return "This clip is \(article) \(name)"
+    }
+
+    /// "MaClip deletes it in 4:32.", or nil for a clip without a countdown.
+    static func countdownLine(until date: Date?, now: Date) -> String? {
+        guard let date, date < .distantFuture else { return nil }
+        return "MaClip deletes it in \(ClipboardItemRow.countdown(until: date, now: now))."
+    }
+
+    /// The preview header: the date, the kind of secret, then the size while the clip is shown.
+    static func header(time: String, kind: SecretKind?, detail: String, hidden: Bool) -> String {
+        var parts = [time]
+        if let kind { parts.append(kind.title) }
+        if !detail.isEmpty, !hidden { parts.append(detail) }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
+    /// The accessibility label of a hidden row. It never contains the value.
+    static func hiddenRowLabel(for item: ClipboardItem) -> String {
+        item.secretKind.map { "Concealed clip, \($0.title)" } ?? "Concealed clip"
+    }
+
+    /// A detected secret shows Not a Secret in place of Edit… in the preview.
+    static func showsNotASecretButton(for item: ClipboardItem) -> Bool {
+        item.secretKind != nil
+    }
 }
 
 /// The text in the editor for a text, link or file clip, and the clip that the edited text makes.
@@ -104,6 +143,8 @@ struct ClipPreviewView: View {
     var isEditing: Bool = false
     var onSave: (ClipboardItemContent) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
+    /// "Not a Secret": shows a detected secret as a normal clip.
+    var onDismissSecret: () -> Void = {}
 
     @State private var image: NSImage?
     @State private var isRevealed = false
@@ -150,7 +191,11 @@ struct ClipPreviewView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
                 HStack(spacing: 8) {
-                    Button(action: onEdit) { buttonLabel("Edit\u{2026}", key: "\u{2318}E") }
+                    if ClipPreviewInfo.showsNotASecretButton(for: item) {
+                        Button("Not a Secret", action: onDismissSecret)
+                    } else {
+                        Button(action: onEdit) { buttonLabel("Edit\u{2026}", key: "\u{2318}E") }
+                    }
                     Button(action: onCopyOnly) { buttonLabel("Copy Only", key: "\u{2318}C") }
                     Spacer()
                     Button(action: onPaste) { buttonLabel("Paste", key: "\u{21A9}", onAccent: true) }
@@ -200,15 +245,14 @@ struct ClipPreviewView: View {
     }
 
     private var headerText: String {
-        var parts = [ClipPreviewInfo.time(of: item.date)]
         let detail: String
         if case .image = item.content {
             detail = image.map(ClipPreviewInfo.detail(for:)) ?? ""
         } else {
             detail = ClipPreviewInfo.detail(for: item)
         }
-        if !detail.isEmpty, !(item.isConcealed && !isRevealed) { parts.append(detail) }
-        return parts.joined(separator: " \u{00B7} ")
+        return ClipPreviewInfo.header(time: ClipPreviewInfo.time(of: item.date), kind: item.secretKind,
+                                      detail: detail, hidden: item.isConcealed && !isRevealed)
     }
 
     @ViewBuilder
@@ -216,7 +260,14 @@ struct ClipPreviewView: View {
         if item.isConcealed && !isRevealed {
             VStack(spacing: 10) {
                 Image(systemName: "lock.fill").font(.system(size: 24)).foregroundColor(Theme.warning)
-                Text("This clip is concealed").font(.headline)
+                Text(ClipPreviewInfo.concealedTitle(for: item)).font(.headline)
+                if ClipPreviewInfo.countdownLine(until: item.concealedExpiresAt, now: Date()) != nil {
+                    TimelineView(.periodic(from: Date(), by: 1)) { context in
+                        Text(ClipPreviewInfo.countdownLine(until: item.concealedExpiresAt, now: context.date) ?? "")
+                            .font(.system(size: 12).monospacedDigit())
+                            .foregroundColor(.secondary)
+                    }
+                }
                 Button("Show for 5 Seconds") {
                     isRevealed = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 5) { isRevealed = false }

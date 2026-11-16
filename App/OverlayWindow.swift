@@ -18,6 +18,9 @@ final class OverlayWindowController: NSObject {
     private let imageEditor = ImageEditorWindowController()
     private var previewPanel: NSPanel?
     private var previewedItemID: UUID?
+    /// The clip in the preview, to redraw it when its flags change ("Not a Secret", Hide).
+    private var previewedItem: ClipboardItem?
+    private var itemsObserver: AnyCancellable?
     private var lastActivity: Date = Date()
     private let windowState = ClipWindowState()
     private var paneObserver: AnyCancellable?
@@ -41,6 +44,16 @@ final class OverlayWindowController: NSObject {
                   (window.firstResponder as? NSTextView)?.isFieldEditor == true else { return }
             self?.leaveSearchField()
         }
+        // "Not a Secret" and Hide change the flags of a clip. Redraw the preview of that clip.
+        itemsObserver = viewModel.$items.sink { [weak self] items in
+            DispatchQueue.main.async { self?.refreshPreview(from: items) }
+        }
+    }
+
+    private func refreshPreview(from items: [ClipboardItem]) {
+        guard let shown = previewedItem, previewedItemID == shown.id, !windowState.editing,
+              let current = items.first(where: { $0.id == shown.id }), current != shown else { return }
+        showPreview(current)
     }
 
     deinit {
@@ -523,6 +536,7 @@ private extension OverlayWindowController {
     func showPreview(_ item: ClipboardItem, editing: Bool = false) {
         guard let window else { return }
         previewedItemID = item.id
+        previewedItem = item
         windowState.previewOpen = true
         windowState.editing = editing
         if editing { windowState.pane = .preview }
@@ -539,7 +553,8 @@ private extension OverlayWindowController {
             onClose: { [weak self] in self?.closePreview() },
             isEditing: editing,
             onSave: { [weak self] content in self?.saveEdit(of: item, content: content) },
-            onCancelEdit: { [weak self] in self?.endEdit(showing: item) }
+            onCancelEdit: { [weak self] in self?.endEdit(showing: item) },
+            onDismissSecret: { [weak self] in self?.viewModel.dismissSecret(item) }
         )
         let panel = previewPanel ?? makePreviewPanel()
         previewPanel = panel

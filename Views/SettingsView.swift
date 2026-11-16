@@ -694,8 +694,45 @@ private struct PrivacyTab: View {
                                    values: [5, 10, 20, 30, 60, 120, 300, 600, 900, 1800, -1])
                 }
             }
+
+            SettingsSection(title: "Secrets") {
+                SettingsRow(title: "Find secrets in copied text",
+                            caption: "API keys, tokens and private keys become concealed clips. The concealed clip settings above apply to them.") {
+                    SettingsSwitch(label: "Find secrets in copied text", isOn: $settings.findSecrets)
+                        .settingsFocus("findSecrets", toggle: $settings.findSecrets)
+                }
+                SettingsRow(title: "Secrets in history") {
+                    Button("Find Secrets in History\u{2026}", action: findSecretsInHistory)
+                        .settingsFocus("findSecretsInHistory", press: findSecretsInHistory)
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsRemoveSelectedApp)) { _ in removeSelected() }
+    }
+
+    /// Checks the text clips and link clips, then asks to hide or delete the secrets it found.
+    private func findSecretsInHistory() {
+        let scan = viewModel.scanHistoryForSecrets()
+        let alert = NSAlert()
+        alert.messageText = scan.title
+        alert.informativeText = scan.message
+        if scan.isEmpty {
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            return
+        }
+        let delete = alert.addButton(withTitle: "Delete \(scan.found.count) Clip\(scan.found.count == 1 ? "" : "s")")
+        delete.hasDestructiveAction = true
+        // Return hides. A delete needs a click, so a quick Return does not delete clips.
+        delete.keyEquivalent = ""
+        alert.addButton(withTitle: "Hide").keyEquivalent = "\r"
+        let cancel = alert.addButton(withTitle: "Cancel")
+        cancel.keyEquivalent = "\u{1b}"
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: viewModel.deleteSecrets(scan)
+        case .alertSecondButtonReturn: viewModel.hideSecrets(scan)
+        default: break
+        }
     }
 
     private func appRow(_ bundleID: String) -> some View {
