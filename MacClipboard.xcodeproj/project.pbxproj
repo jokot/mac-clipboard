@@ -10,6 +10,7 @@
 		036DF1DC3402A0369E1AC409 /* ExtractToastWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5D4D6E0F6E1192A1CCC6AE /* ExtractToastWindow.swift */; };
 		03AC489464E5D2A5DC7208DD /* ClipboardItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9C1B3758DFC3B21C63A452 /* ClipboardItemRow.swift */; };
 		0414F7BC1B9B2B06BD0E210F /* HistoryCryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79E2300E05E72FCC7AEB159 /* HistoryCryptoTests.swift */; };
+		06A11F388EED6AC6E5C4B1CA /* JWTDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B163388AA3B5613A26CB85F9 /* JWTDecoderTests.swift */; };
 		0A01B58AB7BD50779A091321 /* EditorStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDB820E002001C4564D4D1F /* EditorStatusTests.swift */; };
 		0EFE4D34B1B4FC0A9B17E1B6 /* TextPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF81986603D19912EF59AD1 /* TextPreview.swift */; };
 		112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E1DDAF695FDA410044FEAC /* InfoViewModel.swift */; };
@@ -28,6 +29,7 @@
 		2DA665FB0CED6CA5E30F9B3F /* AccessibilityPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170D815A01E99A4093527555 /* AccessibilityPromptView.swift */; };
 		2E782788303ABCBED58B7CE9 /* SettingsRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB405DFA798E0AE1F1AD129 /* SettingsRows.swift */; };
 		398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31AB460CDECFC331586AF24 /* SecretDetector.swift */; };
+		398B57CF777E490F32AB80BA /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9368EADE952C9A3FAF79C83C /* JWTDecoder.swift */; };
 		3E6074E6F47E3A8677C66048 /* SecretScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CECDFE3E55157FBF8B90B2A /* SecretScan.swift */; };
 		4245D9AFDC682E6F5D5B798B /* AccentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B122731F3648582A52541069 /* AccentStore.swift */; };
 		45DBD2E88E7CCCB82673EDF0 /* AccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451581E9F48AB3E1E26559B3 /* AccentColor.swift */; };
@@ -163,6 +165,7 @@
 		8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorWindowController.swift; sourceTree = "<group>"; };
 		9136BED16CE0A49D73F98AC3 /* SecretExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretExport.swift; sourceTree = "<group>"; };
 		92DAD4224B51A0C0BD29A8C5 /* ExtractPasteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractPasteController.swift; sourceTree = "<group>"; };
+		9368EADE952C9A3FAF79C83C /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
 		95F666DE6781E514FE7F9921 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMaskTests.swift; sourceTree = "<group>"; };
 		9C7D258BC605842AEBA68655 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
@@ -173,6 +176,7 @@
 		AE8D17915B8A6F25E8AA8EDF /* HotkeyUtilsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyUtilsTests.swift; sourceTree = "<group>"; };
 		AFD1F11CCE8A7517D18F5F1B /* ImageEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorViewModel.swift; sourceTree = "<group>"; };
 		B122731F3648582A52541069 /* AccentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentStore.swift; sourceTree = "<group>"; };
+		B163388AA3B5613A26CB85F9 /* JWTDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoderTests.swift; sourceTree = "<group>"; };
 		B18F8150D9761A140088F983 /* AppMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadataTests.swift; sourceTree = "<group>"; };
 		B2D6D6D9544D32BB060E3211 /* HotKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyService.swift; sourceTree = "<group>"; };
 		B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretDetectorTests.swift; sourceTree = "<group>"; };
@@ -291,6 +295,7 @@
 				1D2888C02F1F29FE5B864D3A /* FirstMouseHostingView.swift */,
 				C79D329789FD0A6741C07D77 /* HotkeyUtils.swift */,
 				33EFD2074486FADCBD667A8D /* ImageCompositor.swift */,
+				9368EADE952C9A3FAF79C83C /* JWTDecoder.swift */,
 				0292CF77B1F1E1872C0C520D /* KeyShortcuts.swift */,
 				6E1A98A9409F221718C10FB5 /* MaxItemsDraft.swift */,
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
@@ -327,6 +332,7 @@
 				03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */,
 				5E9FF33AF5F9B8A12F4B06BD /* ImageEditorViewModelTests.swift */,
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
+				B163388AA3B5613A26CB85F9 /* JWTDecoderTests.swift */,
 				343918D327D3415521E47E64 /* KeyShortcutsTests.swift */,
 				F32A319FC028A7C05FD765EE /* SecretCaptureTests.swift */,
 				B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */,
@@ -489,6 +495,7 @@
 				C127FE0E57A35CA8C307010D /* ImageCompositorTests.swift in Sources */,
 				232718A01D9DEB7A1DCD2305 /* ImageEditorViewModelTests.swift in Sources */,
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
+				06A11F388EED6AC6E5C4B1CA /* JWTDecoderTests.swift in Sources */,
 				E9EB7C213CD707051F2DFCFA /* KeyShortcutsTests.swift in Sources */,
 				6F1E89128FE59AFCD248B00B /* SecretCaptureTests.swift in Sources */,
 				14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */,
@@ -545,6 +552,7 @@
 				CC082A9CFED49E1BD9FBF5C3 /* ImageEditorWindowController.swift in Sources */,
 				E58D3EF8DD61DCD433169CFC /* InfoView.swift in Sources */,
 				112FD6A5F75656D0F61ACA8C /* InfoViewModel.swift in Sources */,
+				398B57CF777E490F32AB80BA /* JWTDecoder.swift in Sources */,
 				D9677C720DDEED857A4B195D /* KeyShortcuts.swift in Sources */,
 				6B3F52FFFF63F304101C006D /* MaxItemsDraft.swift in Sources */,
 				7170F47F267388BAF4517709 /* Notifications.swift in Sources */,
