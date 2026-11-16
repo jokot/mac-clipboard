@@ -55,6 +55,11 @@ final class AppSettings: ObservableObject {
     @Published var skipConcealedItems: Bool {
         didSet { AppEnvironment.defaults.set(skipConcealedItems, forKey: Keys.skipConcealedItems) }
     }
+    /// On by default: MaClip finds API keys, tokens and private keys in copied text and
+    /// handles them as concealed clips.
+    @Published var findSecrets: Bool {
+        didSet { AppEnvironment.defaults.set(findSecrets, forKey: Keys.findSecrets) }
+    }
     @Published var concealedClearTimeout: TimeInterval {
         didSet { AppEnvironment.defaults.set(concealedClearTimeout, forKey: Keys.concealedClearTimeout) }
     }
@@ -119,6 +124,7 @@ final class AppSettings: ObservableObject {
         static let skipConcealedItems = "settings.skipConcealedItems"
         static let saveMaClipClips = "settings.saveMaClipClips"
         static let concealedClearTimeout = "settings.concealedClearTimeout"
+        static let findSecrets = "settings.findSecrets"
         static let autoDismissOverlayEnabled = "settings.autoDismissOverlay.enabled"
         static let autoDismissOverlayTimeout = "settings.autoDismissOverlay.timeout"
         static let closeOnClickOutside = "settings.closeOnClickOutside"
@@ -169,6 +175,9 @@ final class AppSettings: ObservableObject {
     }
 
     static let defaultMaxItems = 50
+
+    /// The switch "Find secrets in copied text" is on when nothing is saved.
+    static func initialFindSecrets(stored: Bool?) -> Bool { stored ?? true }
 
     /// Control-Command-V.
     static let defaultHotkeyKeyCode = UInt32(kVK_ANSI_V)
@@ -237,6 +246,7 @@ final class AppSettings: ObservableObject {
         saveMaClipClips = false
         skipConcealedItems = false
         concealedClearTimeout = 300
+        findSecrets = true
     }
 
     private init() {
@@ -283,6 +293,7 @@ final class AppSettings: ObservableObject {
         self.saveMaClipClips = initialSaveMaClipClips
         self.skipConcealedItems = initialSkipConcealed
         self.concealedClearTimeout = initialConcealedTimeout
+        self.findSecrets = Self.initialFindSecrets(stored: defaults.object(forKey: Keys.findSecrets) as? Bool)
         self.pasteOnClick = initialPasteOnClick
         self.moveTopOnClick = initialMoveTopOnClick
         self.autoDismissOverlayEnabled = initialAutoDismissEnabled
