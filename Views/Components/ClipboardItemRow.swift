@@ -198,6 +198,15 @@ struct ClipboardItemRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
+            if let badge = ClipPreviewInfo.rowBadge(for: item) {
+                Text(badge)
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(0.5)
+                    .foregroundColor(Theme.warning)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.warning.opacity(0.18)))
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ClipPreviewInfo.hiddenRowLabel(for: item))

@@ -460,6 +460,7 @@ struct ContentView: View {
         case .extractCode: extractCode(item)
         case .showForFiveSeconds: NotificationCenter.default.post(name: .overlayRevealItem, object: item.id)
         case .notASecret: viewModel.dismissSecret(item)
+        case .secret(let action): SecretActionRunner.run(action, on: item, viewModel: viewModel)
         case .edit: if case .image = item.content { openImageEditor(for: item) } else { onEdit(item) }
         case .excludeApp(let bundleID): confirmExclude(bundleID: bundleID)
         case .delete: remove(item, at: index)

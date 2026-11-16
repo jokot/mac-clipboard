@@ -70,7 +70,15 @@ enum ClipPreviewInfo {
 
     /// The accessibility label of a hidden row. It never contains the value.
     static func hiddenRowLabel(for item: ClipboardItem) -> String {
-        item.secretKind.map { "Concealed clip, \($0.title)" } ?? "Concealed clip"
+        guard let kind = item.secretKind else { return "Concealed clip" }
+        let badge = rowBadge(for: item).map { ", " + $0.lowercased() } ?? ""
+        return "Concealed clip, \(kind.title)\(badge)"
+    }
+
+    /// The pill after the kind on the row: "LIVE" for a live Stripe key.
+    static func rowBadge(for item: ClipboardItem) -> String? {
+        guard let kind = item.secretKind, let text = item.secretText else { return nil }
+        return SecretFacts.rowBadge(for: text, kind: kind)
     }
 
     /// A detected secret shows Not a Secret in place of Edit… in the preview.
@@ -145,6 +153,10 @@ struct ClipPreviewView: View {
     var onCancelEdit: () -> Void = {}
     /// "Not a Secret": shows a detected secret as a normal clip.
     var onDismissSecret: () -> Void = {}
+    /// Shows the decoded view of a JWT, after Decode JWT in ⌘K.
+    var decodedJWT: Bool = false
+    /// Copy Public Key, Copy Header and Copy Payload.
+    var onSecretAction: (SecretAction) -> Void = { _ in }
 
     @State private var image: NSImage?
     @State private var isRevealed = false
@@ -187,16 +199,19 @@ struct ClipPreviewView: View {
                 ClipEditorView(item: item, onCancel: onCancelEdit, onSave: onSave)
                     .id(item.id)
             } else {
-                body(for: item)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                if let jwt = decodedJWTContent {
+                    JWTDecodedView(jwt: jwt)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                } else {
+                    body(for: item)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    SecretFactsList(item: item)
+                }
 
                 HStack(spacing: 8) {
-                    if ClipPreviewInfo.showsNotASecretButton(for: item) {
-                        Button("Not a Secret", action: onDismissSecret)
-                    } else {
-                        Button(action: onEdit) { buttonLabel("Edit\u{2026}", key: "\u{2318}E") }
+                    ForEach(PreviewButtons.buttons(for: item, decodedJWT: decodedJWTContent != nil), id: \.title) { button in
+                        previewButton(button)
                     }
-                    Button(action: onCopyOnly) { buttonLabel("Copy Only", key: "\u{2318}C") }
                     Spacer()
                     Button(action: onPaste) { buttonLabel("Paste", key: "\u{21A9}", onAccent: true) }
                         .buttonStyle(AccentButtonStyle())
@@ -234,6 +249,21 @@ struct ClipPreviewView: View {
     }
 
     private var isFocused: Bool { windowState.previewOpen && windowState.pane == .preview }
+
+    private var decodedJWTContent: DecodedJWT? {
+        guard decodedJWT, item.secretKind == .jwt, let text = item.secretText else { return nil }
+        return JWTDecoder.decode(text)
+    }
+
+    @ViewBuilder
+    private func previewButton(_ button: PreviewButton) -> some View {
+        switch button {
+        case .edit: Button(action: onEdit) { buttonLabel("Edit\u{2026}", key: "\u{2318}E") }
+        case .copyOnly: Button(action: onCopyOnly) { buttonLabel("Copy Only", key: "\u{2318}C") }
+        case .notASecret: Button("Not a Secret", action: onDismissSecret)
+        case .secret(let action): Button(action.title) { onSecretAction(action) }
+        }
+    }
 
     private func buttonLabel(_ title: String, key: String, onAccent: Bool = false) -> some View {
         HStack(spacing: 6) {
@@ -433,5 +463,115 @@ private struct ClipEditorView: View {
             if let found = findTextView(in: sub) { return found }
         }
         return nil
+    }
+}
+
+extension PreviewButton {
+    /// A stable id for `ForEach`.
+    var title: String {
+        switch self {
+        case .edit: return "Edit"
+        case .copyOnly: return "Copy Only"
+        case .notASecret: return "Not a Secret"
+        case .secret(let action): return action.title
+        }
+    }
+}
+
+/// The facts about a secret under the preview. It shows also while the clip is hidden,
+/// because it never contains the value.
+private struct SecretFactsList: View {
+    let item: ClipboardItem
+
+    var body: some View {
+        let facts = item.secretKind.flatMap { kind in
+            item.secretText.map { SecretFacts.facts(for: $0, kind: kind, now: Date()) }
+        } ?? []
+        if !facts.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Rectangle().fill(Theme.line).frame(height: 1)
+                ForEach(facts, id: \.label) { fact in
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(fact.label)
+                            .foregroundColor(.secondary)
+                            .frame(width: 84, alignment: .leading)
+                        Text(fact.value)
+                            .font(fact.label == "Fingerprint" ? .system(size: 11, design: .monospaced) : .system(size: 12))
+                            .foregroundColor(fact.isWarning ? Theme.warning : .primary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.system(size: 12))
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+        }
+    }
+}
+
+/// The decoded view of a JWT: the expiry, the claims, the header and the payload.
+/// It never shows the signature or the full token.
+private struct JWTDecodedView: View {
+    let jwt: DecodedJWT
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                TimelineView(.periodic(from: Date(), by: 30)) { context in
+                    let status = jwt.status(now: context.date)
+                    Label(status.text(now: context.date), systemImage: "clock")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(status.isWarning ? Theme.warning : .secondary)
+                }
+                if jwt.isUnsigned {
+                    Label("This token is not signed (alg: none).", systemImage: "exclamationmark.triangle")
+                        .foregroundColor(Theme.warning)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(claims, id: \.0) { label, value in
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Text(label).foregroundColor(.secondary).frame(width: 84, alignment: .leading)
+                            Text(value).textSelection(.enabled)
+                        }
+                        .font(.system(size: 12))
+                    }
+                }
+                jsonBlock("Header", jwt.headerJSON)
+                jsonBlock("Payload", jwt.payloadJSON)
+                Text("MaClip does not check the signature.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private var claims: [(String, String)] {
+        var rows: [(String, String)] = []
+        if let v = jwt.algorithm { rows.append(("Algorithm", v)) }
+        if let v = jwt.type { rows.append(("Type", v)) }
+        if let v = jwt.issuer { rows.append(("Issuer", v)) }
+        if let v = jwt.subject { rows.append(("Subject", v)) }
+        if !jwt.audience.isEmpty { rows.append(("Audience", jwt.audience.joined(separator: ", "))) }
+        if let v = jwt.issuedAt { rows.append(("Issued at", JWTDecoder.dateText(v))) }
+        if let v = jwt.expiresAt { rows.append(("Expires", JWTDecoder.dateText(v))) }
+        if let v = jwt.notBefore { rows.append(("Not before", JWTDecoder.dateText(v))) }
+        return rows
+    }
+
+    private func jsonBlock(_ title: String, _ json: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.system(size: 11)).foregroundColor(.secondary)
+            Text(json)
+                .font(.system(size: 11.5, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.hoverFill))
+        }
     }
 }

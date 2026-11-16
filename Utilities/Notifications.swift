@@ -12,6 +12,8 @@ extension Notification.Name {
     static let overlayCommand = Notification.Name("OverlayCommand")
     /// ⌘U: show the concealed clip with this id (the object) for 5 seconds.
     static let overlayRevealItem = Notification.Name("OverlayRevealItem")
+    /// Decode JWT in ⌘K: open the preview of the clip with this id (the object) in the decoded view.
+    static let overlayDecodeJWT = Notification.Name("OverlayDecodeJWT")
     /// A key in the edit mode of the preview. The object is the `PreviewEditAction`.
     static let previewEditCommand = Notification.Name("PreviewEditCommand")
     /// A key in Settings. The object is the `SettingsCommand`.
