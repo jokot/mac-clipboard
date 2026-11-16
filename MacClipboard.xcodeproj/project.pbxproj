@@ -17,6 +17,7 @@
 		1690F3F4EABD38C6D216C68C /* ClipKeyMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E96C952DB2DA995B5643E4 /* ClipKeyMap.swift */; };
 		18C0680CAEFAFBEBFBC0DE10 /* ClipListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24FE6DF54F2FF97C24FC3A9 /* ClipListText.swift */; };
 		19742895E7A968E617947BA6 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2A25C559C9759FD8E4AF7B /* AppIconView.swift */; };
+		1A5C4CFD858AF3B66BA56B34 /* SecretFieldsRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2D17D2ADED46102EC0753A /* SecretFieldsRepositoryTests.swift */; };
 		1E1D00340048E2DFA2FB166D /* ContentTags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A83A199875AAD6DA273591F /* ContentTags.swift */; };
 		1E6AC014FCA09D04301E79CF /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4235CBBB175E9BB87DE8791 /* UpdateService.swift */; };
 		22EC2CF891DA3B0121A16B69 /* AppFocusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668DB323E10EDCA899DDC163 /* AppFocusService.swift */; };
@@ -103,6 +104,7 @@
 		03DC016B3E2E15C7083643D3 /* ImageCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompositorTests.swift; sourceTree = "<group>"; };
 		0541BFC864D5029CB046A0A4 /* ClipWindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipWindowState.swift; sourceTree = "<group>"; };
 		0A68F4B94FC1F35F8CA9C4A7 /* MenuBarIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MenuBarIcon.png; sourceTree = "<group>"; };
+		0D2D17D2ADED46102EC0753A /* SecretFieldsRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretFieldsRepositoryTests.swift; sourceTree = "<group>"; };
 		170D815A01E99A4093527555 /* AccessibilityPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPromptView.swift; sourceTree = "<group>"; };
 		18A5E1B92A0543BA5D33AD02 /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
 		19935DAD7985C6E587966A20 /* OverlayWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayWindow.swift; sourceTree = "<group>"; };
@@ -303,6 +305,7 @@
 				FA424FD3568939E9C8C9074D /* InfoViewModelTests.swift */,
 				343918D327D3415521E47E64 /* KeyShortcutsTests.swift */,
 				B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */,
+				0D2D17D2ADED46102EC0753A /* SecretFieldsRepositoryTests.swift */,
 				F4D51B70AAAA729C12A4DBB6 /* SpyKeyStore.swift */,
 				DE7CFB463980E025F2453F5F /* TextPreviewTests.swift */,
 				555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */,
@@ -458,6 +461,7 @@
 				2A79E769A31307E7C4C22F05 /* InfoViewModelTests.swift in Sources */,
 				E9EB7C213CD707051F2DFCFA /* KeyShortcutsTests.swift in Sources */,
 				14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */,
+				1A5C4CFD858AF3B66BA56B34 /* SecretFieldsRepositoryTests.swift in Sources */,
 				DA3DC83A5333247B6A45CC07 /* SpyKeyStore.swift in Sources */,
 				87011F9E077DDB68590A1E5D /* TextPreviewTests.swift in Sources */,
 				571B862018FC471035814617 /* URLUtilsTests.swift in Sources */,

@@ -37,6 +37,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
         let isOCRResult: Bool?
         // Added in 1.10.0; optional so legacy JSON without this key still decodes.
         let filePaths: [String]?
+        // Added in 2.4.0; optional so older JSON without these keys still decodes.
+        var secretKind: String? = nil
+        var secretDismissed: Bool? = nil
     }
 
     // Serialize all disk operations to avoid race conditions and out-of-order writes
@@ -109,7 +112,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         sourceBundleID: rec.sourceBundleID,
                         isConcealed: isConcealed,
                         concealedExpiresAt: rec.concealedExpiresAt,
-                        isOCRResult: rec.isOCRResult ?? false
+                        isOCRResult: rec.isOCRResult ?? false,
+                        secretKind: rec.secretKind.flatMap(SecretKind.init(rawValue:)),
+                        secretDismissed: rec.secretDismissed ?? false
                     ))
                 }
             case "image":
@@ -125,7 +130,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                             sourceBundleID: rec.sourceBundleID,
                             isConcealed: isConcealed,
                             concealedExpiresAt: rec.concealedExpiresAt,
-                            isOCRResult: rec.isOCRResult ?? false
+                            isOCRResult: rec.isOCRResult ?? false,
+                            secretKind: rec.secretKind.flatMap(SecretKind.init(rawValue:)),
+                            secretDismissed: rec.secretDismissed ?? false
                         ))
                     }
                 }
@@ -136,7 +143,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         sourceBundleID: rec.sourceBundleID,
                         isConcealed: isConcealed,
                         concealedExpiresAt: rec.concealedExpiresAt,
-                        isOCRResult: rec.isOCRResult ?? false
+                        isOCRResult: rec.isOCRResult ?? false,
+                        secretKind: rec.secretKind.flatMap(SecretKind.init(rawValue:)),
+                        secretDismissed: rec.secretDismissed ?? false
                     ))
                 }
             case "file":
@@ -147,7 +156,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         sourceBundleID: rec.sourceBundleID,
                         isConcealed: isConcealed,
                         concealedExpiresAt: rec.concealedExpiresAt,
-                        isOCRResult: rec.isOCRResult ?? false
+                        isOCRResult: rec.isOCRResult ?? false,
+                        secretKind: rec.secretKind.flatMap(SecretKind.init(rawValue:)),
+                        secretDismissed: rec.secretDismissed ?? false
                     ))
                 }
             default:
@@ -230,7 +241,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     isConcealed: item.isConcealed,
                     concealedExpiresAt: item.concealedExpiresAt,
                     isOCRResult: item.isOCRResult,
-                    filePaths: nil
+                    filePaths: nil,
+                    secretKind: item.secretKind?.rawValue,
+                    secretDismissed: item.secretDismissed
                 ))
             case .image(let imgContent):
                 guard let imagesDir else { continue }
@@ -257,7 +270,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                         isConcealed: item.isConcealed,
                         concealedExpiresAt: item.concealedExpiresAt,
                         isOCRResult: item.isOCRResult,
-                        filePaths: nil
+                        filePaths: nil,
+                        secretKind: item.secretKind?.rawValue,
+                        secretDismissed: item.secretDismissed
                     ))
                 case .memory(let image):
                     let name = item.id.uuidString + "." + imageExt
@@ -282,7 +297,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                             isConcealed: item.isConcealed,
                             concealedExpiresAt: item.concealedExpiresAt,
                             isOCRResult: item.isOCRResult,
-                            filePaths: nil
+                            filePaths: nil,
+                            secretKind: item.secretKind?.rawValue,
+                            secretDismissed: item.secretDismissed
                         ))
                     }
                 }
@@ -295,7 +312,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     isConcealed: item.isConcealed,
                     concealedExpiresAt: item.concealedExpiresAt,
                     isOCRResult: item.isOCRResult,
-                    filePaths: nil
+                    filePaths: nil,
+                    secretKind: item.secretKind?.rawValue,
+                    secretDismissed: item.secretDismissed
                 ))
             case .file(let urls):
                 records.append(PersistRecord(
@@ -306,7 +325,9 @@ final class ClipboardRepository: ClipboardRepositoryProtocol {
                     isConcealed: item.isConcealed,
                     concealedExpiresAt: item.concealedExpiresAt,
                     isOCRResult: item.isOCRResult,
-                    filePaths: urls.map(\.path)
+                    filePaths: urls.map(\.path),
+                    secretKind: item.secretKind?.rawValue,
+                    secretDismissed: item.secretDismissed
                 ))
             }
         }

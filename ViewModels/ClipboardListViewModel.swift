@@ -214,22 +214,13 @@ final class ClipboardListViewModel: ObservableObject {
     }
 
     /// Replaces the `content` of an existing clip in-place while preserving identity
-    /// (id, date, sourceBundleID, isConcealed, concealedExpiresAt, isOCRResult).
+    /// (id, date, sourceBundleID and all flags, see `ClipboardItem.replacing(content:)`).
     /// Persists the updated list and clears the tag-detection cache.
     /// Returns the updated item, or `nil` if no item with the matching id was found.
     @discardableResult
     func replaceContent(of item: ClipboardItem, with newContent: ClipboardItemContent) -> ClipboardItem? {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return nil }
-        let existing = items[idx]
-        let updated = ClipboardItem(
-            id: existing.id,
-            date: existing.date,
-            content: newContent,
-            sourceBundleID: existing.sourceBundleID,
-            isConcealed: existing.isConcealed,
-            concealedExpiresAt: existing.concealedExpiresAt,
-            isOCRResult: existing.isOCRResult
-        )
+        let updated = items[idx].replacing(content: newContent)
         items[idx] = updated
         repository.saveToDiskAsync(items: items)
         ContentTagDetector.clearCache()
@@ -249,7 +240,9 @@ final class ClipboardListViewModel: ObservableObject {
             sourceBundleID: source.sourceBundleID,
             isConcealed: source.isConcealed,
             concealedExpiresAt: source.concealedExpiresAt,
-            isOCRResult: false
+            isOCRResult: false,
+            secretKind: source.secretKind,
+            secretDismissed: source.secretDismissed
         )
         items.insert(item, at: 0)
         applyMaxItems(AppSettings.shared.maxItems)
@@ -391,15 +384,7 @@ final class ClipboardListViewModel: ObservableObject {
            case .memory(let image) = imgContent.source {
             if let savedURL = repository.saveImage(image) {
                 let newContent = ImageContent(source: .file(savedURL), cachedText: imgContent.cachedText, cachedId: imgContent.cachedId, cachedBarcode: imgContent.cachedBarcode)
-                itemToInsert = ClipboardItem(
-                    id: item.id,
-                    date: item.date,
-                    content: .image(newContent),
-                    sourceBundleID: item.sourceBundleID,
-                    isConcealed: item.isConcealed,
-                    concealedExpiresAt: item.concealedExpiresAt,
-                    isOCRResult: item.isOCRResult
-                )
+                itemToInsert = item.replacing(content: .image(newContent))
             }
         }
         
@@ -442,16 +427,7 @@ final class ClipboardListViewModel: ObservableObject {
             if let cachedBarcode = cachedBarcode {
                 newContent.cachedBarcode = cachedBarcode
             }
-            let existing = items[idx]
-            items[idx] = ClipboardItem(
-                id: existing.id,
-                date: existing.date,
-                content: .image(newContent),
-                sourceBundleID: existing.sourceBundleID,
-                isConcealed: existing.isConcealed,
-                concealedExpiresAt: existing.concealedExpiresAt,
-                isOCRResult: existing.isOCRResult
-            )
+            items[idx] = items[idx].replacing(content: .image(newContent))
             repository.saveToDiskAsync(items: items)
         }
     }

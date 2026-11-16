@@ -948,6 +948,46 @@ final class ClipboardListViewModelTests: XCTestCase {
     }
 }
 
+// MARK: - Secret flags
+
+extension ClipboardListViewModelTests {
+    @MainActor
+    func test_editKeepsTheSecretFlags() {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let expiry = Date(timeIntervalSinceNow: 120)
+        let secret = ClipboardItem(date: Date(), content: .text("DB_PASSWORD=old"),
+                                   isConcealed: true, concealedExpiresAt: expiry, secretKind: .keyValue)
+        let repo = MockRepo()
+        repo.savedItems = [secret]
+        let vm = ClipboardListViewModel(repository: repo, monitor: MockMonitor())
+
+        let updated = vm.replaceContent(of: secret, with: .text("new"))
+
+        XCTAssertEqual(updated?.isConcealed, true)
+        XCTAssertEqual(updated?.concealedExpiresAt, expiry)
+        XCTAssertEqual(updated?.secretKind, .keyValue)
+        XCTAssertEqual(vm.items.first?.secretKind, .keyValue)
+    }
+
+    @MainActor
+    func test_saveAsNewImageKeepsTheSecretFlags() throws {
+        AppSettings.shared.maxItems = 10
+        AppSettings.shared.autoCleanEnabled = false
+        let source = ClipboardItem(date: Date(), content: .text("x"), isConcealed: true,
+                                   concealedExpiresAt: .distantFuture, secretKind: .privateKey, secretDismissed: false)
+        let vm = ClipboardListViewModel(repository: MockRepo(), monitor: MockMonitor())
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 32))
+        let png = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+
+        XCTAssertTrue(vm.insertImage(pngData: png, from: source))
+        XCTAssertEqual(vm.items.first?.secretKind, .privateKey)
+        XCTAssertEqual(vm.items.first?.isConcealed, true)
+    }
+}
+
 // MARK: - Mocks
 private final class MockRepo: ClipboardRepositoryProtocol {
     var savedItems: [ClipboardItem] = []
