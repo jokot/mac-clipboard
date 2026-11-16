@@ -32,6 +32,7 @@
 		4245D9AFDC682E6F5D5B798B /* AccentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B122731F3648582A52541069 /* AccentStore.swift */; };
 		45DBD2E88E7CCCB82673EDF0 /* AccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451581E9F48AB3E1E26559B3 /* AccentColor.swift */; };
 		484511220AFBFACF1596A9F7 /* AccentColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75566F1C5C65A91FC70BE7FD /* AccentColorTests.swift */; };
+		4BE22C994D3179BEA1B18F6E /* SecretExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4B02E33836B49D99EC0F08 /* SecretExportTests.swift */; };
 		4CB64154952712185733A483 /* HistoryCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF271F0F519A98A8C1689D1C /* HistoryCrypto.swift */; };
 		4DEA2E87CBD46E398FCBC2A3 /* MenuBarIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A68F4B94FC1F35F8CA9C4A7 /* MenuBarIcon.png */; };
 		547F5F36DFED0664C5620D45 /* CanvasGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F92F8B7254620E41576506 /* CanvasGeometryTests.swift */; };
@@ -66,6 +67,7 @@
 		AF102B291346979BFF8B8D54 /* ClipPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A707A70D5F41234DFCC95DC0 /* ClipPreview.swift */; };
 		B2BD8CE54AFCB28B2AE52849 /* ClipMenuLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78E5BD5F5C7D30192F5B7959 /* ClipMenuLayout.swift */; };
 		B3DAF98ABBDBE882FFEC7E39 /* ClipboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233F1A964D2D27AA2DB09B1B /* ClipboardRepository.swift */; };
+		B6529F118BA3806392CE2ACA /* SecretExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9136BED16CE0A49D73F98AC3 /* SecretExport.swift */; };
 		B6E3A6C5EE7070AABCCAC0DC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95F666DE6781E514FE7F9921 /* ContentView.swift */; };
 		B7145E979D867746DB75E236 /* ClipboardListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63ECD86587A3DE062DB598C0 /* ClipboardListViewModel.swift */; };
 		B7D4E2B42C30142CC9A044ED /* FirstMouseHostingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2888C02F1F29FE5B864D3A /* FirstMouseHostingView.swift */; };
@@ -135,6 +137,7 @@
 		343918D327D3415521E47E64 /* KeyShortcutsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcutsTests.swift; sourceTree = "<group>"; };
 		42329943E61EA51FA9377AE9 /* MenuBarIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "MenuBarIcon@2x.png"; sourceTree = "<group>"; };
 		451581E9F48AB3E1E26559B3 /* AccentColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColor.swift; sourceTree = "<group>"; };
+		4B4B02E33836B49D99EC0F08 /* SecretExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretExportTests.swift; sourceTree = "<group>"; };
 		4E7F2BCE8886027192AD2307 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		524E4F1E5AC90BE7C9F2F904 /* ClipboardListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardListViewModelTests.swift; sourceTree = "<group>"; };
 		555F8D49E7C5D1A1174BB492 /* URLUtilsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLUtilsTests.swift; sourceTree = "<group>"; };
@@ -158,6 +161,7 @@
 		815338FAF7D3A98423D0E86C /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		87A90B1A3298B9A8AB94DA69 /* ExtractPasteControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractPasteControllerTests.swift; sourceTree = "<group>"; };
 		8BAB36B0474DEFE37F8C0F02 /* ImageEditorWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditorWindowController.swift; sourceTree = "<group>"; };
+		9136BED16CE0A49D73F98AC3 /* SecretExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretExport.swift; sourceTree = "<group>"; };
 		92DAD4224B51A0C0BD29A8C5 /* ExtractPasteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractPasteController.swift; sourceTree = "<group>"; };
 		95F666DE6781E514FE7F9921 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMaskTests.swift; sourceTree = "<group>"; };
@@ -292,6 +296,7 @@
 				4E7F2BCE8886027192AD2307 /* Notifications.swift */,
 				2CC25CF9DF4FCDD9A9178E80 /* PasteUtility.swift */,
 				D31AB460CDECFC331586AF24 /* SecretDetector.swift */,
+				9136BED16CE0A49D73F98AC3 /* SecretExport.swift */,
 				2EB933B3A6DFCDB94783967F /* SecretMask.swift */,
 				2CECDFE3E55157FBF8B90B2A /* SecretScan.swift */,
 				1AF81986603D19912EF59AD1 /* TextPreview.swift */,
@@ -325,6 +330,7 @@
 				343918D327D3415521E47E64 /* KeyShortcutsTests.swift */,
 				F32A319FC028A7C05FD765EE /* SecretCaptureTests.swift */,
 				B4AE7EDCC140A7A01F76E480 /* SecretDetectorTests.swift */,
+				4B4B02E33836B49D99EC0F08 /* SecretExportTests.swift */,
 				0D2D17D2ADED46102EC0753A /* SecretFieldsRepositoryTests.swift */,
 				9832366B82DCE51BE7DEE565 /* SecretMaskTests.swift */,
 				32A4DA1B4B490DFCFE8FF7FF /* SecretScanTests.swift */,
@@ -486,6 +492,7 @@
 				E9EB7C213CD707051F2DFCFA /* KeyShortcutsTests.swift in Sources */,
 				6F1E89128FE59AFCD248B00B /* SecretCaptureTests.swift in Sources */,
 				14100EA96D4A852AA37888C3 /* SecretDetectorTests.swift in Sources */,
+				4BE22C994D3179BEA1B18F6E /* SecretExportTests.swift in Sources */,
 				1A5C4CFD858AF3B66BA56B34 /* SecretFieldsRepositoryTests.swift in Sources */,
 				C4D6404FDE08FA1F95BF1662 /* SecretMaskTests.swift in Sources */,
 				64F7CA0D5DB4AA7AEC18B2C2 /* SecretScanTests.swift in Sources */,
@@ -546,6 +553,7 @@
 				B96628BCAEBB466C015D2D72 /* PasteUtility.swift in Sources */,
 				941DF98FCD932B2D4CA7128B /* SecretCapture.swift in Sources */,
 				398396F4EFE563B32FE0B94D /* SecretDetector.swift in Sources */,
+				B6529F118BA3806392CE2ACA /* SecretExport.swift in Sources */,
 				776A9F8D61319DBD2B043327 /* SecretMask.swift in Sources */,
 				3E6074E6F47E3A8677C66048 /* SecretScan.swift in Sources */,
 				2E782788303ABCBED58B7CE9 /* SettingsRows.swift in Sources */,
